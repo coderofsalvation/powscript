@@ -1,0 +1,14 @@
+#!/bin/bash 
+
+for i in lang/*; do
+  lang="$(basename $i)"
+  { 
+    echo "#!/bin/$lang" 
+    cat lang/$lang/.transpile 
+    echo "######################### begin-of-powscript-functions"
+    cat lang/$lang/* | grep -vE '^#'
+    echo "######################### end-of-powscript-functions"
+    cat src/powscript.$lang 
+  } > powscript && chmod 755 powscript
+done
+  
