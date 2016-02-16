@@ -1,4 +1,4 @@
-makes developing shellscript fun & fast
+write shellscript in a powful way!
 
 \![Build Status](https://travis-ci.org/coderofsalvation/powscript.svg?branch=master)
 
