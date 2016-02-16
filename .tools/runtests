@@ -1,0 +1,6 @@
+#!/bin/bash
+
+./powscript.bash --compile test/code-1.pow
+./powscript.bash test/code-1.pow
+echo 'OK'
+exit 0

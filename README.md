@@ -1,10 +1,14 @@
 makes developing shellscript fun & fast
 
-\![Build Status](https://travis-ci.org/username/reponame.svg?branch=master)
+\![Build Status](https://travis-ci.org/coderofsalvation/powscript.svg?branch=master)
 
 ## Usage
+    
+    $ powscript myscript.pow                        # run directly
+    $ powscript --compile myscript.pow > myscript   # compile to bashscript
 
 ## Features
 
-## Example: 
-
+* no more syntactic noise
+* safetynets: automatic quoting
+* easy declaring- and iterating over arrays
