@@ -1,0 +1,4 @@
+# example: pick foo "index"
+pick(){                                                                         
+  [[ ! -n $2 ]] && return 1 || eval "echo \${$1[$2]}"
+}

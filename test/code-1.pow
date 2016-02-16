@@ -1,0 +1,38 @@
+foo="1 2 3 4 5"
+
+# comparison
+i="foo"
+if $i is "foo" then 
+  echo "foo" 
+
+if not $j is "foo" then 
+  echo "not foo" 
+
+simple_arrays(){
+  bla=[]
+  for i in {0..10}
+    bla[$i]=$i;
+
+  for i in bla
+    echo bla=$i
+}
+
+associative_arrays(){
+  foo={}
+  foo["bar"]="a value"
+
+  for k,v of foo
+    echo k=$k
+    echo v=$v
+}
+
+simple_arrays
+associative_arrays
+
+#for k,v of foo map dofoo
+
+#for k,v of foo
+#  map dofoo $k $v
+
+
+#if $foo; then echo flop; fi

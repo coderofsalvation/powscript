@@ -1,0 +1,11 @@
+# foreach
+# example:
+#   source ./foreach
+#   declare -A foo[0]="one" foo[1]="two" foo["bar"]="BAR"
+#                                                                                                                        
+#   bar(){ echo "$1 -> $2"; }
+#   foreach foo bar
+#   foreach foo keys | grep [0-1] | map pick foo
+foreach(){ 
+  eval "for i in \"\${!$1[@]}\"; do $2 \"\$i\" \"\$( echo \"\${$1[\$i]}\" )\"; done"
+}

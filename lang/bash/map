@@ -1,0 +1,7 @@
+# maps a pipe stream to individual calls
+# example:
+#  foreach foo values | map echo
+map(){
+  set +m ; shopt -s lastpipe
+  cat - | while read line; do "$@" "$line"; done
+}

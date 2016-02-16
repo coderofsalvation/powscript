@@ -1,0 +1,6 @@
+# example:
+#   bar(){ return 1; }
+#   not bar && echo "command failed"
+not(){
+  if "$@"; then return 0; else return 1; fi
+}
