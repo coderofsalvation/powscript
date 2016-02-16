@@ -28,11 +28,3 @@ associative_arrays(){
 
 simple_arrays
 associative_arrays
-
-#for k,v of foo map dofoo
-
-#for k,v of foo
-#  map dofoo $k $v
-
-
-#if $foo; then echo flop; fi
