@@ -12,3 +12,8 @@ write shellscript in a powful way!
 * no more syntactic noise
 * safetynets: automatic quoting
 * easy declaring- and iterating over arrays
+* 100% bash:'zero'-dependency solution (no installation, compilation using 3rd party software)
+
+## Wiki
+
+* [Similar projects](https://github.com/coderofsalvation/powscript/wiki/Similar-projects)
