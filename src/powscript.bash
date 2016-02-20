@@ -30,7 +30,6 @@ transpile_sugar(){
     [[ "$line" =~ ^([ ]*switch )                   ]] && transpile_switch "$line"     && continue
     [[ "$line" =~ ^([ ]*case )                     ]] && transpile_case "$line"       && continue
     [[ "$line" =~ ([a-zA-Z_0-9]\+=)                ]] && transpile_array_push "$line" && continue
-    #[[ "$line" =~ ([A-Za-z_0-9]\[\]=[a-zA-Z_0-9]) ]] && transpile_array_push "$line" && continue
     echo "$line" | transpile_all
   done <  $input
 }

@@ -25,7 +25,7 @@
   </tr>
 
   <tr>
-    <td>switch statement</td>
+    <td><b>switch statement</b></td>
     <td>
       <pre>
         <code>
@@ -54,7 +54,7 @@ esac
   </tr>
 
   <tr>
-    <td>if statement</td>
+    <td><b>if statement</b></td>
     <td>
       <pre>
         <code>
@@ -85,7 +85,7 @@ fi
   </tr>
 
   <tr>
-    <td>associative array</td>
+    <td><b>associative array</b></td>
     <td>
       <pre>
         <code>
@@ -119,7 +119,7 @@ echo "${foo["bar"]}"
   </tr>
 
   <tr>
-    <td>indexed array</td>
+    <td><b>indexed array</b></td>
     <td>
       <pre>
         <code>
@@ -152,7 +152,7 @@ echo "${bla[0]}"
   </tr>
 
   <tr>
-    <td>regex</td>
+    <td><b>regex</b></td>
     <td>
       <pre>
         <code>
