@@ -14,9 +14,9 @@ write shellscript in a powful way!
 * easy declaring- and iterating over arrays
 * 100% bash:'zero'-dependency solution (no installation, compilation using 3rd party software)
 
-<table>
+<table width="100%">
   <tr>
-    <td>hoi</td>
+    <td width="50%">hoi</td>
     <td>hoi</td>
   </tr>
 </table>
