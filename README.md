@@ -3,7 +3,8 @@
   write shellscript in a powful way!
 
 ## Usage
-    
+
+    $ wget "https://raw.githubusercontent.com/coderofsalvation/powscript/master/powscript" -O powscript && chmod 755 powscript
     $ powscript myscript.pow                        # run directly
     $ powscript --compile myscript.pow > myscript   # compile to bashscript
 
