@@ -1,4 +1,4 @@
-<img alt="" src=".tools/logo.jpg" width="12%" style="width:12%"/>
+<img alt="" src=".tools/logo.png" width="12%" style="width:12%"/>
 \![Build Status](https://travis-ci.org/coderofsalvation/powscript.svg?branch=master)
   write shellscript in a powful way!
 
@@ -95,6 +95,8 @@ foo["bar"]="a value"
 for k,v of foo
   echo k=$k
   echo v=$v
+  
+echo $foo["bar"]
         </code>
       </pre>
     </td>
@@ -109,6 +111,8 @@ for k in "${!foo[@]}"; do
   echo k="$k"
   echo v="$v"
 done
+
+echo "${foo["bar"]}"
         </code>
       </pre>
     </td>
@@ -125,6 +129,8 @@ bla+="push value"
 
 for i in bla
   echo bla=$i
+
+echo $bla[0]
         </code>
       </pre>
     </td>
@@ -138,6 +144,8 @@ bla+=("push value")
 for i in "${bla[@]}"; do
   echo bla="$i"
 done
+
+echo "${bla[0]}"
         </code>
       </pre>
     </td>

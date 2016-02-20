@@ -70,7 +70,7 @@ transpile_for(){
 
 transpile_if(){
   push stack "fi"
-  code="${1/if not/if \!}"
+  code="$1/if not/if \!}"
   code="${code/and /&& }"
   code="${code/or /|| }"
   code="${code/if /if [[ }"
@@ -95,30 +95,171 @@ transpile_array_push(){
   echo "$code)"
 }
 
+transpile_array_get(){
+  code="${1/\$/\"\$\{}"
+  echo "$code}\""
+}
 ######################### begin-of-powscript-functions
+powfunctions="compose empty foreach keys last map math on pick values"
+indent_current=0
+indent_last=0
+stack=()
+
+getindent(){
+  echo "$1" | sed "s/\n/ /g" | awk '{ match($0, /^ */); printf("%d", RLENGTH) }' | sed 's/00/0/g'
+}
+
+push (){ 
+  var="$1"; shift 1; eval "$var+=($(printf "'%s' " "$@"))"; 
+}
+
+makeindent(){  
+  for((i=0;i<$1;i++)); do printf " "; done
+}
+
+stack_pop(){
+  index=${#stack[@]}
+  index=$((index-1))
+  [[ $index == "-1" ]] && return 0
+  lastitem="${stack[$index]}"
+  unset stack["$index"]
+  echo -e "$(makeindent $((indent_last-2)) )$lastitem"
+  if ! (( (indent_last-2) == indent_current )); then 
+    indent_last=$((indent_last-2))
+    stack_pop
+  fi
+}
+
+stack_update(){
+  indent_last="$indent_current"
+  indent_current=$(getindent "$1")
+  [[ -n $DEBUG ]] && echo ">> $indent_last|$indent_current|stacksize:${#stack[@]}"
+  if ((indent_current < indent_last)); then stack_pop; fi
+}
+
+transpile_all(){
+  cat - | while IFS="" read line; do
+    i=$(getindent "$line")
+    [[ "$line" =~ "={}" ]] && echo "$(makeindent $i)declare -A ${line/=\{\}/}" && continue
+    [[ "$line" =~ "=[]" ]] && echo "$(makeindent $i)declare -a ${line/=\[\]/}" && continue
+    [[ "$line" =~ \$[A-Za-z_0-9] ]] && line="$(echo "$line" | sed -E 's/([ =])\$([a-zA-Z_0-9]+)/\1"$\2"/gi' )"
+    echo "$line"
+  done
+}
+
+transpile_for(){
+  push stack "done"
+  local arr="$(echo "$1" | awk '{ print $4 }' )"
+  local i=$(( $(getindent "$code") + 2 ))
+  code="$1; do"
+  indent="$(makeindent $i)"
+  # iterate over associative array
+  [[ "$code" =~ " of" ]] && [[ "$code" =~ [a-zA-Z_0-9],[a-zA-Z_0-9] ]] && {
+    local key="$(echo "$code" | awk '{ print $2 }' | awk -F',' '{ print $1 }')"
+    local value="$(echo "$code" | awk '{ print $2 }' | awk -F',' '{ print $2 }')"
+    code="$code\n$indent$value=\"\${$arr[\$$key]}\""
+    code="${code/,$value/}"
+    code="${code/ of / in }"
+    code="${code/ $arr/ \"\${!$arr\[@\]\}\"}";
+  }
+  # iterate over indexed array
+  [[ "$code" =~ " in "[a-zA-Z_] ]] && {
+    local key="$(echo "$code" | awk '{ print $2 }')"
+    code="${code/ $arr/ \"\${$arr\[@\]\}\"}"
+  }
+  echo -e "$code" | transpile_all
+}
+
+transpile_if(){
+  push stack "fi"
+  code="$1/if not/if \!}"
+  code="${code/and /&& }"
+  code="${code/or /|| }"
+  code="${code/if /if [[ }"
+  code="${code/match /=~ }"
+  code="$code \]\]; then"
+  code="${code/ is / == }"
+  echo "$code" | transpile_all
+}
+
+transpile_switch(){
+  push stack "esac"
+  echo "${1/switch/case} in" 
+}
+
+transpile_case(){
+  push stack "  ;;"
+  echo "${1/case /})"
+}
+
+transpile_array_push(){
+  code="${1/+=/+=(}"
+  echo "$code)"
+}
+
+transpile_array_get(){
+  code="${1/\$/\"\$\{}"
+  echo "$code}\""
+}
+set -e
+shopt -s extglob
+
+
+# compose function out of 2 functions
+# example: 
+#   compose functionname func2 func1
+#   functionname "this is input"
 compose() {
   result_fun=$1; shift ; f1=$1; shift ; f2=$1; shift
   eval "$result_fun() { $f1 \"\$($f2 \"\$*\")\"; }"
 }
+# example: empty "" && echo "empty string"
 empty(){
   [[ "${#1}" == 0 ]] && return 0 || return 1
 }
+# foreach
+# example:
+#   source ./foreach
+#   declare -A foo[0]="one" foo[1]="two" foo["bar"]="BAR"
+#                                                                                                                        
+#   bar(){ echo "$1 -> $2"; }
+#   foreach foo bar
+#   foreach foo keys | grep [0-1] | map pick foo
 foreach(){ 
   eval "for i in \"\${!$1[@]}\"; do $2 \"\$i\" \"\$( echo \"\${$1[\$i]}\" )\"; done"
 }
+# example: foreach foo keys
 keys(){
   echo "$1"
 }
 last(){
   [[ ! -n $2 ]] && return 1 || eval "echo \${$1[$2]:(-1)}"
 }
+# maps a pipe stream to individual calls
+# example:
+#  foreach foo values | map echo
 map(){
   set +m ; shopt -s lastpipe
   cat - | while read line; do "$@" "$line"; done
 }
-not(){
-  if "$@"; then return 0; else return 1; fi
+math(){
+  if [[ -n "$2" ]]; then
+    which bc &>/dev/null && { echo "scale=$2;$1" | bc; } || echo "bc is not installed"; 
+  else echo $(("$1")); fi
 }
+#  1) SIGHUP	 2) SIGINT	 3) SIGQUIT	 4) SIGILL	 5) SIGTRAP
+#  6) SIGABRT	 7) SIGBUS	 8) SIGFPE	 9) SIGKILL	10) SIGUSR1
+# 11) SIGSEGV	12) SIGUSR2	13) SIGPIPE	14) SIGALRM	15) SIGTERM
+# 16) SIGSTKFLT	17) SIGCHLD	18) SIGCONT	19) SIGSTOP	20) SIGTSTP
+# 21) SIGTTIN	22) SIGTTOU	23) SIGURG	24) SIGXCPU	25) SIGXFSZ
+# 26) SIGVTALRM	27) SIGPROF	28) SIGWINCH	29) SIGIO	30) SIGPWR
+# 31) SIGSYS	34) SIGRTMIN	35) SIGRTMIN+1	36) SIGRTMIN+2	37) SIGRTMIN+3
+# 38) SIGRTMIN+4	39) SIGRTMIN+5	40) SIGRTMIN+6	41) SIGRTMIN+7	42) SIGRTMIN+8
+# 43) SIGRTMIN+9	44) SIGRTMIN+10	45) SIGRTMIN+11	46) SIGRTMIN+12	47) SIGRTMIN+13
+# 48) SIGRTMIN+14	49) SIGRTMIN+15	50) SIGRTMAX-14	51) SIGRTMAX-13	52) SIGRTMAX-12
+# 53) SIGRTMAX-11	54) SIGRTMAX-10	55) SIGRTMAX-9	56) SIGRTMAX-8	57) SIGRTMAX-7
+# 58) SIGRTMAX-6	59) SIGRTMAX-5	60) SIGRTMAX-4	61) SIGRTMAX-3	62) SIGRTMAX-2
+# 63) SIGRTMAX-1	64) SIGRTMAX	
 
 on() {
     func="$1" ; shift
@@ -127,19 +268,18 @@ on() {
     done
 }
 
+#trap_with_arg func_trap INT TERM EXIT
+# example: pick foo "index"
 pick(){                                                                         
   [[ ! -n $2 ]] && return 1 || eval "echo \${$1[$2]}"
 }
-set -e
-shopt -s extglob
-
-
+# example: foreach foo values
 values(){
   echo "$2"  
 }
 ######################### end-of-powscript-functions
 # parse args
-
+includefuncs=""
 shopt -s extglob
 
 for arg in "$@"; do
@@ -156,29 +296,43 @@ done
 
 empty "$1" && {
   echo 'Usage:
-     powscript--compile <file.powscript>
+     powscript <file.powscript>
+     powscript --compile <file.powscript>
   ';
 }
 
-compile(){
-  local enable=0
-  echo -e "\n#\n# powscript functions\n#\n"
-  while IFS="" read line; do 
-    [[ "$line" =~ "end-of-powscript-functions" ]] && break;
-    [[ "$enable" == 1 ]] && echo "$line"
-    [[ "$line" =~ "begin-of-powscript-functions" ]] && enable=1
-  done < $0 | sed '/^$/d'
-  echo -e "\n#\n# Your powscript application starts here\n#\n"
+transpile_sugar(){
   while IFS="" read line; do 
     stack_update "$line"
-    [[ "$line" =~ ^([ ]*for )   ]] && transpile_for "$line"     && continue
-    [[ "$line" =~ ^([ ]*if )     ]] && transpile_if  "$line"     && continue
-    [[ "$line" =~ ^([ ]*switch ) ]] && transpile_switch "$line"  && continue
-    [[ "$line" =~ ^([ ]*case )   ]] && transpile_case "$line"    && continue
-    [[ "$line" =~ ([a-zA-Z_0-9]\+=) ]] && transpile_array_push "$line"    && continue
-    #[[ "$line" =~ ([A-Za-z_0-9]\[\]=[a-zA-Z_0-9])   ]] && transpile_array_push "$line"    && continue
+    [[ "$line" =~ (\$[a-zA-Z_0-9]*\[)              ]] && transpile_array_get "$line"  && continue
+    [[ "$line" =~ ^([ ]*for )                      ]] && transpile_for "$line"        && continue
+    [[ "$line" =~ ^([ ]*if )                       ]] && transpile_if  "$line"        && continue
+    [[ "$line" =~ ^([ ]*switch )                   ]] && transpile_switch "$line"     && continue
+    [[ "$line" =~ ^([ ]*case )                     ]] && transpile_case "$line"       && continue
+    [[ "$line" =~ ([a-zA-Z_0-9]\+=)                ]] && transpile_array_push "$line" && continue
+    #[[ "$line" =~ ([A-Za-z_0-9]\[\]=[a-zA-Z_0-9]) ]] && transpile_array_push "$line" && continue
     echo "$line" | transpile_all
   done <  $input
+}
+
+transpile_functions(){
+  # *FIXME* this is bruteforce: if functionname is mentioned in textfile, include it
+  while IFS="" read line; do 
+    regex="(${powfunctions// /|})" 
+    echo "$line" | grep -qE "$regex" && {
+      for func in $powfunctions; do
+        [[ "$line" =~ ^([ ]*)$func([ ]*) ]] && includefuncs="$includefuncs $func"
+      done;
+    }
+  done <  $input
+  for func in $includefuncs; do
+    declare -f $func
+  done
+}
+
+compile(){
+  transpile_functions
+  #transpile_sugar
 }
 
 runfile(){

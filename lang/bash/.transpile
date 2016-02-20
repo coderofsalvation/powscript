@@ -69,7 +69,7 @@ transpile_for(){
 
 transpile_if(){
   push stack "fi"
-  code="${1/if not/if \!}"
+  code="$1/if not/if \!}"
   code="${code/and /&& }"
   code="${code/or /|| }"
   code="${code/if /if [[ }"
@@ -94,3 +94,7 @@ transpile_array_push(){
   echo "$code)"
 }
 
+transpile_array_get(){
+  code="${1/\$/\"\$\{}"
+  echo "$code}\""
+}

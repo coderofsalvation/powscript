@@ -6,9 +6,12 @@ for i in lang/*; do
     echo "#!/bin/$lang" 
     cat lang/$lang/.transpile 
     echo "######################### begin-of-powscript-functions"
-    cat lang/$lang/* | grep -vE '^#'
+    cd lang/$lang &>/dev/null
+    echo "powfunctions=\"$(echo *)\""
+    cd - &>/dev/null
+    cat lang/$lang/.transpile lang/$lang/.settings lang/$lang/*
     echo "######################### end-of-powscript-functions"
-    cat src/powscript.$lang 
+    cat src/powscript.$lang
   } > powscript && chmod 755 powscript
 done
   

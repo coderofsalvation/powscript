@@ -26,6 +26,8 @@ simple_arrays(){
   bla+="push value"
   for i in bla
     echo bla=$i
+
+  echo $bla[0]
 }
 
 associative_arrays(){
@@ -35,6 +37,8 @@ associative_arrays(){
   for k,v of foo
     echo k=$k
     echo v=$v
+
+  echo $foo["bar"]
 }
 
 switch(){
@@ -46,6 +50,8 @@ switch(){
       echo "foo"
       echo "bar"
 }
+
+
 
 simple_arrays
 associative_arrays
