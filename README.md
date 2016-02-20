@@ -70,7 +70,7 @@ for k,v of foo
     <td>
       <pre>
         <code>
-declare -A   foo
+declare -A foo
 foo["bar"]="a value"
 
 for k in "${!foo[@]}"; do
@@ -100,7 +100,7 @@ for i in bla
     <td>
       <pre>
         <code>
-declare -a   bla
+declare -a bla
 bla[0]="foo"
 bla+=("push value")
 
@@ -112,6 +112,34 @@ done
     </td>
   </tr>
 
+  <tr>
+    <td>switch statement</td>
+    <td>
+      <pre>
+        <code>
+switch $foo
+  case 0-9
+    echo "bar"
+  case *
+    echo "foo"
+        </code>
+      </pre>
+    </td>
+    <td>
+      <pre>
+        <code>
+case $foo in
+  0-9)
+    echo "bar"
+    ;;
+  *)
+    echo "foo"
+    ;;
+esac
+        </code>
+      </pre>
+    </td>
+  </tr>
 </table>
 
 ## Wiki
