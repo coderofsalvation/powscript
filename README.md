@@ -9,7 +9,7 @@ write shellscript in a powful way!
 
 ## Features
 
-* no more syntactic noise
+* syntactic sugar: less { ! [[ @ ]] and so on
 * safetynets: automatic quoting
 * easy declaring- and iterating over arrays
 * 100% bash:'zero'-dependency solution (no installation, compilation using 3rd party software)
@@ -28,17 +28,53 @@ write shellscript in a powful way!
       <pre>
         <code>
 bla=[]
-for i in {0..10}
-  bla[$i]=$i;
+bla[0]="foo"
+bla[]="push value"
+
+for i in bla
+  echo bla=$i
         </code>
       </pre>
     </td>
     <td>
       <pre>
         <code>
-declare -a bla
-for i in {0..10}; do
-  bla[$i]="$i";
+declare -a   bla
+bla[0]="foo"
+bla+=("push value")
+
+for i in "${bla[@]}"; do
+  echo bla="$i"
+done
+        </code>
+      </pre>
+    </td>
+  </tr>
+
+  <tr>
+    <td>associative array</td>
+    <td>
+      <pre>
+        <code>
+foo={}
+foo["bar"]="a value"
+
+for k,v of foo
+  echo k=$k
+  echo v=$v
+        </code>
+      </pre>
+    </td>
+    <td>
+      <pre>
+        <code>
+declare -A   foo
+foo["bar"]="a value"
+
+for k in "${!foo[@]}"; do
+  v="${foo[$k]}"
+  echo k="$k"
+  echo v="$v"
 done
         </code>
       </pre>
