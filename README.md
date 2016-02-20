@@ -1,3 +1,5 @@
+<img alt="" src=".tools/logo.jpg" style="width:20%"/>
+
 write shellscript in a powful way!
 
 \![Build Status](https://travis-ci.org/coderofsalvation/powscript.svg?branch=master)
