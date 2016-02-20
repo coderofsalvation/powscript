@@ -2,11 +2,18 @@ foo="1 2 3 4 5"
 
 # comparison
 i="foo"
-if $i is "foo" then 
+if $i is "foo"
   echo "foo" 
 
-if not $j is "foo" then 
-  echo "not foo" 
+if not $j is "foo" and $x is "bar"
+  if $j is "foo" or $j is "xfoo"
+    echo "foo!" 
+
+# extended pattern matching 
+# (google 'extglob' for more
+
+if $f match ^([f]oo)
+  echo "foo found!"  
 
 for k,v of foo 
   for j,x of bla
@@ -15,9 +22,8 @@ for k,v of foo
 
 simple_arrays(){
   bla=[]
-  for i in {0..10}
-    bla[$i]=$i;
-
+  bla[0]="foo"
+  bla+="push value"
   for i in bla
     echo bla=$i
 }

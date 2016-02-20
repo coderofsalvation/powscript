@@ -9,10 +9,11 @@ write shellscript in a powful way!
 
 ## Features
 
-* syntactic sugar: less { ! [[ @ ]] || ~ and so on
+* memorizable syntactic sugar: less { ! [[ @ ]] || ~ and so on
 * safetynets: automatic quoting, halt on error
 * easy declaring- and iterating over arrays
-* 100% bash:'zero'-dependency solution (no installation, compilation using 3rd party software)
+* written in bash, 'zero'-dependency solution
+* hasslefree: no installation or compilation using 3rd party software
 
 ## Language
 
@@ -20,7 +21,7 @@ write shellscript in a powful way!
   <tr>
     <th>What</th>
     <th>Powscript</th>
-    <th>Compiles to bash</th>
+    <th>Bash output</th>
   </tr>
 
   <tr>
@@ -120,7 +121,7 @@ done
         <code>
 bla=[]
 bla[0]="foo"
-bla[]="push value"
+bla+="push value"
 
 for i in bla
   echo bla=$i
