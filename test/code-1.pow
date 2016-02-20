@@ -8,6 +8,11 @@ if $i is "foo" then
 if not $j is "foo" then 
   echo "not foo" 
 
+for k,v of foo 
+  for j,x of bla
+    for v,f of bla
+      echo "foo"
+
 simple_arrays(){
   bla=[]
   for i in {0..10}
@@ -24,6 +29,16 @@ associative_arrays(){
   for k,v of foo
     echo k=$k
     echo v=$v
+}
+
+switch(){
+  switch $foo
+    case 0-9
+      echo "i want to switch an if for two years"
+      echo "bar"
+    case *
+      echo "foo"
+      echo "bar"
 }
 
 simple_arrays

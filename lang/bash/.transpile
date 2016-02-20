@@ -30,7 +30,7 @@ stack_pop(){
 stack_update(){
   indent_last="$indent_current"
   indent_current=$(getindent "$1")
-  #echo ">> $indent_last|$indent_current|stacksize:${#stack[@]}"
+  [[ -n $DEBUG ]] && echo ">> $indent_last|$indent_current|stacksize:${#stack[@]}"
   if ((indent_current < indent_last)); then stack_pop; fi
 }
 
@@ -49,11 +49,12 @@ transpile_for(){
   local arr="$(echo "$1" | awk '{ print $4 }' )"
   local i=$(( $(getindent "$code") + 2 ))
   code="$1; do"
+  indent="$(makeindent $i)"
   # iterate over associative array
   [[ "$code" =~ " of" ]] && [[ "$code" =~ [a-zA-Z_0-9],[a-zA-Z_0-9] ]] && {
     local key="$(echo "$code" | awk '{ print $2 }' | awk -F',' '{ print $1 }')"
     local value="$(echo "$code" | awk '{ print $2 }' | awk -F',' '{ print $2 }')"
-    code="$code\n$(makeindent $i)$value=\"\${$arr[\$$key]}\""
+    code="$code\n$indent$value=\"\${$arr[\$$key]}\""
     code="${code/,$value/}"
     code="${code/ of / in }"
     code="${code/ $arr/ \"\${!$arr\[@\]\}\"}";
@@ -73,5 +74,15 @@ transpile_if(){
   code="${code/then/\]\]; then}"
   code="${code/ is / == }"
   echo "$code" | transpile_all
+}
+
+transpile_switch(){
+  push stack "esac"
+  echo "${1/switch/case} in" 
+}
+
+transpile_case(){
+  push stack "  ;;"
+  echo "${1/case /})"
 }
 
