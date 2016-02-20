@@ -23,29 +23,31 @@ write shellscript in a powful way!
     <th>Compiles to bash</th>
   </tr>
   <tr>
-    <td>indexed array</td>
+    <td>if statement</td>
     <td>
       <pre>
         <code>
-bla=[]
-bla[0]="foo"
-bla[]="push value"
+if $i is "foo"
+  echo "foo" 
 
-for i in bla
-  echo bla=$i
+if not $j is "foo" and $x is "bar"
+  if $j is "foo" or $j is "xfoo"
+    echo "foo!" 
         </code>
       </pre>
     </td>
     <td>
       <pre>
         <code>
-declare -a   bla
-bla[0]="foo"
-bla+=("push value")
+if [[ "$i" == "foo" then ]]; then
+  echo "foo" 
+fi
 
-for i in "${bla[@]}"; do
-  echo bla="$i"
-done
+if [[ ! "$j" == "foo" && "$x" is "bar"]]; then
+  if [[ "$j" == "foo" || "$j" is "xfoo"]]; then
+    echo "foo!" 
+  fi
+fi
         </code>
       </pre>
     </td>
@@ -80,6 +82,36 @@ done
       </pre>
     </td>
   </tr>
+
+  <tr>
+    <td>indexed array</td>
+    <td>
+      <pre>
+        <code>
+bla=[]
+bla[0]="foo"
+bla[]="push value"
+
+for i in bla
+  echo bla=$i
+        </code>
+      </pre>
+    </td>
+    <td>
+      <pre>
+        <code>
+declare -a   bla
+bla[0]="foo"
+bla+=("push value")
+
+for i in "${bla[@]}"; do
+  echo bla="$i"
+done
+        </code>
+      </pre>
+    </td>
+  </tr>
+
 </table>
 
 ## Wiki
