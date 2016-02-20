@@ -9,8 +9,8 @@ write shellscript in a powful way!
 
 ## Features
 
-* syntactic sugar: less { ! [[ @ ]] and so on
-* safetynets: automatic quoting
+* syntactic sugar: less { ! [[ @ ]] || ~ and so on
+* safetynets: automatic quoting, halt on error
 * easy declaring- and iterating over arrays
 * 100% bash:'zero'-dependency solution (no installation, compilation using 3rd party software)
 
@@ -22,6 +22,36 @@ write shellscript in a powful way!
     <th>Powscript</th>
     <th>Compiles to bash</th>
   </tr>
+
+  <tr>
+    <td>switch statement</td>
+    <td>
+      <pre>
+        <code>
+switch $foo
+  case 0-9
+    echo "bar"
+  case *
+    echo "foo"
+        </code>
+      </pre>
+    </td>
+    <td>
+      <pre>
+        <code>
+case $foo in
+  0-9)
+    echo "bar"
+    ;;
+  *)
+    echo "foo"
+    ;;
+esac
+        </code>
+      </pre>
+    </td>
+  </tr>
+
   <tr>
     <td>if statement</td>
     <td>
@@ -113,33 +143,29 @@ done
   </tr>
 
   <tr>
-    <td>switch statement</td>
+    <td>regex</td>
     <td>
       <pre>
         <code>
-switch $foo
-  case 0-9
-    echo "bar"
-  case *
-    echo "foo"
+if $f match ^([f]oo)
+  echo "foo found!"  
         </code>
       </pre>
     </td>
     <td>
       <pre>
         <code>
-case $foo in
-  0-9)
-    echo "bar"
-    ;;
-  *)
-    echo "foo"
-    ;;
-esac
+# extended pattern matching 
+# (google 'extglob' for more
+
+if [[ "$f" =~ ^([f]oo) ]]; then
+  echo "foo found!"  
+fi
         </code>
       </pre>
     </td>
   </tr>
+
 </table>
 
 ## Wiki
