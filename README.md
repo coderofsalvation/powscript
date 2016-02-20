@@ -14,10 +14,35 @@ write shellscript in a powful way!
 * easy declaring- and iterating over arrays
 * 100% bash:'zero'-dependency solution (no installation, compilation using 3rd party software)
 
+## Language
+
 <table style="width:100%">
   <tr>
-    <td width="50%">hoi</td>
-    <td>hoi</td>
+    <th>What</th>
+    <th>Powscript</th>
+    <th>Compiles to bash</th>
+  </tr>
+  <tr>
+    <td>indexed array</td>
+    <td>
+      <pre>
+        <code>
+bla=[]
+for i in {0..10}
+  bla[$i]=$i;
+        </code>
+      </pre>
+    </td>
+    <td>
+      <pre>
+        <code>
+declare -a bla
+for i in {0..10}; do
+  bla[$i]="$i";
+done
+        </code>
+      </pre>
+    </td>
   </tr>
 </table>
 
