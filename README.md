@@ -1,4 +1,4 @@
-<img alt="" src=".tools/logo.jpg" style="width:20%"/>
+<img alt="" src=".tools/logo.jpg" width="20%" style="width:20%"/>
 
 write shellscript in a powful way!
 
