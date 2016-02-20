@@ -1,8 +1,6 @@
-<img alt="" src=".tools/logo.jpg" width="20%" style="width:20%"/>
-
-write shellscript in a powful way!
-
 \![Build Status](https://travis-ci.org/coderofsalvation/powscript.svg?branch=master)
+<img alt="" src=".tools/logo.jpg" width="12%" style="width:12%"/>
+write shellscript in a powful way!
 
 ## Usage
     
