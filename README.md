@@ -12,7 +12,7 @@
 
 * memorizable syntax: more human-like, less robotic { ! [[ @ ]] || ~ and so on
 * safetynets: automatic quoting, halt on error
-* easy declaring- and iterating over arrays
+* comfort: easy arrays, functional programming
 * written in bash, 'zero'-dependency solution
 * hasslefree: no installation or compilation using 3rd party software
 
