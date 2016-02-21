@@ -69,13 +69,13 @@ transpile_for(){
 
 transpile_if(){
   push stack "fi"
-  code="$1/if not/if \!}"
-  code="${code/and /&& }"
-  code="${code/or /|| }"
+  code="${1/if not/if \!}"
+  code="${code//and /&& }"
+  code="${code//or /|| }"
   code="${code/if /if [[ }"
   code="${code/match /=~ }"
   code="$code \]\]; then"
-  code="${code/ is / == }"
+  code="${code// is / == }"
   echo "$code" | transpile_all
 }
 

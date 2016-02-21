@@ -75,8 +75,8 @@ if [[ "$i" == "foo" then ]]; then
   echo "foo" 
 fi
 
-if [[ ! "$j" == "foo" && "$x" is "bar"]]; then
-  if [[ "$j" == "foo" || "$j" is "xfoo"]]; then
+if [[ ! "$j" == "foo" && "$x" == "bar"]]; then
+  if [[ "$j" == "foo" || "$j" == "xfoo"]]; then
     echo "foo!" 
   fi
 fi
