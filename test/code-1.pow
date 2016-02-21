@@ -20,28 +20,23 @@ for k,v of foo
     for v,f of bla
       echo "foo"
 
-simple_arrays(){
+simple_arrays()
   bla=[]
   bla[0]="foo"
   bla+="push value"
   for i in bla
     echo bla=$i
-
   echo $bla[0]
-}
 
-associative_arrays(){
+associative_arrays()
   foo={}
   foo["bar"]="a value"
-
   for k,v of foo
     echo k=$k
     echo v=$v
-
   echo $foo["bar"]
-}
 
-switch(){
+switch()
   switch $foo
     case 0-9
       echo "i want to switch an if for two years"
@@ -49,10 +44,8 @@ switch(){
     case *
       echo "foo"
       echo "bar"
-}
 
 
 
 simple_arrays
 associative_arrays
-foreach

@@ -98,3 +98,8 @@ transpile_array_get(){
   code="${1/\$/\"\$\{}"
   echo "$code}\""
 }
+
+transpile_function(){
+  push stack "}"
+  echo "$1{"
+}

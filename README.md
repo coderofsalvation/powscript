@@ -4,7 +4,7 @@
 
 ## Usage
 
-    $ wget "https://raw.githubusercontent.com/coderofsalvation/powscript/master/powscript" -O powscript && chmod 755 powscript
+    $ wget "https://raw.githubusercontent.com/coderofsalvation/powscript/master/powscript" -O /usr/local/bin/powscript && chmod 755 /usr/local/bin/powscript
     $ powscript myscript.pow                        # run directly
     $ powscript --compile myscript.pow > myscript   # compile to bashscript
 
@@ -23,6 +23,27 @@
     <th>What</th>
     <th>Powscript</th>
     <th>Bash output</th>
+  </tr>
+
+  <tr>
+    <td><b>functions</b></td>
+    <td>
+      <pre>
+        <code>
+dofoo()
+  echo "doing foo"
+        </code>
+      </pre>
+    </td>
+    <td>
+      <pre>
+        <code>
+function dofoo(){
+  echo "doing foo"
+}
+        </code>
+      </pre>
+    </td>
   </tr>
 
   <tr>
@@ -177,6 +198,20 @@ fi
   </tr>
 
 </table>
+
+## Example
+
+    #!/usr/bin/env powscript
+    
+    usage()
+      echo "Usage: $(basename "$0") <number>"
+
+    switch $1
+      case 0-9
+        echo "arg 1 is a number"
+      case *
+        usage && exit
+
 
 ## Wiki
 

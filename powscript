@@ -99,6 +99,11 @@ transpile_array_get(){
   code="${1/\$/\"\$\{}"
   echo "$code}\""
 }
+
+transpile_function(){
+  push stack "}"
+  echo "$1{"
+}
 ######################### begin-of-powscript-functions
 powfunctions="compose empty foreach keys last map math on pick values"
 indent_current=0
@@ -200,6 +205,11 @@ transpile_array_push(){
 transpile_array_get(){
   code="${1/\$/\"\$\{}"
   echo "$code}\""
+}
+
+transpile_function(){
+  push stack "}"
+  echo "$1{"
 }
 set -e
 shopt -s extglob
@@ -311,6 +321,7 @@ transpile_sugar(){
     [[ "$line" =~ ^([ ]*switch )                   ]] && transpile_switch "$line"     && continue
     [[ "$line" =~ ^([ ]*case )                     ]] && transpile_case "$line"       && continue
     [[ "$line" =~ ([a-zA-Z_0-9]\+=)                ]] && transpile_array_push "$line" && continue
+    [[ "$line" =~ \(\)$                       ]] && transpile_function "$line"   && continue
     echo "$line" | transpile_all
   done <  $input
 }
