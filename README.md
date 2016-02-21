@@ -10,7 +10,7 @@
 
 ## Features
 
-* memorizable syntactic sugar: less { ! [[ @ ]] || ~ and so on
+* memorizable syntax: more sugar, less { ! [[ @ ]] || ~ and so on
 * safetynets: automatic quoting, halt on error
 * easy declaring- and iterating over arrays
 * written in bash, 'zero'-dependency solution
