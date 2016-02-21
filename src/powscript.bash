@@ -34,6 +34,7 @@ transpile_sugar(){
     [[ "$line" =~ \(\)$                       ]] && transpile_function "$line"   && continue
     echo "$line" | transpile_all
   done <  $input
+  stack_update ""
 }
 
 transpile_functions(){
