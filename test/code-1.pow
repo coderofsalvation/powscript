@@ -4,6 +4,8 @@ foo="1 2 3 4 5"
 i="foo"
 if $i is "foo"
   echo "foo" 
+else
+  echo "bar"
 
 if not $j is "foo" and $x is "bar"
   if $j is "foo" or $j is "xfoo"

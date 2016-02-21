@@ -19,12 +19,13 @@ stack_pop(){
   index=${#stack[@]}
   index=$((index-1))
   [[ $index == "-1" ]] && return 0
+  [[ "$1" =~ ^([ ]*else) ]] && echo "$1" && continue # ignore else
   lastitem="${stack[$index]}"
   unset stack["$index"]
   echo -e "$(makeindent $((indent_last-2)) )$lastitem"
   if ! (( (indent_last-2) == indent_current )); then 
     indent_last=$((indent_last-2))
-    stack_pop
+    stack_pop "$1"
   fi
 }
 
@@ -32,7 +33,7 @@ stack_update(){
   indent_last="$indent_current"
   indent_current=$(getindent "$1")
   [[ -n $DEBUG ]] && echo ">> $indent_last|$indent_current|stacksize:${#stack[@]}"
-  if ((indent_current < indent_last)); then stack_pop; fi
+  if ((indent_current < indent_last)); then stack_pop "$1"; fi
 }
 
 transpile_all(){
@@ -126,12 +127,13 @@ stack_pop(){
   index=${#stack[@]}
   index=$((index-1))
   [[ $index == "-1" ]] && return 0
+  [[ "$1" =~ ^([ ]*else) ]] && echo "$1" && continue # ignore else
   lastitem="${stack[$index]}"
   unset stack["$index"]
   echo -e "$(makeindent $((indent_last-2)) )$lastitem"
   if ! (( (indent_last-2) == indent_current )); then 
     indent_last=$((indent_last-2))
-    stack_pop
+    stack_pop "$1"
   fi
 }
 
@@ -139,7 +141,7 @@ stack_update(){
   indent_last="$indent_current"
   indent_current=$(getindent "$1")
   [[ -n $DEBUG ]] && echo ">> $indent_last|$indent_current|stacksize:${#stack[@]}"
-  if ((indent_current < indent_last)); then stack_pop; fi
+  if ((indent_current < indent_last)); then stack_pop "$1"; fi
 }
 
 transpile_all(){

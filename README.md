@@ -95,6 +95,8 @@ esac
         <code>
 if $i is "foo"
   echo "foo" 
+else
+  echo "bar"
 
 if not $j is "foo" and $x is "bar"
   if $j is "foo" or $j is "xfoo"
@@ -107,6 +109,8 @@ if not $j is "foo" and $x is "bar"
         <code>
 if [[ "$i" == "foo" ]]; then
   echo "foo" 
+else
+  echo "bar"
 fi
 
 if [[ ! "$j" == "foo" && "$x" == "bar"]]; then
