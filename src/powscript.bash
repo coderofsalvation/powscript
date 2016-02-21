@@ -2,14 +2,14 @@
 includefuncs=""
 shopt -s extglob
 
+input="$1"
+[[ ! -n $startfunction ]] && startfunction=runfile
+
 for arg in "$@"; do
   case "$arg" in
     --compile) 
       startfunction=compile
-      ;;
-    *)
-      input="$arg"
-      [[ ! -n $startfunction ]] && startfunction=runfile
+      input="$2"
       ;;
   esac
 done
@@ -58,7 +58,8 @@ compile(){
 }
 
 runfile(){
-  compile $input | bash
+  shift 
+  eval "$(compile $input)"
 }
 
-$startfunction "${0//.*\./}"
+$startfunction "$@" #"${0//.*\./}"

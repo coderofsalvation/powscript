@@ -8,6 +8,19 @@
     $ powscript myscript.pow                        # run directly
     $ powscript --compile myscript.pow > myscript   # compile to bashscript
 
+## Example
+
+    #!/usr/bin/env powscript
+    
+    usage()
+      echo "Usage: foo <number>"
+
+    switch $1
+      case [0-9]*
+        echo "arg 1 is a number"
+      case *
+        usage and exit
+
 ## Features
 
 * memorizable syntax: more human-like, less robotic { ! [[ @ ]] || ~ and so on
@@ -92,7 +105,7 @@ if not $j is "foo" and $x is "bar"
     <td>
       <pre>
         <code>
-if [[ "$i" == "foo" then ]]; then
+if [[ "$i" == "foo" ]]; then
   echo "foo" 
 fi
 
@@ -198,19 +211,6 @@ fi
   </tr>
 
 </table>
-
-## Example
-
-    #!/usr/bin/env powscript
-    
-    usage()
-      echo "Usage: $(basename "$0") <number>"
-
-    switch $1
-      case 0-9
-        echo "arg 1 is a number"
-      case *
-        usage && exit
 
 
 ## Wiki
