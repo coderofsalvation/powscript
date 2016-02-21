@@ -65,7 +65,7 @@ function dofoo(){
       <pre>
         <code>
 switch $foo
-  case 0-9
+  case [0-9]*
     echo "bar"
   case *
     echo "foo"
@@ -76,7 +76,7 @@ switch $foo
       <pre>
         <code>
 case $foo in
-  0-9)
+  [0-9]*)
     echo "bar"
     ;;
   *)
