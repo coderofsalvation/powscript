@@ -240,7 +240,7 @@ source  'foo.bash'
 
 ## Modules 
 
-Easily release portable bash-scripts by using modules and `powscript --compile myapp.pow > all-in-one.bash`
+Create 1 portable bashscript
 
 ####  /myapp.pow
 
@@ -260,6 +260,8 @@ Easily release portable bash-scripts by using modules and `powscript --compile m
     function bar(){
       echo "hi im a bash module"
     }
+
+Then run `powscript --compile myapp.pow > all-in-one.bash`
 
 ## Wiki
 
