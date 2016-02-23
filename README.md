@@ -240,7 +240,7 @@ source  'foo.bash'
 
 ## Modules 
 
-Create 1 portable bashscript
+Create 1 portable bashscript.
 
 ####  /myapp.pow
 
