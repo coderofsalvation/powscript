@@ -226,10 +226,8 @@ require 'mymodule.pow' # = include bash- or powscript (portable)
     <td>
       <pre>
         <code>
-# in contrast to 'source' or '.'
-# require will 'bake' the file into the output
-# like so: powscript --compile app.pow > app_including_modules.bash
-# for runtime inclusion just use bash's 'source' like so
+# --compile will 'bake' the file into the output
+# for dynamic runtime inclusion just use:
 
 source  'foo.bash'
         </code>
