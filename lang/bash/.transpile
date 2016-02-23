@@ -52,19 +52,18 @@ transpile_for(){
   code="$1; do"
   indent="$(makeindent $i)"
   # iterate over associative array
-  [[ "$code" =~ " of" ]] && [[ "$code" =~ [a-zA-Z_0-9],[a-zA-Z_0-9] ]] && {
+  if [[ "$code" =~ [a-zA-Z_0-9],[a-zA-Z_0-9] ]]; then
     local key="$(echo "$code" | awk '{ print $2 }' | awk -F',' '{ print $1 }')"
     local value="$(echo "$code" | awk '{ print $2 }' | awk -F',' '{ print $2 }')"
     code="$code\n$indent$value=\"\${$arr[\$$key]}\""
     code="${code/,$value/}"
     code="${code/ of / in }"
     code="${code/ $arr/ \"\${!$arr\[@\]\}\"}";
-  }
-  # iterate over indexed array
-  [[ "$code" =~ " in "[a-zA-Z_] ]] && {
+  else
+    # iterate over indexed array
     local key="$(echo "$code" | awk '{ print $2 }')"
     code="${code/ $arr/ \"\${$arr\[@\]\}\"}"
-  }
+  fi
   echo -e "$code" | transpile_all
 }
 

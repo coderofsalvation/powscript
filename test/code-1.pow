@@ -1,3 +1,5 @@
+require 'mymod.pow'
+
 foo="1 2 3 4 5"
 
 # comparison

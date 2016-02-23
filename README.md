@@ -131,7 +131,7 @@ fi
 foo={}
 foo["bar"]="a value"
 
-for k,v of foo
+for k,v in foo
   echo k=$k
   echo v=$v
   
@@ -214,8 +214,53 @@ fi
     </td>
   </tr>
 
+  <tr>
+    <td><b>require module</b></td>
+    <td>
+      <pre>
+        <code>
+require 'mymodule.pow' # = include bash- or powscript (portable)
+        </code>
+      </pre>
+    </td>
+    <td>
+      <pre>
+        <code>
+# in contrast to 'source' or '.'
+# require will 'bake' the file into the output
+# like so: powscript --compile app.pow > app_including_modules.bash
+# for runtime inclusion just use bash's 'source' like so
+
+source  'foo.bash'
+        </code>
+      </pre>
+    </td>
+  </tr>
+
 </table>
 
+## Modules 
+
+Easily release portable bash-scripts by using modules and `powscript --compile myapp.pow > all-in-one.bash`
+
+####  /myapp.pow
+
+    require 'mod/mymod.pow'
+    require 'mod/foo.bash'
+
+    mymodfunc
+    bar
+
+#### /mod/mymod.pow
+
+    mymodfunc()
+      echo "hi im a powscript module!"
+
+#### /mod/foo.bash
+
+    function bar(){
+      echo "hi im a bash module"
+    }
 
 ## Wiki
 

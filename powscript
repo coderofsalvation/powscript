@@ -1,9 +1,11 @@
 #!/bin/bash
+set -e
+shopt -s extglob
+
+
 indent_current=0
 indent_last=0
 stack=()
-set -e
-shopt -s extglob
 
 getindent(){
   echo "$1" | sed "s/\n/ /g" | awk '{ match($0, /^ */); printf("%d", RLENGTH) }' | sed 's/00/0/g'
@@ -55,19 +57,18 @@ transpile_for(){
   code="$1; do"
   indent="$(makeindent $i)"
   # iterate over associative array
-  [[ "$code" =~ " of" ]] && [[ "$code" =~ [a-zA-Z_0-9],[a-zA-Z_0-9] ]] && {
+  if [[ "$code" =~ [a-zA-Z_0-9],[a-zA-Z_0-9] ]]; then
     local key="$(echo "$code" | awk '{ print $2 }' | awk -F',' '{ print $1 }')"
     local value="$(echo "$code" | awk '{ print $2 }' | awk -F',' '{ print $2 }')"
     code="$code\n$indent$value=\"\${$arr[\$$key]}\""
     code="${code/,$value/}"
     code="${code/ of / in }"
     code="${code/ $arr/ \"\${!$arr\[@\]\}\"}";
-  }
-  # iterate over indexed array
-  [[ "$code" =~ " in "[a-zA-Z_] ]] && {
+  else
+    # iterate over indexed array
     local key="$(echo "$code" | awk '{ print $2 }')"
     code="${code/ $arr/ \"\${$arr\[@\]\}\"}"
-  }
+  fi
   echo -e "$code" | transpile_all
 }
 
@@ -109,114 +110,6 @@ transpile_function(){
 }
 ######################### begin-of-powscript-functions
 powfunctions="compose empty foreach keys last map math on pick values"
-
-
-indent_current=0
-indent_last=0
-stack=()
-
-getindent(){
-  echo "$1" | sed "s/\n/ /g" | awk '{ match($0, /^ */); printf("%d", RLENGTH) }' | sed 's/00/0/g'
-}
-
-push (){ 
-  var="$1"; shift 1; eval "$var+=($(printf "'%s' " "$@"))"; 
-}
-
-makeindent(){  
-  for((i=0;i<$1;i++)); do printf " "; done
-}
-
-stack_pop(){
-  index=${#stack[@]}
-  index=$((index-1))
-  [[ $index == "-1" ]] && return 0
-  [[ "$1" =~ ^([ ]*else) ]] && echo "$1" && continue # ignore else
-  lastitem="${stack[$index]}"
-  unset stack["$index"]
-  echo -e "$(makeindent $((indent_last-2)) )$lastitem"
-  if ! (( (indent_last-2) == indent_current )); then 
-    indent_last=$((indent_last-2))
-    stack_pop "$1"
-  fi
-}
-
-stack_update(){
-  indent_last="$indent_current"
-  indent_current=$(getindent "$1")
-  [[ -n $DEBUG ]] && echo ">> $indent_last|$indent_current|stacksize:${#stack[@]}"
-  if ((indent_current < indent_last)); then stack_pop "$1"; fi
-}
-
-transpile_all(){
-  cat - | while IFS="" read line; do
-    i=$(getindent "$line")
-    [[ "$line" =~ "={}" ]] && echo "$(makeindent $i)declare -A ${line/=\{\}/}" && continue
-    [[ "$line" =~ "=[]" ]] && echo "$(makeindent $i)declare -a ${line/=\[\]/}" && continue
-    [[ "$line" =~ \$[A-Za-z_0-9] ]] && line="$(echo "$line" | sed -E 's/([ =])\$([a-zA-Z_0-9]+)/\1"$\2"/gi' )"
-    echo "$line"
-  done
-}
-
-transpile_for(){
-  push stack "done"
-  local arr="$(echo "$1" | awk '{ print $4 }' )"
-  local i=$(( $(getindent "$code") + 2 ))
-  code="$1; do"
-  indent="$(makeindent $i)"
-  # iterate over associative array
-  [[ "$code" =~ " of" ]] && [[ "$code" =~ [a-zA-Z_0-9],[a-zA-Z_0-9] ]] && {
-    local key="$(echo "$code" | awk '{ print $2 }' | awk -F',' '{ print $1 }')"
-    local value="$(echo "$code" | awk '{ print $2 }' | awk -F',' '{ print $2 }')"
-    code="$code\n$indent$value=\"\${$arr[\$$key]}\""
-    code="${code/,$value/}"
-    code="${code/ of / in }"
-    code="${code/ $arr/ \"\${!$arr\[@\]\}\"}";
-  }
-  # iterate over indexed array
-  [[ "$code" =~ " in "[a-zA-Z_] ]] && {
-    local key="$(echo "$code" | awk '{ print $2 }')"
-    code="${code/ $arr/ \"\${$arr\[@\]\}\"}"
-  }
-  echo -e "$code" | transpile_all
-}
-
-transpile_if(){
-  push stack "fi"
-  code="${1/if not/if \!}"
-  code="${code//and /&& }"
-  code="${code//or /|| }"
-  code="${code/if /if [[ }"
-  code="${code/match /=~ }"
-  code="$code \]\]; then"
-  code="${code// is / == }"
-  echo "$code" | transpile_all
-}
-
-transpile_switch(){
-  push stack "esac"
-  echo "${1/switch/case} in" 
-}
-
-transpile_case(){
-  push stack "  ;;"
-  echo "${1/case /})"
-}
-
-transpile_array_push(){
-  code="${1/+=/+=(}"
-  echo "$code)"
-}
-
-transpile_array_get(){
-  code="${1/\$/\"\$\{}"
-  echo "$code}\""
-}
-
-transpile_function(){
-  push stack "}"
-  echo "$1{"
-}
 # compose function out of 2 functions
 # example: 
 #   compose functionname func2 func1
@@ -291,7 +184,12 @@ values(){
 }
 ######################### end-of-powscript-functions
 # parse args
+date=$(date +%Y%m%d%H%M%S)
+rand=$(cat /dev/urandom | tr -cd [:alnum:] | head -c 4)
+ID=$date"_"$rand
 includefuncs=""
+requires=""
+tmpfile="/tmp/.$(whoami).powscript.$date_$rand"
 shopt -s extglob
 
 input="$1"
@@ -301,7 +199,7 @@ for arg in "$@"; do
   case "$arg" in
     --compile) 
       startfunction=compile
-      input="$2"
+      shift
       ;;
   esac
 done
@@ -314,9 +212,9 @@ empty "$1" && {
 }
 
 transpile_sugar(){
-  [[ ! ${#includefuncs} == 0 ]] && echo -e "\n#\n# application code\n#\n"
   while IFS="" read line; do 
     stack_update "$line"
+    [[ "$line" =~ ^(require )                      ]] && continue 
     [[ "$line" =~ (\$[a-zA-Z_0-9]*\[)              ]] && transpile_array_get "$line"  && continue
     [[ "$line" =~ ^([ ]*for )                      ]] && transpile_for "$line"        && continue
     [[ "$line" =~ ^([ ]*if )                       ]] && transpile_if  "$line"        && continue
@@ -325,34 +223,45 @@ transpile_sugar(){
     [[ "$line" =~ ([a-zA-Z_0-9]\+=)                ]] && transpile_array_push "$line" && continue
     [[ "$line" =~ \(\)$                       ]] && transpile_function "$line"   && continue
     echo "$line" | transpile_all
-  done <  $input
+  done <  $1
   stack_update ""
+}
+
+cat_requires(){
+  while IFS="" read line; do 
+    [[ "$line" =~ ^(require ) ]] && {                                               # include require-calls
+      local file="${line//*require /}"; file="${file//[\"\']/}"
+      echo -e "#\n# $line (included by powscript\n#\n"
+      cat "$file";
+    };
+  done <  $1
+  echo "" 
 }
 
 transpile_functions(){
   # *FIXME* this is bruteforce: if functionname is mentioned in textfile, include it
   while IFS="" read line; do 
-    regex="(${powfunctions// /|})" 
+    regex="(${powfunctions// /|})"                                                  # include powscript-functions
     echo "$line" | grep -qE "$regex" && {
       for func in $powfunctions; do
         [[ "$line" =~ ^([ ]*)$func([ ]*) ]] && includefuncs="$includefuncs $func"
       done;
     }
-  done <  $input
+  done <  $1
   [[ ! ${#includefuncs} == 0 ]] && echo -e "#\n# generated by powscript (https://github.com/coderofsalvation/powscript)\n#\n"
-  for func in $includefuncs; do
-    declare -f $func
-  done
+  for func in $includefuncs; do declare -f $func; done
 }
 
 compile(){
-  transpile_functions
-  transpile_sugar
+  local dir="$(dirname "$1")"; local file="$(basename "$1")"; cd "$dir" &>/dev/null
+  { cat_requires "$file" ; echo -e "#\n# application code\n#\n"; cat "$file"; } > $tmpfile
+  transpile_functions "$tmpfile"
+  transpile_sugar "$tmpfile"
+  rm $tmpfile
 }
 
 runfile(){
-  shift 
-  eval "$(compile $input)"
+  eval "$(compile "$1")"
 }
 
 $startfunction "$@" #"${0//.*\./}"

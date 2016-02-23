@@ -4,12 +4,12 @@ for i in lang/*; do
   lang="$(basename $i)"
   { 
     echo "#!/bin/$lang" 
-    cat lang/$lang/.transpile 
+    cat lang/$lang/.settings lang/$lang/.transpile 
     echo "######################### begin-of-powscript-functions"
     cd lang/$lang &>/dev/null
     echo "powfunctions=\"$(echo *)\""
     cd - &>/dev/null
-    cat lang/$lang/.settings lang/$lang/.transpile lang/$lang/*
+    cat lang/$lang/*
     echo "######################### end-of-powscript-functions"
     cat src/powscript.$lang
   } > powscript && chmod 755 powscript

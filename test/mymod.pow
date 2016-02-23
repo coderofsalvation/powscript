@@ -1,0 +1,2 @@
+modulefunc()
+  echo "hi im a module!"
