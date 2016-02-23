@@ -9,7 +9,7 @@ for i in lang/*; do
     cd lang/$lang &>/dev/null
     echo "powfunctions=\"$(echo *)\""
     cd - &>/dev/null
-    cat lang/$lang/.transpile lang/$lang/.settings lang/$lang/*
+    cat lang/$lang/.settings lang/$lang/.transpile lang/$lang/*
     echo "######################### end-of-powscript-functions"
     cat src/powscript.$lang
   } > powscript && chmod 755 powscript

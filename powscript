@@ -2,6 +2,8 @@
 indent_current=0
 indent_last=0
 stack=()
+set -e
+shopt -s extglob
 
 getindent(){
   echo "$1" | sed "s/\n/ /g" | awk '{ match($0, /^ */); printf("%d", RLENGTH) }' | sed 's/00/0/g'
@@ -107,6 +109,8 @@ transpile_function(){
 }
 ######################### begin-of-powscript-functions
 powfunctions="compose empty foreach keys last map math on pick values"
+
+
 indent_current=0
 indent_last=0
 stack=()
@@ -213,10 +217,6 @@ transpile_function(){
   push stack "}"
   echo "$1{"
 }
-set -e
-shopt -s extglob
-
-
 # compose function out of 2 functions
 # example: 
 #   compose functionname func2 func1
