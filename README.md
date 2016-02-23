@@ -219,7 +219,8 @@ fi
     <td>
       <pre>
         <code>
-require 'mymodule.pow' # = include bash- or powscript (portable)
+# include bash- or powscript (portable)
+require 'mymodule.pow' 
         </code>
       </pre>
     </td>
