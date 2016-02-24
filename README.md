@@ -305,7 +305,8 @@ n/a
 math '9 / 2'
 math '9 / 2' 4
 # outputs: '4' and '4.5000'
-# NOTE: the second requires `bc` to be installed for floatingpoint math
+# NOTE: the second requires `bc` 
+# to be installed for floatingpoint math
         </code>
       </pre>
     </td>
