@@ -224,10 +224,12 @@ fi
     <td>
       <pre>
         <code>
-# include bash- or powscript (compiletime/portable)
+# include bash- or powscript 
+# at compiletime (=portable)
 require 'mymodule.pow' 
 
-# include remote bashscript (at runtime)
+# include remote bashscript 
+# at runtime
 source foo.bash 
         </code>
       </pre>
