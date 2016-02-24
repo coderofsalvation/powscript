@@ -82,7 +82,7 @@ transpile_if(){
   code="${code//!= /-ne }"
   [[ "$code" =~ (if[ ]) && "$firstvar" =~ ^([\"\$]) ]] && code="${code/if /if [[ }"
   code="${code/match /=~ }"
-  [[ "$code" =~ "[[" ]] && code="$code \]\]"
+  [[ "$code" =~ "[[" ]] && code="$code ]]"
   code="$code; then"
   code="${code// is / == }"
   echo "$code" | transpile_all
@@ -110,5 +110,13 @@ transpile_array_get(){
 
 transpile_function(){
   push stack "}"
-  echo "$1{"
+  local curindent=$(( $(getindent "$1") + 2 ))
+  local indent="$(makeindent $curindent)"
+  fields="${1//*\(/}"
+  fields="${fields//\)*/}"
+  fields="${fields// /}"
+  fields="${fields//,/ }"
+  echo "${1//\(*\)/()}{"
+  local i=1; 
+  for field in $fields; do echo "$indent""local $field=\"\$$i\""; i=$((i+1)); done
 }

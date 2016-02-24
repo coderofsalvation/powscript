@@ -13,20 +13,21 @@
     #!/usr/bin/env powscript
     
     usage()
-      echo "foo <number>"
+      echo "yapp <number>"
       
     switch $1
       case [0-9]*
         echo "arg 1 is a number"
       case *
-        help=$(usage)
-        echo "Usage: $help" and exit
+        if empty $1
+          help=$(usage myapp)
+          echo "Usage: $help" && exit
 
 ## Features
 
 * memorizable syntax: more human-like, less robotic { ! [[ @ ]] || ~ and so on
 * safetynets: automatic quoting, halt on error
-* comfort: easy arrays, functional programming
+* comfort: easy arrays, functional programming, named variables instead of positionals
 * written in bash 4, 'zero'-dependency solution
 * hasslefree: no installation or compilation using 3rd party software
 
@@ -44,17 +45,23 @@
     <td>
       <pre>
         <code>
-dofoo()
+foo( a, b )
   echo "doing foo"
+
+foo one two
         </code>
       </pre>
     </td>
     <td>
       <pre>
         <code>
-function dofoo(){
-  echo "doing foo"
+foo(){
+  local a="$1"
+  local b="$2"
+  echo a="$a" b="$b"
 }
+
+foo one two
         </code>
       </pre>
     </td>

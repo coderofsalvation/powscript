@@ -29,14 +29,14 @@ empty "$1" && {
 transpile_sugar(){
   while IFS="" read -r line; do 
     stack_update "$line"
-    [[ "$line" =~ ^(require )                      ]] && continue 
-    [[ "$line" =~ (\$[a-zA-Z_0-9]*\[)              ]] && transpile_array_get "$line"  && continue
-    [[ "$line" =~ ^([ ]*for )                      ]] && transpile_for "$line"        && continue
-    [[ "$line" =~ ^([ ]*if )                       ]] && transpile_if  "$line"        && continue
-    [[ "$line" =~ ^([ ]*switch )                   ]] && transpile_switch "$line"     && continue
-    [[ "$line" =~ ^([ ]*case )                     ]] && transpile_case "$line"       && continue
-    [[ "$line" =~ ([a-zA-Z_0-9]\+=)                ]] && transpile_array_push "$line" && continue
-    [[ "$line" =~ \(\)$                       ]] && transpile_function "$line"   && continue
+    [[ "$line" =~ ^(require )                           ]] && continue 
+    [[ "$line" =~ (\$[a-zA-Z_0-9]*\[)                   ]] && transpile_array_get "$line"  && continue
+    [[ "$line" =~ ^([ ]*for )                           ]] && transpile_for "$line"        && continue
+    [[ "$line" =~ ^([ ]*if )                            ]] && transpile_if  "$line"        && continue
+    [[ "$line" =~ ^([ ]*switch )                        ]] && transpile_switch "$line"     && continue
+    [[ "$line" =~ ^([ ]*case )                          ]] && transpile_case "$line"       && continue
+    [[ "$line" =~ ([a-zA-Z_0-9]\+=)                     ]] && transpile_array_push "$line" && continue
+    [[ "$line" =~ ^([a-zA-Z_0-9]*\([a-zA-Z_0-9, ]*\))   ]] && transpile_function "$line"   && continue
     echo "$line" | transpile_all
   done <  $1
   stack_update ""
@@ -76,7 +76,8 @@ compile(){
 }
 
 runfile(){
-  eval "$(compile "$1")"
+  file=$1; shift;
+  eval "$(compile "$file")"
 }
 
 $startfunction "$@" #"${0//.*\./}"

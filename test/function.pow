@@ -1,0 +1,7 @@
+bbar()
+  echo flop
+
+foo( a, b )
+  echo a=$a b=$b
+
+foo one two
