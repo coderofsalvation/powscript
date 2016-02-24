@@ -220,7 +220,7 @@ fi
   </tr>
 
   <tr>
-    <td><b>`require` module</b></td>
+    <td><b>require module</b></td>
     <td>
       <pre>
         <code>
@@ -237,22 +237,22 @@ source foo.bash
     <td>
       <pre>
         <code>
-require is n/a
+require is 
         </code>
       </pre>
     </td>
   </tr>
   
   <tr>
-    <td><b>`empty` / `isset` checks</b></td>
+    <td><b>empty / isset checks</b></td>
     <td>
       <pre>
         <code>
 bar()
   if isset $1
     echo "no argument given"
-  if empty $1
-    echo "empty string given"
+  if not empty $1
+    echo "string given"
 
 foo "$@"    
         </code>
@@ -277,7 +277,7 @@ foo "$@"
   </tr>
   
   <tr>
-    <td><b>`pipemap` unwraps a pipe</b></td>
+    <td><b>pipemap unwraps a pipe</b></td>
     <td>
       <pre>
         <code>
@@ -293,21 +293,45 @@ echo -e "foo\nbar\n" | pipemap myfunc
     <td>
       <pre>
         <code>
-n/a
+
         </code>
       </pre>
     </td>
   </tr>
   
   <tr>
-    <td><b>easy `math`</b></td>
+    <td><b>FP: curry</b></td>
+    <td>
+      <pre>
+        <code>
+myfunc()
+  echo "1=$1 2=$2"
+
+arg="one"
+echo -e "foo\nbar\n" | pipemap myfunc $arg
+
+# outputs: '1=one 2=foo' and '1=one 2=bar'
+        </code>
+      </pre>
+    </td>
+    <td>
+      <pre>
+        <code>
+
+        </code>
+      </pre>
+    </td>
+  </tr>
+  
+  <tr>
+    <td><b>easy math</b></td>
     <td>
       <pre>
         <code>
 math '9 / 2'
 math '9 / 2' 4
 # outputs: '4' and '4.5000'
-# NOTE: the second requires `bc` 
+# NOTE: the second requires bc 
 # to be installed for floatingpoint math
         </code>
       </pre>
@@ -315,7 +339,7 @@ math '9 / 2' 4
     <td>
       <pre>
         <code>
-n/a
+
         </code>
       </pre>
     </td>
@@ -338,7 +362,7 @@ map foo values # prints value per line
     <td>
       <pre>
         <code>
-n/a
+
         </code>
       </pre>
     </td>
@@ -362,7 +386,7 @@ map foo printitem
     <td>
       <pre>
         <code>
-n/a
+
         </code>
       </pre>
     </td>
@@ -385,7 +409,7 @@ map foo values | unpipe pick bar
     <td>
       <pre>
         <code>
-n/a
+
         </code>
       </pre>
     </td>
@@ -412,7 +436,7 @@ decorate_string "foo"
     <td>
       <pre>
         <code>
-n/a
+
         </code>
       </pre>
     </td>
@@ -445,6 +469,14 @@ Create 1 portable bashscript.
 
 Then run `powscript --compile myapp.pow > all-in-one.bash`
 
+## Todo
+
+* `on`
+* `first`
+* `last`
+* `filter`
+
 ## Wiki
 
+* [Developer info / Contributions](https://github.com/coderofsalvation/powscript/wiki/Contributing)
 * [Similar projects](https://github.com/coderofsalvation/powscript/wiki/Similar-projects)

@@ -1,0 +1,4 @@
+pipemap(){
+  func="$1"; shift
+  cat - | while read line; do $func "$@" "$line"; done
+}
