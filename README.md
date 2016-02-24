@@ -237,7 +237,6 @@ source foo.bash
     <td>
       <pre>
         <code>
-require is 
         </code>
       </pre>
     </td>
@@ -307,10 +306,10 @@ echo -e "foo\nbar\n" | pipemap myfunc
 myfunc()
   echo "1=$1 2=$2"
 
-arg="one"
-echo -e "foo\nbar\n" | pipemap myfunc $arg
+curry curriedfunc abc
+echo -e "foo\nbar\n" | pipemap curriedfunc
 
-# outputs: '1=one 2=foo' and '1=one 2=bar'
+# outputs: '1=abc 2=foo' and '1=abc 2=bar'
         </code>
       </pre>
     </td>
@@ -475,6 +474,7 @@ Then run `powscript --compile myapp.pow > all-in-one.bash`
 * `first`
 * `last`
 * `filter`
+* `curry`
 
 ## Wiki
 
