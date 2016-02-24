@@ -1,4 +1,6 @@
-set -e
-shopt -s extglob
+set -e                 # halt on error
+set +m                 #
+shopt -s lastpipe      # flexible while loops (maintain scope)
+shopt -s extglob       # regular expressions
 
 

@@ -13,20 +13,21 @@
     #!/usr/bin/env powscript
     
     usage()
-      echo "Usage: foo <number>"
-
+      echo "foo <number>"
+      
     switch $1
       case [0-9]*
         echo "arg 1 is a number"
       case *
-        usage and exit
+        help=$(usage)
+        echo "Usage: $help" and exit
 
 ## Features
 
 * memorizable syntax: more human-like, less robotic { ! [[ @ ]] || ~ and so on
 * safetynets: automatic quoting, halt on error
 * comfort: easy arrays, functional programming
-* written in bash, 'zero'-dependency solution
+* written in bash 4, 'zero'-dependency solution
 * hasslefree: no installation or compilation using 3rd party software
 
 ## Reference
@@ -89,7 +90,7 @@ esac
   </tr>
 
   <tr>
-    <td><b>if statement</b></td>
+    <td><b>easy if statements</b></td>
     <td>
       <pre>
         <code>
@@ -100,7 +101,9 @@ else
 
 if not $j is "foo" and $x is "bar"
   if $j is "foo" or $j is "xfoo"
-    echo "foo!" 
+    if $j > $y and $j != $y or $j >= $y
+      echo "foo"
+
         </code>
       </pre>
     </td>
@@ -113,9 +116,11 @@ else
   echo "bar"
 fi
 
-if [[ ! "$j" == "foo" && "$x" == "bar"]]; then
-  if [[ "$j" == "foo" || "$j" == "xfoo"]]; then
-    echo "foo!" 
+if [[ ! "$j" == "foo" && "$x" == "bar" ]]; then
+  if [[ "$j" == "foo" || "$j" == "xfoo" ]]; then
+    if [[ "$j" -gt "$y" && "$j" -ne "$y" || "$j" -ge "$y" ]]; then
+      echo "foo"
+    fi
   fi
 fi
         </code>
@@ -215,22 +220,196 @@ fi
   </tr>
 
   <tr>
-    <td><b>require module</b></td>
+    <td><b>`require` module</b></td>
     <td>
       <pre>
         <code>
-# include bash- or powscript (portable)
+# include bash- or powscript (compiletime/portable)
 require 'mymodule.pow' 
+
+# include remote bashscript (at runtime)
+source foo.bash 
         </code>
       </pre>
     </td>
     <td>
       <pre>
         <code>
-# --compile will 'bake' the file into the output
-# for dynamic runtime inclusion just use:
+require is n/a
+        </code>
+      </pre>
+    </td>
+  </tr>
+  
+  <tr>
+    <td><b>`empty` / `isset` checks</b></td>
+    <td>
+      <pre>
+        <code>
+bar()
+  if isset $1
+    echo "no argument given"
+  if empty $1
+    echo "empty string given"
 
-source  'foo.bash'
+foo "$@"    
+        </code>
+      </pre>
+    </td>
+    <td>
+      <pre>
+        <code>
+foo(){
+  if [[ "${#1}" == 0 ]]; then
+    echo "no argument given"
+  fi
+  if [[ ! "${#1}" == 0 ]]; then
+    echo "string given"
+  fi
+}
+
+foo "$@"        
+        </code>
+      </pre>
+    </td>
+  </tr>
+  
+  <tr>
+    <td><b>`pipemap` unwraps a pipe</b></td>
+    <td>
+      <pre>
+        <code>
+myfunc()
+  echo "value=$1"
+
+echo -e "foo\nbar\n" | pipemap myfunc
+
+# outputs: 'value=foo' and 'value=bar'
+        </code>
+      </pre>
+    </td>
+    <td>
+      <pre>
+        <code>
+n/a
+        </code>
+      </pre>
+    </td>
+  </tr>
+  
+  <tr>
+    <td><b>easy `math`</b></td>
+    <td>
+      <pre>
+        <code>
+math '9 / 2'
+math '9 / 2' 4
+# outputs: '4' and '4.5000'
+# NOTE: the second requires `bc` to be installed for floatingpoint math
+        </code>
+      </pre>
+    </td>
+    <td>
+      <pre>
+        <code>
+n/a
+        </code>
+      </pre>
+    </td>
+  </tr>
+  
+  <tr>
+    <td><b>FP: array values, keys</b></td>
+    <td>
+      <pre>
+        <code>
+foo={}
+foo["one"]="foo"
+foo["two"]="bar"
+map foo keys   # prints key per line
+map foo values # prints value per line
+
+        </code>
+      </pre>
+    </td>
+    <td>
+      <pre>
+        <code>
+n/a
+        </code>
+      </pre>
+    </td>
+  </tr>
+  
+  <tr>
+    <td><b>FP: map</b></td>
+    <td>
+      <pre>
+        <code>
+printitem()
+  echo "key=$1 value=$2"  
+
+foo={}
+foo["one"]="foo"
+foo["two"]="bar"
+map foo printitem
+        </code>
+      </pre>
+    </td>
+    <td>
+      <pre>
+        <code>
+n/a
+        </code>
+      </pre>
+    </td>
+  </tr>
+  
+  <tr>
+    <td><b>FP: pick</b></td>
+    <td>
+      <pre>
+        <code>
+foo={}
+bar={}
+foo["one"]="foo"
+bar["foo"]="123"
+map foo values | unpipe pick bar
+# outputs: '123'
+        </code>
+      </pre>
+    </td>
+    <td>
+      <pre>
+        <code>
+n/a
+        </code>
+      </pre>
+    </td>
+  </tr>
+
+  <tr>
+    <td><b>FP: compose</b></td>
+    <td>
+      <pre>
+        <code>
+funcA()
+  echo "($1)"
+
+funcB()
+  echo "|$1|"
+
+compose decorate_string funcA funcB
+decorate_string "foo"
+
+# outputs: '(|foo|)'
+        </code>
+      </pre>
+    </td>
+    <td>
+      <pre>
+        <code>
+n/a
         </code>
       </pre>
     </td>

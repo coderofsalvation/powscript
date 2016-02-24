@@ -1,7 +1,7 @@
 # maps a pipe stream to individual calls
 # example:
-#  foreach foo values | map echo
+#  map foo somefunction
 map(){
-  set +m ; shopt -s lastpipe
-  cat - | while read line; do "$@" "$line"; done
+  local arr="$1"; shift; local func="$1"; shift;
+  eval "for i in \"\${!$arr[@]}\"; do $func \"\$@\" \"\$i\" \"\${$arr[\$i]}\"; done"
 }

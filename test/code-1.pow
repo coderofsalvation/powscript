@@ -4,6 +4,9 @@ foo="1 2 3 4 5"
 
 # comparison
 i="foo"
+if "$i" is "foo"
+  echo "foo" 
+
 if $i is "foo"
   echo "foo" 
 else
@@ -11,7 +14,8 @@ else
 
 if not $j is "foo" and $x is "bar"
   if $j is "foo" or $j is "xfoo"
-    echo "foo!" 
+    if $j > $y and $j != $y or $j >= $y
+      echo "foo"
 
 # extended pattern matching 
 # (google 'extglob' for more
@@ -50,6 +54,58 @@ switch()
       echo "bar"
 
 
+bar()
+  if isset $1
+    echo "no argument given"
+  if empty $1
+    echo "empty string given"
+
+bar one $@
+
+printitem()
+  echo "key=$1 value=$2"  
+
+foo={}
+foo["one"]="foo"
+foo["two"]="bar"
+map foo printitem
+
+
+myfunc()
+  if $1 > 1
+    echo "$1"
 
 simple_arrays
 associative_arrays
+
+foo={}
+bar={}
+foo["one"]="foo"
+bar["foo"]="123"
+map foo values | pipemap pick bar
+echo last="$(last foo)"
+
+math '9 / 2'
+math '9 / 2' 4
+
+funcA()
+  echo "($1)"
+
+funcB()
+  echo "|$1|"
+
+compose decorate_string funcA funcB
+decorate_string "foo"
+
+usage()
+  echo "foo <number>"
+  
+switch $1
+  case [0-9]*
+    echo "arg 1 is a number"
+  case *
+    help=$(usage)
+    echo "Usage: $help" and exit
+
+exit 0
+#filter foo myfunc 

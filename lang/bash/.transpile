@@ -38,9 +38,10 @@ stack_update(){
 transpile_all(){
   cat - | while IFS="" read line; do
     i=$(getindent "$line")
-    [[ "$line" =~ "={}" ]] && echo "$(makeindent $i)declare -A ${line/=\{\}/}" && continue
-    [[ "$line" =~ "=[]" ]] && echo "$(makeindent $i)declare -a ${line/=\[\]/}" && continue
-    [[ "$line" =~ \$[A-Za-z_0-9] ]] && line="$(echo "$line" | sed -E 's/([ =])\$([a-zA-Z_0-9]+)/\1"$\2"/gi' )"
+    [[ "$line" =~ ^(#) ]] && local _comment="#"
+    [[ "$line" =~ "={}" ]] && echo "$_comment$(makeindent $i)declare -A ${line/=\{\}/}" && continue
+    [[ "$line" =~ "=[]" ]] && echo "$_comment$(makeindent $i)declare -a ${line/=\[\]/}" && continue
+    [[ "$line" =~ \$[A-Za-z_0-9@] ]] && line="$(echo "$line" | sed -E 's/([ =])\$([a-zA-Z_0-9@]+)/\1"$\2"/gi' )"
     echo "$line"
   done
 }
@@ -70,11 +71,19 @@ transpile_for(){
 transpile_if(){
   push stack "fi"
   code="${1/if not/if \!}"
+  firstvar="${code/\! /}"
+  firstvar="$(echo "$firstvar" | awk '{ print $2 }')"
   code="${code//and /&& }"
   code="${code//or /|| }"
-  code="${code/if /if [[ }"
+  code="${code//> /-gt }"
+  code="${code//>= /-ge }"
+  code="${code//< /-lt }"
+  code="${code//<= /-le }"
+  code="${code//!= /-ne }"
+  [[ "$code" =~ (if[ ]) && "$firstvar" =~ ^([\"\$]) ]] && code="${code/if /if [[ }"
   code="${code/match /=~ }"
-  code="$code \]\]; then"
+  [[ "$code" =~ "[[" ]] && code="$code \]\]"
+  code="$code; then"
   code="${code// is / == }"
   echo "$code" | transpile_all
 }
