@@ -6,7 +6,7 @@
 
     $ wget "https://raw.githubusercontent.com/coderofsalvation/powscript/master/powscript" -O /usr/local/bin/powscript && chmod 755 /usr/local/bin/powscript
     $ powscript myscript.pow                        # run directly
-    $ powscript --compile myscript.pow > myscript   # compile to bashscript
+    $ powscript --compile myscript.pow > myscript   # output bashscript
 
 ## Example
 
