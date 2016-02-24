@@ -27,7 +27,7 @@ empty "$1" && {
 }
 
 transpile_sugar(){
-  while IFS="" read line; do 
+  while IFS="" read -r line; do 
     stack_update "$line"
     [[ "$line" =~ ^(require )                      ]] && continue 
     [[ "$line" =~ (\$[a-zA-Z_0-9]*\[)              ]] && transpile_array_get "$line"  && continue
@@ -43,7 +43,7 @@ transpile_sugar(){
 }
 
 cat_requires(){
-  while IFS="" read line; do 
+  while IFS="" read -r line; do 
     [[ "$line" =~ ^(require ) ]] && {                                               # include require-calls
       local file="${line//*require /}"; file="${file//[\"\']/}"
       echo -e "#\n# $line (included by powscript\n#\n"
@@ -55,7 +55,7 @@ cat_requires(){
 
 transpile_functions(){
   # *FIXME* this is bruteforce: if functionname is mentioned in textfile, include it
-  while IFS="" read line; do 
+  while IFS="" read -r line; do 
     regex="((^|[ ])${powfunctions// /[ ]|(^|[ ])})"                                                  # include powscript-functions
     echo "$line" | grep -qE "$regex" && {
       for func in $powfunctions; do

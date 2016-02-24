@@ -36,7 +36,7 @@ stack_update(){
 }
 
 transpile_all(){
-  cat - | while IFS="" read line; do
+  cat - | while IFS="" read -r line; do
     i=$(getindent "$line")
     [[ "$line" =~ ^(#) ]] && local _comment="#"
     [[ "$line" =~ "={}" ]] && echo "$_comment$(makeindent $i)declare -A ${line/=\{\}/}" && continue
