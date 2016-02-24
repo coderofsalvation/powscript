@@ -483,6 +483,10 @@ Then run `powscript --compile myapp.pow > all-in-one.bash`
 * `filter`
 * `curry`
 
+## Examples
+
+* [m3uchecker (19 lines powscript vs 57 lines bash)](https://gist.github.com/coderofsalvation/b1313d287c1f0a7e6cdf)
+
 ## Wiki
 
 * [Developer info / Contributions](https://github.com/coderofsalvation/powscript/wiki/Contributing)
