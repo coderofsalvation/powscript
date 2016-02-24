@@ -46,7 +46,7 @@
       <pre>
         <code>
 foo( a, b )
-  echo "doing foo"
+  echo a=$a b=$b
 
 foo one two
         </code>
