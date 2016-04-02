@@ -1,10 +1,13 @@
 {
   "name": "powscript",
-  "version": "1.0.12",
+  "version": "1.0.13",
   "description": "painless shellscript aka bash for hipsters: a bash transpiler which reduces noise",
   "main": "powscript",
   "directories": {
     "test": "test"
+  },
+  "bin":{
+    "powscript":"powscript"
   },
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1"
