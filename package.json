@@ -1,6 +1,6 @@
 {
   "name": "powscript",
-  "version": "1.0.11",
+  "version": "1.0.12",
   "description": "painless shellscript aka bash for hipsters: a bash transpiler which reduces noise",
   "main": "powscript",
   "directories": {

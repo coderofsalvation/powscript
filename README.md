@@ -1,5 +1,5 @@
 <img alt="" src=".tools/pow.png" width="12%" style="width:12%"/>
-\![Build Status](https://travis-ci.org/coderofsalvation/powscript.svg?branch=master)
+[![Travis build status](https://travis-ci.org/coderofsalvation/powscript.svg?branch=master)](https://travis-ci.org/coderofsalvation/powscript.svg?branch=master)
   write shellscript in a powful way!
 
 ## Usage
