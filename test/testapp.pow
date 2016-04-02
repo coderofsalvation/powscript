@@ -1,5 +1,5 @@
-usage()
-  echo "yapp <number>"
+usage(app)
+  echo "$app <number>"
   
 switch $1
   case [0-9]*

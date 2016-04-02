@@ -12,8 +12,8 @@
 
     #!/usr/bin/env powscript
     
-    usage()
-      echo "yapp <number>"
+    usage(app)
+      echo "$app <number>"
       
     switch $1
       case [0-9]*
@@ -23,6 +23,10 @@
           help=$(usage myapp)
           echo "Usage: $help" && exit
 
+## Reference + Examples
+
+Check the wiki <a href="https://github.com/coderofsalvation/powscript/wiki/Reference">here</a>
+
 ## Features
 
 * memorizable syntax: more human-like, less robotic { ! [[ @ ]] || ~ and so on
@@ -30,10 +34,6 @@
 * comfort: easy arrays, functional programming, named variables instead of positionals
 * written in bash 4, 'zero'-dependency solution
 * hasslefree: no installation or compilation using 3rd party software
-
-## Reference
-
-See the syntax reference + examples <a href="https://github.com/coderofsalvation/powscript/wiki/Reference">here</a>
 
 ## Modules 
 
