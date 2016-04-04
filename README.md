@@ -11,6 +11,7 @@
 ## Example
 
     #!/usr/bin/env powscript
+    require 'foo'
     
     usage(app)
       echo "$app <number>"
@@ -29,11 +30,12 @@ Check the wiki <a href="https://github.com/coderofsalvation/powscript/wiki/Refer
 
 ## Features
 
-* memorizable syntax: more human-like, less robotic { ! [[ @ ]] || ~ and so on
+* indentbased, memorizable, coffeescript-inspired syntax
+* more human-like, less semantic noise like { ! [[ @ ]] || ~=
 * safetynets: automatic quoting, halt on error
-* comfort: easy arrays, functional programming, named variables instead of positionals
+* comfort: easy arrays, easy async, functional programming, named variables instead of positionals
 * written in bash 4, 'zero'-dependency solution
-* hasslefree: no installation or compilation using 3rd party software
+* hasslefree: easy installation without gcc compilation/3rd party software
 
 ## Modules 
 
@@ -59,14 +61,6 @@ Create 1 portable bashscript.
     }
 
 Then run `powscript --compile myapp.pow > all-in-one.bash`
-
-## Todo
-
-* `on`
-* `first`
-* `last`
-* `filter`
-* `curry`
 
 ## Examples
 

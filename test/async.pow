@@ -1,0 +1,24 @@
+myfunc()
+  echo "one"
+  sleep 1s
+  echo "two"
+  sleep 2s
+
+await myfunc 123 then
+  echo "async done"
+
+sleep 4s
+
+await myfunc 123 then |
+  echo "pipe received"
+  cat -
+when done
+  echo "async done"
+
+sleep 4s 
+
+await myfunc 123 then foreachline
+  if $line match (two|one)
+    echo "line: $*"
+when done
+  echo "async done"

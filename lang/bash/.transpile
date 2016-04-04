@@ -1,9 +1,14 @@
 indent_current=0
 indent_last=0
 stack=()
+anonymous_funcs=0
 
 getindent(){
   echo "$1" | sed "s/\n/ /g" | awk '{ match($0, /^ */); printf("%d", RLENGTH) }' | sed 's/00/0/g'
+}
+  
+add_anonymous_func(){
+  anonymous_funcs=$((anonymous_funcs+1))
 }
 
 push (){ 
@@ -86,6 +91,29 @@ transpile_if(){
   code="$code; then"
   code="${code// is / == }"
   echo "$code" | transpile_all
+}
+
+transpile_then(){
+  line="${*/await /}"
+  [[ ! -n $3 ]] && category="then" || category="$3"
+  add_anonymous_func 
+  funcindex=$anonymous_funcs
+  echo -e "\n# async code"
+  echo "_"$category"_$funcindex(){"
+  local curindent=$(getindent "$1")
+  local indent="$(makeindent $curindent)"
+  if [[ $category =~ "pipe" ]]; then
+    add_anonymous_func
+    push stack "}\n$indent""async_$category _then_when_done_$anonymous_funcs "_"$category"_"$funcindex ${line/ then*/}"
+    push stack ""
+  else
+    push stack "}\n$indent""async_$category "_"$category"_"$funcindex ${line/ then*/}"
+  fi
+}
+
+transpile_when_done(){
+  local curindent=$(getindent "$1")
+  echo -e "}\n_then_when_done_"$anonymous_funcs"(){"
 }
 
 transpile_switch(){

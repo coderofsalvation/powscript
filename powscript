@@ -3,14 +3,23 @@ set -e                 # halt on error
 set +m                 #
 shopt -s lastpipe      # flexible while loops (maintain scope)
 shopt -s extglob       # regular expressions
+declare -A footer
 
-
+footer['async']="
+# wait for all async child processes (because 'await ... then' is used in powscript)
+[[ \$ASYNC == 1 ]] && wait
+"
 indent_current=0
 indent_last=0
 stack=()
+anonymous_funcs=0
 
 getindent(){
   echo "$1" | sed "s/\n/ /g" | awk '{ match($0, /^ */); printf("%d", RLENGTH) }' | sed 's/00/0/g'
+}
+  
+add_anonymous_func(){
+  anonymous_funcs=$((anonymous_funcs+1))
 }
 
 push (){ 
@@ -95,6 +104,29 @@ transpile_if(){
   echo "$code" | transpile_all
 }
 
+transpile_then(){
+  line="${*/await /}"
+  [[ ! -n $3 ]] && category="then" || category="$3"
+  add_anonymous_func 
+  funcindex=$anonymous_funcs
+  echo -e "\n# async code"
+  echo "_"$category"_$funcindex(){"
+  local curindent=$(getindent "$1")
+  local indent="$(makeindent $curindent)"
+  if [[ $category =~ "pipe" ]]; then
+    add_anonymous_func
+    push stack "}\n$indent""async_$category _then_when_done_$anonymous_funcs "_"$category"_"$funcindex ${line/ then*/}"
+    push stack ""
+  else
+    push stack "}\n$indent""async_$category "_"$category"_"$funcindex ${line/ then*/}"
+  fi
+}
+
+transpile_when_done(){
+  local curindent=$(getindent "$1")
+  echo -e "}\n_then_when_done_"$anonymous_funcs"(){"
+}
+
 transpile_switch(){
   push stack "esac"
   echo "${1/switch/case} in" 
@@ -128,7 +160,36 @@ transpile_function(){
   for field in $fields; do echo "$indent""local $field=\"\$$i\""; i=$((i+1)); done
 }
 ######################### begin-of-powscript-functions
-powfunctions="compose empty filter isset keys last map math on pick pipemap values"
+powfunctions="async_pipe async_pipe_each_line async_then compose empty filter isset keys last map math on pick pipemap values"
+# async_then <done_callback> <pipe_function> <function> <args..>
+async_pipe() {
+  cb=$1   ; shift
+  pcb=$1  ; shift
+  func=$1 ; shift
+  { $func "$@" | $pcb; $cb $?; }&
+  ASYNC=1
+}
+# async_then <done_callback> <pipe_line_function> <function> <args..>
+async_pipe_each_line() {
+  cb=$1   ; shift
+  pcb=$1  ; shift
+  func=$1 ; shift
+  { 
+    $func "$@" | while IFS='' read line; do 
+      $pcb "$line"
+    done; 
+    $cb $?
+  }&
+  ASYNC=1
+}
+# async_then <done_callback> <function> <args..>
+async_then() {
+  {
+    $2 "$@" 
+    $1 $? # callback
+  }&
+  ASYNC=1
+}
 # compose function out of 2 functions
 # example: 
 #   compose functionname func2 func1
@@ -238,13 +299,17 @@ transpile_sugar(){
   while IFS="" read -r line; do 
     stack_update "$line"
     [[ "$line" =~ ^(require )                           ]] && continue 
-    [[ "$line" =~ (\$[a-zA-Z_0-9]*\[)                   ]] && transpile_array_get "$line"  && continue
-    [[ "$line" =~ ^([ ]*for )                           ]] && transpile_for "$line"        && continue
-    [[ "$line" =~ ^([ ]*if )                            ]] && transpile_if  "$line"        && continue
-    [[ "$line" =~ ^([ ]*switch )                        ]] && transpile_switch "$line"     && continue
-    [[ "$line" =~ ^([ ]*case )                          ]] && transpile_case "$line"       && continue
-    [[ "$line" =~ ([a-zA-Z_0-9]\+=)                     ]] && transpile_array_push "$line" && continue
-    [[ "$line" =~ ^([a-zA-Z_0-9]*\([a-zA-Z_0-9, ]*\))   ]] && transpile_function "$line"   && continue
+    [[ "$line" =~ (\$[a-zA-Z_0-9]*\[)                   ]] && transpile_array_get "$line"                  && continue
+    [[ "$line" =~ ^([ ]*for )                           ]] && transpile_for "$line"                        && continue
+    [[ "$line" =~ ^([  ]*when done)                     ]] && transpile_when_done "$line"                  && continue
+    [[ "$line" =~ (await .* then foreachline)               ]] && transpile_then "$line" "pl" "pipe_each_line" && continue
+    [[ "$line" =~ (await .* then \|)                        ]] && transpile_then "$line" "p"  "pipe"           && continue
+    [[ "$line" =~ (await .* then)                           ]] && transpile_then "$line"                       && continue
+    [[ "$line" =~ ^([ ]*if )                            ]] && transpile_if  "$line"                        && continue
+    [[ "$line" =~ ^([ ]*switch )                        ]] && transpile_switch "$line"                     && continue
+    [[ "$line" =~ ^([ ]*case )                          ]] && transpile_case "$line"                       && continue
+    [[ "$line" =~ ([a-zA-Z_0-9]\+=)                     ]] && transpile_array_push "$line"                 && continue
+    [[ "$line" =~ ^([a-zA-Z_0-9]*\([a-zA-Z_0-9, ]*\))   ]] && transpile_function "$line"                   && continue
     echo "$line" | transpile_all
   done <  $1
   stack_update ""
@@ -267,19 +332,26 @@ transpile_functions(){
     regex="((^|[ ])${powfunctions// /[ ]|(^|[ ])})"                                                  # include powscript-functions
     echo "$line" | grep -qE "$regex" && {
       for func in $powfunctions; do
-        [[ "$line" =~ ([ ]?$func[ ]?) ]] && includefuncs="$includefuncs $func"
+        if [[ "$line" =~ ([ ]?$func[ ]) ]]; then 
+          includefuncs="$includefuncs $func"; 
+        fi
       done;
     }
   done <  $1
   [[ ! ${#includefuncs} == 0 ]] && echo -e "#\n# generated by powscript (https://github.com/coderofsalvation/powscript)\n#\n"
-  for func in $includefuncs; do declare -f $func; echo ""; done
+  for func in $includefuncs; do 
+    declare -f $func; echo ""; 
+  done
 }
 
 compile(){
   local dir="$(dirname "$1")"; local file="$(basename "$1")"; cd "$dir" &>/dev/null
   { cat_requires "$file" ; echo -e "#\n# application code\n#\n"; cat "$file"; } > $tmpfile
-  transpile_functions "$tmpfile"
-  transpile_sugar "$tmpfile"
+  #transpile_functions "$tmpfile"
+  transpile_sugar "$tmpfile" | grep -v "^#" > $tmpfile.code
+  transpile_functions $tmpfile.code
+  cat $tmpfile.code
+  for i in ${!footer[@]}; do echo "${footer[$i]}"; done 
   rm $tmpfile
 }
 

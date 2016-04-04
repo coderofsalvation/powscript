@@ -1,0 +1,8 @@
+# async_then <done_callback> <function> <args..>
+async_then() {
+  {
+    $2 "$@" 
+    $1 $? # callback
+  }&
+  ASYNC=1
+}

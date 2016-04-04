@@ -1,6 +1,9 @@
 #!/bin/bash
 
-./powscript.bash --compile test/code-1.pow
-./powscript.bash test/code-1.pow
+./powscript --compile test/code-1.pow
+for file in test/*.pow; do 
+  echo "-> $file"
+  ./powscript $file
+done
 echo 'OK'
 exit 0
