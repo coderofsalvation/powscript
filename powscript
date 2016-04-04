@@ -1,13 +1,28 @@
 #!/bin/bash
+settings='set -e                 # halt on error
+set +m                 #
+shopt -s lastpipe      # flexible while loops (maintain scope)
+shopt -s extglob       # regular expressions
+path="$(pwd)"
+selfpath="$( dirname "$(readlink -f "$0")" )"
+tmpfile="/tmp/$(basename $0).tmp.$(whoami)"'
 set -e                 # halt on error
 set +m                 #
 shopt -s lastpipe      # flexible while loops (maintain scope)
 shopt -s extglob       # regular expressions
+path="$(pwd)"
+selfpath="$( dirname "$(readlink -f "$0")" )"
+tmpfile="/tmp/$(basename $0).tmp.$(whoami)"
 declare -A footer
-
-footer['async']="
-# wait for all async child processes (because 'await ... then' is used in powscript)
+footer["async"]="
+# wait for all async child processes (because \"await ... then\" is used in powscript)
 [[ \$ASYNC == 1 ]] && wait
+"
+
+footer["tmpfile"]="
+touch $tmpfile.flop
+# cleanup tmp files
+for f in /tmp/\$(basename \$0).tmp.$(whoami)*; do rm \$f; done
 "
 indent_current=0
 indent_last=0
@@ -148,7 +163,7 @@ transpile_array_get(){
 }
 
 transpile_foreachline_from(){
-  file="${1/[ ]?foreachline from /}"
+  file="${1/[ ]?for line from /}"
   local curindent=$(getindent "$1")
   local indent="$(makeindent $curindent)"
   echo "$indent""while IFS=\"\" read -r line; do"
@@ -310,7 +325,7 @@ transpile_sugar(){
     stack_update "$line"
     [[ "$line" =~ ^(require )                           ]] && continue 
     [[ "$line" =~ (\$[a-zA-Z_0-9]*\[)                   ]] && transpile_array_get "$line"                  && continue
-    [[ "$line" =~ ^([ ]*foreachline from )              ]] && transpile_foreachline_from "$line"                        && continue
+    [[ "$line" =~ ^([ ]*for line from )              ]] && transpile_foreachline_from "$line"                        && continue
     [[ "$line" =~ ^([ ]*for )                           ]] && transpile_for "$line"                        && continue
     [[ "$line" =~ ^([ ]*when done)                     ]] && transpile_when_done "$line"                  && continue
     [[ "$line" =~ (await .* then foreachline)               ]] && transpile_then "$line" "pl" "pipe_each_line" && continue
@@ -358,6 +373,7 @@ transpile_functions(){
 compile(){
   local dir="$(dirname "$1")"; local file="$(basename "$1")"; cd "$dir" &>/dev/null
   { cat_requires "$file" ; echo -e "#\n# application code\n#\n"; cat "$file"; } > $tmpfile
+  echo -e "$settings"
   #transpile_functions "$tmpfile"
   transpile_sugar "$tmpfile" | grep -v "^#" > $tmpfile.code
   transpile_functions $tmpfile.code

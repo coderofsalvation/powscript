@@ -33,40 +33,20 @@ Check the wiki <a href="https://github.com/coderofsalvation/powscript/wiki/Refer
 * indentbased, memorizable, coffeescript-inspired syntax
 * more human-like, less semantic noise like { ! [[ @ ]] || ~=
 * safetynets: automatic quoting, halt on error
-* comfort: easy arrays, easy async, functional programming, named variables instead of positionals
+* comfort: [easy arrays, easy async, functional programming](https://github.com/coderofsalvation/powscript/wiki/Reference), named variables instead of positionals
+* [Modules / bundling](https://github.com/coderofsalvation/powscript/wiki/Modules)
 * written in bash 4, 'zero'-dependency solution
 * hasslefree: easy installation without gcc compilation/3rd party software
-
-## Modules 
-
-Create 1 portable bashscript.
-
-####  /myapp.pow
-
-    require 'mod/mymod.pow'
-    require 'mod/foo.bash'
-
-    mymodfunc
-    bar
-
-#### /mod/mymod.pow
-
-    mymodfunc()
-      echo "hi im a powscript module!"
-
-#### /mod/foo.bash
-
-    function bar(){
-      echo "hi im a bash module"
-    }
-
-Then run `powscript --compile myapp.pow > all-in-one.bash`
 
 ## Examples
 
 * [m3uchecker (19 lines powscript vs 57 lines bash)](https://gist.github.com/coderofsalvation/b1313d287c1f0a7e6cdf)
+* [Collection of codesnippets](https://github.com/coderofsalvation/powscript/wiki/Reference)
 
 ## Wiki
 
+* [Syntax reference](https://github.com/coderofsalvation/powscript/wiki/Reference)
+* [Modules](https://github.com/coderofsalvation/powscript/wiki/Modules)
 * [Developer info / Contributions](https://github.com/coderofsalvation/powscript/wiki/Contributing)
 * [Similar projects](https://github.com/coderofsalvation/powscript/wiki/Similar-projects)
+* [Why](https://github.com/coderofsalvation/powscript/wiki/Why)

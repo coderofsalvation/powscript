@@ -4,7 +4,8 @@ for i in lang/*; do
   lang="$(basename $i)"
   { 
     echo "#!/bin/$lang" 
-    cat lang/$lang/.settings lang/$lang/.transpile 
+    echo "settings='$(<lang/bash/.settings)'"
+    cat lang/$lang/.settings lang/$lang/.util lang/$lang/.transpile 
     echo "######################### begin-of-powscript-functions"
     cd lang/$lang &>/dev/null
     echo "powfunctions=\"$(echo *)\""

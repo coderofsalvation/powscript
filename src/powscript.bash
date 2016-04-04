@@ -33,7 +33,7 @@ transpile_sugar(){
     stack_update "$line"
     [[ "$line" =~ ^(require )                           ]] && continue 
     [[ "$line" =~ (\$[a-zA-Z_0-9]*\[)                   ]] && transpile_array_get "$line"                  && continue
-    [[ "$line" =~ ^([ ]*foreachline from )              ]] && transpile_foreachline_from "$line"                        && continue
+    [[ "$line" =~ ^([ ]*for line from )              ]] && transpile_foreachline_from "$line"                        && continue
     [[ "$line" =~ ^([ ]*for )                           ]] && transpile_for "$line"                        && continue
     [[ "$line" =~ ^([ ]*when done)                     ]] && transpile_when_done "$line"                  && continue
     [[ "$line" =~ (await .* then foreachline)               ]] && transpile_then "$line" "pl" "pipe_each_line" && continue
@@ -81,6 +81,7 @@ transpile_functions(){
 compile(){
   local dir="$(dirname "$1")"; local file="$(basename "$1")"; cd "$dir" &>/dev/null
   { cat_requires "$file" ; echo -e "#\n# application code\n#\n"; cat "$file"; } > $tmpfile
+  echo -e "$settings"
   #transpile_functions "$tmpfile"
   transpile_sugar "$tmpfile" | grep -v "^#" > $tmpfile.code
   transpile_functions $tmpfile.code

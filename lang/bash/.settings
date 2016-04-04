@@ -2,9 +2,6 @@ set -e                 # halt on error
 set +m                 #
 shopt -s lastpipe      # flexible while loops (maintain scope)
 shopt -s extglob       # regular expressions
-declare -A footer
-
-footer['async']="
-# wait for all async child processes (because 'await ... then' is used in powscript)
-[[ \$ASYNC == 1 ]] && wait
-"
+path="$(pwd)"
+selfpath="$( dirname "$(readlink -f "$0")" )"
+tmpfile="/tmp/$(basename $0).tmp.$(whoami)"

@@ -137,7 +137,7 @@ transpile_array_get(){
 }
 
 transpile_foreachline_from(){
-  file="${1/[ ]?foreachline from /}"
+  file="${1/[ ]?for line from /}"
   local curindent=$(getindent "$1")
   local indent="$(makeindent $curindent)"
   echo "$indent""while IFS=\"\" read -r line; do"
