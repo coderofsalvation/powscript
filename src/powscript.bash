@@ -7,8 +7,10 @@ requires=""
 tmpfile="/tmp/.$(whoami).powscript.$date_$rand"
 shopt -s extglob
 
-input="$1"
-[[ ! -n $startfunction ]] && startfunction=runfile
+input=$1
+if [[ ! -n $startfunction ]]; then 
+  startfunction=runfile
+fi
 
 for arg in "$@"; do
   case "$arg" in
@@ -31,8 +33,9 @@ transpile_sugar(){
     stack_update "$line"
     [[ "$line" =~ ^(require )                           ]] && continue 
     [[ "$line" =~ (\$[a-zA-Z_0-9]*\[)                   ]] && transpile_array_get "$line"                  && continue
+    [[ "$line" =~ ^([ ]*foreachline from )              ]] && transpile_foreachline_from "$line"                        && continue
     [[ "$line" =~ ^([ ]*for )                           ]] && transpile_for "$line"                        && continue
-    [[ "$line" =~ ^([  ]*when done)                     ]] && transpile_when_done "$line"                  && continue
+    [[ "$line" =~ ^([ ]*when done)                     ]] && transpile_when_done "$line"                  && continue
     [[ "$line" =~ (await .* then foreachline)               ]] && transpile_then "$line" "pl" "pipe_each_line" && continue
     [[ "$line" =~ (await .* then \|)                        ]] && transpile_then "$line" "p"  "pipe"           && continue
     [[ "$line" =~ (await .* then)                           ]] && transpile_then "$line"                       && continue

@@ -46,7 +46,7 @@ transpile_all(){
     [[ "$line" =~ ^(#) ]] && local _comment="#"
     [[ "$line" =~ "={}" ]] && echo "$_comment$(makeindent $i)declare -A ${line/=\{\}/}" && continue
     [[ "$line" =~ "=[]" ]] && echo "$_comment$(makeindent $i)declare -a ${line/=\[\]/}" && continue
-    [[ "$line" =~ \$[A-Za-z_0-9@] ]] && line="$(echo "$line" | sed -E 's/([ =])\$([a-zA-Z_0-9@]+)/\1"$\2"/gi' )"
+    [[ "$line" =~ ([ ]\$[A-Za-z_0-9@]) ]] && line="$(echo "$line" | sed -E 's/([ =])\$([a-zA-Z_0-9@]+)/\1"$\2"/gi' )"
     echo "$line"
   done
 }
@@ -134,6 +134,14 @@ transpile_array_push(){
 transpile_array_get(){
   code="${1/\$/\"\$\{}"
   echo "$code}\""
+}
+
+transpile_foreachline_from(){
+  file="${1/[ ]?foreachline from /}"
+  local curindent=$(getindent "$1")
+  local indent="$(makeindent $curindent)"
+  echo "$indent""while IFS=\"\" read -r line; do"
+  push stack $indent"done < $file"
 }
 
 transpile_function(){
