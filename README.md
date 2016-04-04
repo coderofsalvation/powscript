@@ -24,9 +24,7 @@
           help=$(usage myapp)
           echo "Usage: $help" && exit
 
-## Reference + Examples
-
-Check the wiki <a href="https://github.com/coderofsalvation/powscript/wiki/Reference">here</a>
+Check <a href="https://github.com/coderofsalvation/powscript/wiki/Reference">here</a> for more examples
 
 ## Features
 
