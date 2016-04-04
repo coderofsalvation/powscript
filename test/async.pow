@@ -17,7 +17,7 @@ when done
 
 sleep 4s 
 
-await myfunc 123 then foreachline
+await myfunc 123 then for line
   if $line match (two|one)
     echo "line: $*"
 when done
