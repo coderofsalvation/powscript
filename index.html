@@ -7,7 +7,8 @@
 
     <link rel="stylesheet" href="stylesheets/styles.css">
     <link rel="stylesheet" href="stylesheets/github-light.css">
-    <meta name="viewport" content="width=device-width">
+    <script src="javascripts/scale.fix.js"></script>
+    <meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no">
     <!--[if lt IE 9]>
     <script src="//html5shiv.googlecode.com/svn/trunk/html5.js"></script>
     <![endif]-->
@@ -15,17 +16,18 @@
   <body>
     <div class="wrapper">
       <header>
-        <h1>Powscript</h1>
-        <p>bash dialect transpiler in bash: painless shellscript / indentbased / coffeescript for shellscript / bash for hipsters</p>
-
-        <p class="view"><a href="https://github.com/coderofsalvation/powscript">View the Project on GitHub <small>coderofsalvation/powscript</small></a></p>
-
+        <h1 class="header">Powscript</h1>
+        <p class="header">bash dialect transpiler in bash: painless shellscript / indentbased / coffeescript for shellscript / bash for hipsters</p>
 
         <ul>
-          <li><a href="https://github.com/coderofsalvation/powscript/zipball/master">Download <strong>ZIP File</strong></a></li>
-          <li><a href="https://github.com/coderofsalvation/powscript/tarball/master">Download <strong>TAR Ball</strong></a></li>
-          <li><a href="https://github.com/coderofsalvation/powscript">View On <strong>GitHub</strong></a></li>
+          <li class="download"><a class="buttons" href="https://github.com/coderofsalvation/powscript/zipball/master">Download ZIP</a></li>
+          <li class="download"><a class="buttons" href="https://github.com/coderofsalvation/powscript/tarball/master">Download TAR</a></li>
+          <li><a class="buttons github" href="https://github.com/coderofsalvation/powscript">View On GitHub</a></li>
         </ul>
+
+        <p class="header">This project is maintained by <a class="header name" href="https://github.com/coderofsalvation">coderofsalvation</a></p>
+
+
       </header>
       <section>
         <p><img alt="" src="https://github.com/coderofsalvation/powscript/raw/master/.tools/pow.png" width="12%">
@@ -82,6 +84,25 @@ switch $1
 </ul>
 
 <h2>
+<a id="interactive-mode-experimental" class="anchor" href="#interactive-mode-experimental" aria-hidden="true"><span aria-hidden="true" class="octicon octicon-link"></span></a>Interactive mode (experimental)</h2>
+
+<p>Put this line in your <code>.inputrc</code>:</p>
+
+<pre><code>"\C-p" "powscript --interactive\n" 
+</code></pre>
+
+<p>Then hitting ctrl-p in your console will enter powscript mode:</p>
+
+<pre><code>hit ctrl-c to exit powscript, type 'edit' launch editor, and 'help' for help
+&gt; each(line)
+&gt;   echo line=$line
+&gt; tail -2 ~/.kanban.csv | pipemap each
+line=1,foo,bar,flop
+line=2,foo2,bar2,flop2
+&gt; 
+</code></pre>
+
+<h2>
 <a id="wiki" class="anchor" href="#wiki" aria-hidden="true"><span aria-hidden="true" class="octicon octicon-link"></span></a>Wiki</h2>
 
 <ul>
@@ -93,11 +114,10 @@ switch $1
 </ul>
       </section>
       <footer>
-        <p>This project is maintained by <a href="https://github.com/coderofsalvation">coderofsalvation</a></p>
-        <p><small>Hosted on GitHub Pages &mdash; Theme by <a href="https://github.com/orderedlist">orderedlist</a></small></p>
+        <p><small>Hosted on <a href="https://pages.github.com">GitHub Pages</a> using the Dinky theme</small></p>
       </footer>
     </div>
-    <script src="javascripts/scale.fix.js"></script>
-    
+    <!--[if !IE]><script>fixScale(document);</script><![endif]-->
+		
   </body>
 </html>
