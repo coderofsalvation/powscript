@@ -52,7 +52,9 @@ Then hitting ctrl-p in your console will enter powscript mode:
     hit ctrl-c to exit powscript, type 'edit' launch editor, and 'help' for help
     > each(line)
     >   echo line=$line
-    > tail -2 ~/.kanban.csv | pipemap each
+    > run()
+    >   tail -2 ~/.kanban.csv | pipemap each
+    > run
     line=1,foo,bar,flop
     line=2,foo2,bar2,flop2
     > 
