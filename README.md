@@ -41,6 +41,22 @@ Check <a href="https://github.com/coderofsalvation/powscript/wiki/Reference">her
 * [m3uchecker (19 lines powscript vs 57 lines bash)](https://gist.github.com/coderofsalvation/b1313d287c1f0a7e6cdf)
 * [Collection of codesnippets](https://github.com/coderofsalvation/powscript/wiki/Reference)
 
+## Interactive mode (experimental)
+
+Put this line in your `.inputrc`:
+
+    "\C-p" "powscript --interactive\n" 
+
+Then hitting ctrl-p in your console will enter powscript mode:
+
+    hit ctrl-c to exit powscript, type 'edit' launch editor, and 'help' for help
+    > each(line)
+    >   echo line=$line
+    > tail -2 ~/.kanban.csv | pipemap each
+    line=1,foo,bar,flop
+    line=2,foo2,bar2,flop2
+    > 
+
 ## Wiki
 
 * [Syntax reference](https://github.com/coderofsalvation/powscript/wiki/Reference)

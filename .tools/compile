@@ -1,6 +1,7 @@
 #!/bin/bash 
 
 for i in lang/*; do
+  [[ ! "$i" =~ "bash" ]] && continue
   lang="$(basename $i)"
   { 
     echo "#!/bin/$lang" 

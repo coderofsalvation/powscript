@@ -1,7 +1,7 @@
 {
   "name": "powscript",
-  "version": "1.0.19",
-  "description": "painless shellscript aka bash for hipsters: a bash transpiler which reduces noise",
+  "version": "1.0.20",
+  "description": "bash dialect transpiler in bash: painless shellscript / indentbased / coffeescript for shellscript / bash for hipsters",
   "main": "powscript",
   "directories": {
     "test": "test"
@@ -10,7 +10,7 @@
     "powscript":"powscript"
   },
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "./.tools/runtests"
   },
   "repository": {
     "type": "git",
