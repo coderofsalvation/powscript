@@ -23,6 +23,8 @@ empty "$1" && {
      powscript --evaluate <powscript string>
      echo <powscript string> | PIPE=1 powscript --compile
      echo <powscript string> | PIPE=1 powscript --evaluate
+
+     note: PIPE=1 allows input from stdin, PIPE=2 as well but produces bare output
   ';
 }
 
@@ -100,12 +102,11 @@ compile(){
     local dir="$(dirname "$1")"; local file="$(basename "$1")"; cd "$dir" &>/dev/null
     { cat_requires "$file" ; echo -e "#\n# application code\n#\n"; cat "$file"; } > $tmpfile
   fi
-  echo -e "#!/bin/bash\n$settings"
-  #transpile_functions "$tmpfile"
+  [[ ! $PIPE == 2 ]] && echo -e "#!/bin/bash\n$settings"
   transpile_sugar "$tmpfile" | grep -v "^#" > $tmpfile.code
   transpile_functions $tmpfile.code
   cat $tmpfile.code
-  for i in ${!footer[@]}; do echo "${footer[$i]}"; done 
+  [[ ! $PIPE == 2 ]] && for i in ${!footer[@]}; do echo "${footer[$i]}"; done 
   rm $tmpfile
 }
 

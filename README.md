@@ -64,8 +64,8 @@ Then hitting ctrl-p in your console will enter powscript mode:
 > HINT: use live expansion inside vim.
 > Put the lines below in .vimrc and hit 'p>' in normal/visual mode to expand powscript
 
-    vmap p> :!PIPE=1 powscript --compile<CR>                                
-    nmap p> ggVG:!PIPE=1 powscript --compile<CR>
+    vmap p> :!PIPE=2 powscript --compile<CR>                                
+    nmap p> ggVG:!PIPE=2 powscript --compile<CR>
 
 ## Wiki
 
