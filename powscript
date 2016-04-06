@@ -20,9 +20,12 @@ footer["async"]="
 "
 
 footer["tmpfile"]="
-touch $tmpfile.flop
 # cleanup tmp files
-for f in /tmp/\$(basename \$0).tmp.$(whoami)*; do rm \$f; done
+if ls /tmp/\$(basename \$0).tmp.$(whoami)* &>/dev/null; then
+  for f in /tmp/\$(basename \$0).tmp.$(whoami)*; do rm \$f; done
+fi
+"
+footer["zero_exit"]="exit 0
 "
 indent_current=0
 indent_last=0
@@ -111,7 +114,7 @@ transpile_if(){
   code="${code//< /-lt }"
   code="${code//<= /-le }"
   code="${code//!= /-ne }"
-  [[ "$code" =~ (if[ ]) && "$firstvar" =~ ^([\"\$]) ]] && code="${code/if /if [[ }"
+  [[ "$code" =~ (if[ ]) && "$firstvar" =~ ^([\"\$-]) ]] && code="${code/if /if [[ }"
   code="${code/match /=~ }"
   [[ "$code" =~ "[[" ]] && code="$code ]]"
   code="$code; then"
@@ -313,6 +316,8 @@ empty "$1" && {
      powscript --compile <file.powscript>
      powscript --interactive
      powscript --evaluate <powscript string>
+     echo <powscript string> | PIPE=1 powscript --compile
+     echo <powscript string> | PIPE=1 powscript --evaluate
   ';
 }
 
@@ -384,9 +389,13 @@ transpile_functions(){
 }
 
 compile(){
-  local dir="$(dirname "$1")"; local file="$(basename "$1")"; cd "$dir" &>/dev/null
-  { cat_requires "$file" ; echo -e "#\n# application code\n#\n"; cat "$file"; } > $tmpfile
-  echo -e "$settings"
+  if [[ -n $PIPE ]]; then 
+    cat - > $tmpfile
+  else
+    local dir="$(dirname "$1")"; local file="$(basename "$1")"; cd "$dir" &>/dev/null
+    { cat_requires "$file" ; echo -e "#\n# application code\n#\n"; cat "$file"; } > $tmpfile
+  fi
+  echo -e "#!/bin/bash\n$settings"
   #transpile_functions "$tmpfile"
   transpile_sugar "$tmpfile" | grep -v "^#" > $tmpfile.code
   transpile_functions $tmpfile.code
@@ -406,7 +415,7 @@ process(){
 }
 
 evaluate(){
-  echo -e "$*" > $tmpfile
+  [[ -n $PIPE ]] && cat - > $tmpfile || echo -e "$*" > $tmpfile
   evalstr_cache="$evalstr_cache\n$*"
   [[ -n $DEBUG ]] && echo "$(transpile_sugar $tmpfile)"
   eval "$(transpile_sugar $tmpfile)"

@@ -5,7 +5,10 @@ footer["async"]="
 "
 
 footer["tmpfile"]="
-touch $tmpfile.flop
 # cleanup tmp files
-for f in /tmp/\$(basename \$0).tmp.$(whoami)*; do rm \$f; done
+if ls /tmp/\$(basename \$0).tmp.$(whoami)* &>/dev/null; then
+  for f in /tmp/\$(basename \$0).tmp.$(whoami)*; do rm \$f; done
+fi
+"
+footer["zero_exit"]="exit 0
 "

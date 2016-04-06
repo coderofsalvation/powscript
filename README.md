@@ -49,7 +49,7 @@ Put this line in your `.inputrc`:
 
 Then hitting ctrl-p in your console will enter powscript mode:
 
-    hit ctrl-c to exit powscript, type 'edit' launch editor, and 'help' for help
+    hit ctrl-c to exit powscript, type 'edit' to launch editor, and 'help' for help
     > each(line)
     >   echo line=$line
     > run()
@@ -58,6 +58,14 @@ Then hitting ctrl-p in your console will enter powscript mode:
     line=1,foo,bar,flop
     line=2,foo2,bar2,flop2
     > 
+
+## Live expansion inside editor
+
+> HINT: use live expansion inside vim.
+> Put the lines below in .vimrc and hit 'p>' in normal/visual mode to expand powscript
+
+    vmap p> :!PIPE=1 powscript --compile<CR>                                
+    nmap p> ggVG:!PIPE=1 powscript --compile<CR>
 
 ## Wiki
 

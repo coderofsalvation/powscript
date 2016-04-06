@@ -85,7 +85,7 @@ transpile_if(){
   code="${code//< /-lt }"
   code="${code//<= /-le }"
   code="${code//!= /-ne }"
-  [[ "$code" =~ (if[ ]) && "$firstvar" =~ ^([\"\$]) ]] && code="${code/if /if [[ }"
+  [[ "$code" =~ (if[ ]) && "$firstvar" =~ ^([\"\$-]) ]] && code="${code/if /if [[ }"
   code="${code/match /=~ }"
   [[ "$code" =~ "[[" ]] && code="$code ]]"
   code="$code; then"

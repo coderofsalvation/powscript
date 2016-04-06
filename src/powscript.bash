@@ -21,6 +21,8 @@ empty "$1" && {
      powscript --compile <file.powscript>
      powscript --interactive
      powscript --evaluate <powscript string>
+     echo <powscript string> | PIPE=1 powscript --compile
+     echo <powscript string> | PIPE=1 powscript --evaluate
   ';
 }
 
@@ -92,9 +94,13 @@ transpile_functions(){
 }
 
 compile(){
-  local dir="$(dirname "$1")"; local file="$(basename "$1")"; cd "$dir" &>/dev/null
-  { cat_requires "$file" ; echo -e "#\n# application code\n#\n"; cat "$file"; } > $tmpfile
-  echo -e "$settings"
+  if [[ -n $PIPE ]]; then 
+    cat - > $tmpfile
+  else
+    local dir="$(dirname "$1")"; local file="$(basename "$1")"; cd "$dir" &>/dev/null
+    { cat_requires "$file" ; echo -e "#\n# application code\n#\n"; cat "$file"; } > $tmpfile
+  fi
+  echo -e "#!/bin/bash\n$settings"
   #transpile_functions "$tmpfile"
   transpile_sugar "$tmpfile" | grep -v "^#" > $tmpfile.code
   transpile_functions $tmpfile.code
@@ -114,7 +120,7 @@ process(){
 }
 
 evaluate(){
-  echo -e "$*" > $tmpfile
+  [[ -n $PIPE ]] && cat - > $tmpfile || echo -e "$*" > $tmpfile
   evalstr_cache="$evalstr_cache\n$*"
   [[ -n $DEBUG ]] && echo "$(transpile_sugar $tmpfile)"
   eval "$(transpile_sugar $tmpfile)"
@@ -202,7 +208,7 @@ help(){
 }
 
 console(){
-  [[ ! $1 == "1" ]] && echo "hit ctrl-c to exit powscript, type 'edit' launch editor, and 'help' for help"
+  [[ ! $1 == "1" ]] && echo "hit ctrl-c to exit powscript, type 'edit' to launch editor, and 'help' for help"
   trap 'console 1' 0 1 2 3 13 15 # EXIT HUP INT QUIT PIPE TERM SIGTERM SIGHUP
   while IFS="" read -r -e -d $'\n' -p "> " line; do
     "$1" "$line"
