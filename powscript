@@ -313,9 +313,10 @@ fi
 empty "$1" && {
   echo 'Usage:
      powscript <file.powscript>
-     powscript --compile <file.powscript>
-     powscript --interactive
+     powscript --compile <file.pow>
+     powscript --lint <file.pow>
      powscript --evaluate <powscript string>
+     powscript --interactive
      echo <powscript string> | PIPE=1 powscript --compile
      echo <powscript string> | PIPE=1 powscript --evaluate
 
@@ -331,6 +332,10 @@ for arg in "$@"; do
       ;;
     --evaluate)
       startfunction=evaluate
+      shift
+      ;;
+    --lint)
+      startfunction=lint
       shift
       ;;
     --compile) 
@@ -392,10 +397,10 @@ transpile_functions(){
 
 compile(){
   if [[ -n $PIPE ]]; then 
-    cat - > $tmpfile
+    cat - | lint_pipe > $tmpfile
   else
     local dir="$(dirname "$1")"; local file="$(basename "$1")"; cd "$dir" &>/dev/null
-    { cat_requires "$file" ; echo -e "#\n# application code\n#\n"; cat "$file"; } > $tmpfile
+    { cat_requires "$file" ; echo -e "#\n# application code\n#\n"; cat "$file"; } | lint_pipe > $tmpfile
   fi
   [[ ! $PIPE == 2 ]] && echo -e "#!/bin/bash\n$settings"
   transpile_sugar "$tmpfile" | grep -v "^#" > $tmpfile.code
@@ -416,7 +421,7 @@ process(){
 }
 
 evaluate(){
-  [[ -n $PIPE ]] && cat - > $tmpfile || echo -e "$*" > $tmpfile
+  [[ -n $PIPE ]] && cat - > $tmpfile || echo -e "$*" | lint_pipe > $tmpfile
   evalstr_cache="$evalstr_cache\n$*"
   [[ -n $DEBUG ]] && echo "$(transpile_sugar $tmpfile)"
   eval "$(transpile_sugar $tmpfile)"
@@ -501,6 +506,23 @@ help(){
   see more at: https://github.com/coderofsalvation/powscript/wiki/Reference
   
   ' | less
+}
+
+
+lint(){
+  cat "$1" | lint_pipe
+}
+
+lint_pipe(){
+  code="$(cat -)"
+  output="$(echo "$code" | awk -F"[  ]" '{ j=0; for(i=1;i<=NF && ($i=="");i++); j++; if( ((i-1)%2) != 0 ){ print "indent error: "$j" "$i; }  }')"
+  if [[ ${#output} != 0 ]]; then 
+    echo "$output" 1>&2
+    exit 1
+  else
+    echo "$code"
+    return 0
+  fi
 }
 
 console(){
