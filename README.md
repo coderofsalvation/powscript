@@ -67,6 +67,15 @@ Then hitting ctrl-p in your console will enter powscript mode:
     vmap p> :!PIPE=2 powscript --compile<CR>                                
     nmap p> ggVG:!PIPE=2 powscript --compile<CR>
 
+## OSX users
+
+OSX might protest since it isn't quite GNU focused. Please run these commands after installing:
+
+    $ brew install bash
+    $ brew install coreutils gnu-sed grep gawk --default-names
+    $ echo 'export PATH=/usr/local/opt/coreutils/libexec/gnubin:$PATH' >> ~/.bashrc
+    $ sed -i 's|#!/bin/bash|#!/usr/local/bin/bash|g' powscript
+
 ## Wiki
 
 * [Syntax reference](https://github.com/coderofsalvation/powscript/wiki/Reference)
