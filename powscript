@@ -242,7 +242,7 @@ keys(){
 }
 last(){
   [[ ! -n $1 ]] && return 1 
-  echo eval "echo \${$1[@]:(-1)}"
+  echo "$(eval "echo \${$1[@]:(-1)}")"
 }
 # maps a pipe stream to individual calls
 # example:
