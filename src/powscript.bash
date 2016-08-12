@@ -146,6 +146,7 @@ compile(){
     [[ ! $PIPE == 2 ]] && for i in ${!footer[@]}; do echo "${footer[$i]}"; done 
   } | transpile_sh
   rm $tmpfile
+  rm $tmpfile.code
 }
 
 
