@@ -123,7 +123,8 @@ transpile_if(){
 }
 
 transpile_then(){
-  line="${*/await /}"
+  cmd="${*/await /}"
+  cmd="$(echo "$cmd" | sed "s/'/\"/g")" # ugly hack..*FIXME*
   [[ ! -n $3 ]] && category="then" || category="$3"
   add_anonymous_func 
   funcindex=$anonymous_funcs
@@ -133,10 +134,10 @@ transpile_then(){
   local indent="$(makeindent $curindent)"
   if [[ $category =~ "pipe" ]]; then
     add_anonymous_func
-    push stack "}\n$indent""async_$category _then_when_done_$anonymous_funcs "_"$category"_"$funcindex ${line/ then*/}"
+    push stack "}\n$indent""async_$category _then_when_done_$anonymous_funcs "_"$category"_"$funcindex ${cmd}"
     push stack ""
   else
-    push stack "}\n$indent""async_$category "_"$category"_"$funcindex ${line/ then*/}"
+    push stack "}\n$indent""async_$category "_"$category"_"$funcindex $cmd"
   fi
 }
 
@@ -183,10 +184,10 @@ transpile_function(){
   fields="${fields//,/ }"
   echo "${1//\(*\)/()}{"
   local i=1; 
-  for field in $fields; do echo "$indent""local $field=\"\$$i\""; i=$((i+1)); done
+  for field in $fields; do echo "$indent""local $field=\"\${$i}\""; i=$((i+1)); done
 }
 ######################### begin-of-powscript-functions
-powfunctions="async_pipe async_pipe_each_line async_then compose empty filter isset keys last map math on pick pipemap values"
+powfunctions="async_pipe async_pipe_each_line async_then compose empty isset keys last map mappipe math on pick values"
 # async_then <done_callback> <pipe_function> <function> <args..>
 async_pipe() {
   cb=$1   ; shift
@@ -228,10 +229,6 @@ compose() {
 empty(){
   [[ "${#1}" == 0 ]] && return 0 || return 1
 }
-# usage: filter foo myfunc
-filter(){
-  map $1 | pipemap $2 
-}
 # example: isset "" && echo "not empty string" || echo "empty string"
 isset(){
   [[ ! "${#1}" == 0 ]] && return 0 || return 1
@@ -250,6 +247,10 @@ last(){
 map(){
   local arr="$1"; shift; local func="$1"; shift;
   eval "for i in \"\${!$arr[@]}\"; do $func \"\$@\" \"\$i\" \"\${$arr[\$i]}\"; done"
+}
+mappipe(){
+  func="$1"; shift
+  cat - | while read -r line; do $func "$@" "$line"; done
 }
 math(){
   if [[ -n "$2" ]]; then
@@ -283,10 +284,6 @@ pick(){
   [[ ! -n $2 ]] && return 1 
   local output="$(eval "echo \${$1[$2]}")"
   [[ ! ${#output} == 0 ]] && echo "$output" 
-}
-pipemap(){
-  func="$1"; shift
-  cat - | while read -r line; do $func "$@" "$line"; done
 }
 # example: foreach foo values
 values(){
@@ -454,10 +451,10 @@ help(){
   REGEX                     if $f match ^([f]oo)
                               echo "foo found!"    
 
-  PIPEMAP                   myfunc()
+  MAPPIPE                   myfunc()
                               echo "line=$1"
 
-                            echo -e "foo\nbar\n" | pipemap myfunc
+                            echo -e "foo\nbar\n" | mappipe myfunc
                             # outputs: 'value=foo' and 'value=bar'
 
   MATH                      math '9 / 2'

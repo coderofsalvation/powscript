@@ -159,10 +159,10 @@ help(){
   REGEX                     if $f match ^([f]oo)
                               echo "foo found!"    
 
-  PIPEMAP                   myfunc()
+  MAPPIPE                   myfunc()
                               echo "line=$1"
 
-                            echo -e "foo\nbar\n" | pipemap myfunc
+                            echo -e "foo\nbar\n" | mappipe myfunc
                             # outputs: 'value=foo' and 'value=bar'
 
   MATH                      math '9 / 2'

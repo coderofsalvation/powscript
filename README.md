@@ -53,7 +53,7 @@ Then hitting ctrl-p in your console will enter powscript mode:
     > each(line)
     >   echo line=$line
     > run()
-    >   tail -2 ~/.kanban.csv | pipemap each
+    >   tail -2 ~/.kanban.csv | mappipe each
     > run
     line=1,foo,bar,flop
     line=2,foo2,bar2,flop2
