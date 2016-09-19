@@ -25,6 +25,7 @@ empty "$1" && {
      powscript --interactive
      echo <powscript string> | PIPE=1 powscript --compile
      echo <powscript string> | PIPE=1 powscript --evaluate
+     cat foo.bash            | powscript --tosh > foo.sh
 
      note: PIPE=1 allows input from stdin, PIPE=2 as well but produces bare output
   ';
@@ -34,6 +35,10 @@ for arg in "$@"; do
   case "$arg" in
     --sh)
       runtime=sh
+      shift
+      ;;
+    --tosh)
+      startfunction=tosh
       shift
       ;;
     --interactive)
@@ -57,9 +62,9 @@ done
 
 transpile_sh(){
   if [[ $runtime == "bash" ]]; then 
-    cat -
+    cat
   else
-    cat -                                           \
+    cat                                             \
       | sed "s/\[\[/\[/g;s/\]\]/\]/g"               \
       | sed "s/ == / = /g"                          \
       | sed "s/\&>\(.*[^;]\)[; $]/1>\1 2>\1; /g"    \
@@ -161,6 +166,11 @@ evaluate(){
   [[ -n $DEBUG ]] && echo "$(transpile_sugar $tmpfile)"
   eval "$(transpile_sugar $tmpfile)"
   evalstr=""
+}
+
+tosh(){
+  runtime=sh
+  transpile_sh
 }
 
 edit(){

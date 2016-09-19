@@ -1,14 +1,20 @@
 #!/bin/bash
+set -e # remove allowance errors (and exit 1)
+echo -e "todo: powscript should return error code\n\n"
 
-./powscript --compile test/code-1.pow
-for file in test/*.pow; do 
-  echo "-> $file"
-  ./powscript $file
+printline(){
+  cat | awk "{ print \"$*> \"\$0 }"
+}
+
+for file in test/*.bash; do 
+  [[ -x $file ]] && $file | printline $file
 done
-echo "Interactive mode tests:"
+
+for file in test/*.pow; do 
+  ./powscript $file | printline $file
+done
 for file in test/interactive/*.pow; do 
-  echo "-> $file"
-  ./powscript --interactive < $file
+  ./powscript --interactive < $file | printline $file
 done
 echo 'OK'
 exit 0

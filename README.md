@@ -75,8 +75,12 @@ Powscript can produce 'kindof' POSIX `/bin/sh`-compatible output by removing bas
     $ powscript --compile foo.pow      > foo.bash
     $ powscript --sh --compile foo.pow > foo.sh
 
-This however, is not 100% tested, so please remove bashisms manually using docs/tools like [bashism guide](http://mywiki.wooledge.org/Bashism) or [https://linux.die.net/man/1/checkbashisms](checkbashisms)
-The general rule for POSIX sh-output is: `don't write bashfeatures in powscript`
+This however, is experimental, as well as the standalone bash2sh converter:
+
+    $ cat foo.bash | powscript --tosh  > foo.sh
+
+> NOTE: remove bashisms manually using docs/tools like [bashism guide](http://mywiki.wooledge.org/Bashism) or [checkbashisms](https://linux.die.net/man/1/checkbashisms)
+> The general rule for POSIX sh-output is: `don't write bashfeatures in powscript`
 
 ## Live expansion inside editor
 
