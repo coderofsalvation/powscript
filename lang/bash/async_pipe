@@ -3,6 +3,6 @@ async_pipe() {
   cb=$1   ; shift
   pcb=$1  ; shift
   func=$1 ; shift
-  { $func "$@" | $pcb; $cb $?; }&
+  { set +e; $func "$@" | $pcb; $cb $?; }&
   ASYNC=1
 }

@@ -106,10 +106,10 @@ transpile_then(){
   local indent="$(makeindent $curindent)"
   if [[ $category =~ "pipe" ]]; then
     add_anonymous_func
-    push stack "}\n$indent""async_$category _then_when_done_$anonymous_funcs "_"$category"_"$funcindex ${cmd}"
+    push stack "}\n$indent""async_$category _then_when_done_$anonymous_funcs "_"$category"_"$funcindex ${cmd/ then*/}"
     push stack ""
   else
-    push stack "}\n$indent""async_$category "_"$category"_"$funcindex $cmd"
+    push stack "}\n$indent""async_$category "_"$category"_"$funcindex ${cmd/ then/}"
   fi
 }
 

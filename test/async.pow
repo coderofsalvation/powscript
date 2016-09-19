@@ -1,24 +1,28 @@
-myfunc()
-  echo "one"
+myfunc(args)
+  echo "args=$args"
+  echo "one "$args
   sleep 1s
-  echo "two"
+  echo "two "$args
   sleep 2s
 
+await su -c 'foo 123' then
+  echo "'await ... then' done $1"
+
+sleep 1s
+
 await myfunc 123 then
-  echo "async done"
+  echo "removeme"
 
-sleep 4s
-
-await myfunc 123 then |
+await myfunc 456 then |
   echo "pipe received"
   cat -
 when done
-  echo "async done"
+  echo "'await .... then |' done"
 
 sleep 4s 
 
-await myfunc 123 then for line
+await myfunc 789 then for line
   if $line match (two|one)
     echo "line: $*"
 when done
-  echo "async done"
+  echo "'await ... then for line' done"

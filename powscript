@@ -152,10 +152,10 @@ transpile_then(){
   local indent="$(makeindent $curindent)"
   if [[ $category =~ "pipe" ]]; then
     add_anonymous_func
-    push stack "}\n$indent""async_$category _then_when_done_$anonymous_funcs "_"$category"_"$funcindex ${cmd}"
+    push stack "}\n$indent""async_$category _then_when_done_$anonymous_funcs "_"$category"_"$funcindex ${cmd/ then*/}"
     push stack ""
   else
-    push stack "}\n$indent""async_$category "_"$category"_"$funcindex $cmd"
+    push stack "}\n$indent""async_$category "_"$category"_"$funcindex ${cmd/ then/}"
   fi
 }
 
@@ -216,7 +216,7 @@ async_pipe() {
   cb=$1   ; shift
   pcb=$1  ; shift
   func=$1 ; shift
-  { $func "$@" | $pcb; $cb $?; }&
+  { set +e; $func "$@" | $pcb; $cb $?; }&
   ASYNC=1
 }
 # async_then <done_callback> <pipe_line_function> <function> <args..>
@@ -225,6 +225,7 @@ async_pipe_each_line() {
   pcb=$1  ; shift
   func=$1 ; shift
   { 
+    set +e
     $func "$@" | while IFS='' read line; do 
       $pcb "$line"
     done; 
@@ -235,8 +236,9 @@ async_pipe_each_line() {
 # async_then <done_callback> <function> <args..>
 async_then() {
   {
-    $2 "$@" 
-    $1 $? # callback
+    set +e
+    done="$1";  shift ; "$@" 
+    $done $? # callback
   }&
   ASYNC=1
 }
@@ -385,14 +387,14 @@ transpile_sh(){
 transpile_sugar(){
   while IFS="" read -r line; do 
     stack_update "$line"
-    [[ "$line" =~ ^(require )                         ]] && continue
+    [[ "$line" =~ ^(require |#)                       ]] && continue
     [[ "$line" =~ (\$[a-zA-Z_0-9]*\[)                 ]] && transpile_array_get "$line"                  && continue
     [[ "$line" =~ ^([ ]*for line from )               ]] && transpile_foreachline_from "$line"           && continue
     [[ "$line" =~ ^([ ]*for )                         ]] && transpile_for "$line"                        && continue
     [[ "$line" =~ ^([ ]*when done)                    ]] && transpile_when_done "$line"                  && continue
-    [[ "$line" =~ (await .* then for line)            ]] && transpile_then "$line" "pl" "pipe_each_line" && continue
-    [[ "$line" =~ (await .* then \|)                  ]] && transpile_then "$line" "p"  "pipe"           && continue
-    [[ "$line" =~ (await .* then)                     ]] && transpile_then "$line"                       && continue
+    [[ "$line" =~ ^([ ]*await .* then for line)       ]] && transpile_then "$line" "pl" "pipe_each_line" && continue
+    [[ "$line" =~ ^([ ]*await .* then \|)             ]] && transpile_then "$line" "p"  "pipe"           && continue
+    [[ "$line" =~ ^([ ]*await .* then)                ]] && transpile_then "$line"                       && continue
     [[ "$line" =~ ^([ ]*if )                          ]] && transpile_if  "$line"                        && continue
     [[ "$line" =~ ^([ ]*switch )                      ]] && transpile_switch "$line"                     && continue
     [[ "$line" =~ ^([ ]*while )                       ]] && transpile_while "$line"                     && continue

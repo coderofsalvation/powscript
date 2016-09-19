@@ -4,6 +4,7 @@ async_pipe_each_line() {
   pcb=$1  ; shift
   func=$1 ; shift
   { 
+    set +e
     $func "$@" | while IFS='' read line; do 
       $pcb "$line"
     done; 

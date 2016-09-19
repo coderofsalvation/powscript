@@ -82,7 +82,7 @@ afoo={}
 abar={}
 afoo["one"]="foo"
 abar["foo"]="123"
-map afoo values | pipemap pick abar
+map afoo values | mappipe pick abar
 echo last="$(last afoo)"
 
 math '9 / 2'
