@@ -4,6 +4,7 @@ stack=()
 anonymous_funcs=0
 
 getindent(){
+  [[ ! ${1:0:1} =~ ([ \t]) ]] && echo 0 && return 0 
   echo "$1" | sed "s/\n/ /g" | awk '{ match($0, /^ */); printf("%d", RLENGTH) }' | sed 's/00/0/g'
 }
   
@@ -68,7 +69,7 @@ transpile_for(){
   else
     # iterate over indexed array
     local key="$(echo "$code" | awk '{ print $2 }')"
-    code="${code/ $arr/ \"\${$arr\[@\]\}\"}"
+    [[ ! "$arr" == "\$@" ]] && code="${code/ $arr/ \"\${$arr\[@\]\}\"}"
   fi
   echo -e "$code" | transpile_all
 }
@@ -120,6 +121,11 @@ transpile_when_done(){
 transpile_switch(){
   push stack "esac"
   echo "${1/switch/case} in" 
+}
+
+transpile_while(){
+  push stack "done"
+  echo "$1""; do"
 }
 
 transpile_case(){
