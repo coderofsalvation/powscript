@@ -400,7 +400,7 @@ transpile_sugar(){
     [[ "$line" =~ ^([ ]*while )                       ]] && transpile_while "$line"                     && continue
     [[ "$line" =~ ^([ ]*case )                        ]] && transpile_case "$line"                       && continue
     [[ "$line" =~ ([a-zA-Z_0-9]\+=)                   ]] && transpile_array_push "$line"                 && continue
-    [[ "$line" =~ ^([a-zA-Z_0-9]*\([a-zA-Z_0-9, ]*\)) ]] && transpile_function "$line"                   && continue
+    [[ "$line" =~ ^([a-zA-Z_0-9:]*\([a-zA-Z_0-9, ]*\)) ]] && transpile_function "$line"                   && continue
     echo "$line" | transpile_all
   done <  $1
   stack_update ""
