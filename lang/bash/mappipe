@@ -1,4 +1,4 @@
-pipemap(){
+mappipe(){
   func="$1"; shift
   cat - | while read -r line; do $func "$@" "$line"; done
 }
