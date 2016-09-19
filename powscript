@@ -576,10 +576,9 @@ lint_pipe(){
 }
 
 console(){
-  [[ ! $1 == "1" ]] && echo "hit ctrl-c to exit powscript, type 'edit' to launch editor, and 'help' for help"
-  trap 'console 1' 0 1 2 3 13 15 # EXIT HUP INT QUIT PIPE TERM SIGTERM SIGHUP
+  echo "hit ctrl-c to exit powscript, type 'edit' to launch editor, and 'help' for help"
   while IFS="" read -r -e -d $'\n' -p "> " line; do
-    "$1" "$line"
+    "$1" "$line" || [[ $? =~ (0|1|2|3|13|15) ]]
     history -s "$line"
   done
 }

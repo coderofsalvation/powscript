@@ -5,5 +5,10 @@ for file in test/*.pow; do
   echo "-> $file"
   ./powscript $file
 done
+echo "Interactive mode tests:"
+for file in test/interactive/*.pow; do 
+  echo "-> $file"
+  ./powscript --interactive < $file
+done
 echo 'OK'
 exit 0
