@@ -78,12 +78,12 @@ myfunc()
 simple_arrays
 associative_arrays
 
-foo={}
-bar={}
-foo["one"]="foo"
-bar["foo"]="123"
-map foo values | pipemap pick bar
-echo last="$(last foo)"
+afoo={}
+abar={}
+afoo["one"]="foo"
+abar["foo"]="123"
+map afoo values | pipemap pick abar
+echo last="$(last afoo)"
 
 math '9 / 2'
 math '9 / 2' 4
