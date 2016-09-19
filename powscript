@@ -88,12 +88,13 @@ stack_update(){
 }
 
 transpile_all(){
+  [[ -n $1 ]] && [[ $1 == '--noquotes' ]] && NO_QUOTES=1
   cat - | while IFS="" read -r line; do
     i=$(getindent "$line")
-    [[ "$line" =~ ^(#) ]] && local _comment="#"
+    [[ "$line" =~ ^(#)  ]] && local _comment="#"
     [[ "$line" =~ "={}" ]] && echo "$_comment$(makeindent $i)declare -A ${line/=\{\}/}" && continue
     [[ "$line" =~ "=[]" ]] && echo "$_comment$(makeindent $i)declare -a ${line/=\[\]/}" && continue
-    [[ "$line" =~ ([ ]\$[A-Za-z_0-9@]) ]] && line="$(echo "$line" | sed -E 's/([ =])\$([a-zA-Z_0-9@]+)/\1"$\2"/gi' )"
+    [[ ! $NO_QUOTES     ]] && [[ "$line" =~ ([ ]\$[A-Za-z_0-9@]) ]] && line="$(echo "$line" | sed -E 's/([ =])\$([a-zA-Z_0-9@]+)/\1"$\2"/gi' )"
     echo "$line"
   done
 }
@@ -101,11 +102,16 @@ transpile_all(){
 transpile_for(){
   push stack "done"
   local arr="$(echo "$1" | awk '{ print $4 }' )"
+  local arr2nd="$(echo "$1" | awk '{ print $5 }' )"
   local i=$(( $(getindent "$code") + 2 ))
+  args=""
   code="$1; do"
   indent="$(makeindent $i)"
+  # iterate over string (starts with $ or has more than 1 argument)
+  if [[ ${arr:0:1} =~ ^([$]) || ${#arr2nd} != 0 ]]; then 
+    args="--noquotes"
   # iterate over associative array
-  if [[ "$code" =~ [a-zA-Z_0-9],[a-zA-Z_0-9] ]]; then
+  elif [[ "$code" =~ [a-zA-Z_0-9],[a-zA-Z_0-9] ]]; then
     local key="$(echo "$code" | awk '{ print $2 }' | awk -F',' '{ print $1 }')"
     local value="$(echo "$code" | awk '{ print $2 }' | awk -F',' '{ print $2 }')"
     code="$code\n$indent$value=\"\${$arr[\$$key]}\""
@@ -117,7 +123,7 @@ transpile_for(){
     local key="$(echo "$code" | awk '{ print $2 }')"
     [[ ! "$arr" == "\$@" ]] && code="${code/ $arr/ \"\${$arr\[@\]\}\"}"
   fi
-  echo -e "$code" | transpile_all
+  echo -e "$code" | transpile_all ${args}
 }
 
 transpile_if(){
@@ -210,7 +216,7 @@ transpile_function(){
   for field in $fields; do echo "$indent""local $field=\"\${$i}\""; i=$((i+1)); done
 }
 ######################### begin-of-powscript-functions
-powfunctions="async_pipe async_pipe_each_line async_then compose empty isset keys last map mappipe math on pick values"
+powfunctions="async_pipe async_pipe_each_line async_then compose empty filter isset keys last map mappipe math on pick values"
 # async_then <done_callback> <pipe_function> <function> <args..>
 async_pipe() {
   cb=$1   ; shift
@@ -253,6 +259,10 @@ compose() {
 # example: empty "" && echo "empty string"
 empty(){
   [[ "${#1}" == 0 ]] && return 0 || return 1
+}
+# usage: filter foo myfunc
+filter(){
+  map $1 | pipemap $2 
 }
 # example: isset "" && echo "not empty string" || echo "empty string"
 isset(){
