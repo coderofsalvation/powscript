@@ -4,11 +4,12 @@ rand=$(cat /dev/urandom | tr -cd [:alnum:] | head -c 4)
 ID=$date"_"$rand
 includefuncs=""
 requires=""
-tmpfile="/tmp/.$(whoami).powscript.$date_$rand"
+tmpfile="/tmp/.$(whoami).pow.$date_$rand"
 ps1="${PS1//\\u/$USER}"; p="${p//\\h/$HOSTNAME}"
 evalstr=""
 evalstr_cache=""
 shopt -s extglob
+[[ -n $runtime ]] && runtime=$runtime || runtime=bash
 
 input=$1
 if [[ ! -n $startfunction ]]; then 
@@ -17,8 +18,8 @@ fi
 
 empty "$1" && {
   echo 'Usage:
-     powscript <file.powscript>
-     powscript --compile <file.pow>
+     powscript <file.pow>
+     powscript --compile [--sh] <file.pow>
      powscript --lint <file.pow>
      powscript --evaluate <powscript string>
      powscript --interactive
@@ -31,6 +32,10 @@ empty "$1" && {
 
 for arg in "$@"; do
   case "$arg" in
+    --sh)
+      runtime=sh
+      shift
+      ;;
     --interactive)
       startfunction="console process"
       shift
@@ -49,6 +54,18 @@ for arg in "$@"; do
       ;;
   esac
 done
+
+transpile_sh(){
+  if [[ $runtime == "bash" ]]; then 
+    cat -
+  else
+    cat -                                           \
+      | sed "s/\[\[/\[/g;s/\]\]/\]/g"               \
+      | sed "s/ == / = /g"                          \
+      | sed "s/\&>\(.*[^;]\)[; $]/1>\1 2>\1; /g"    \
+      | transpile_all
+  fi
+}
 
 transpile_sugar(){
   while IFS="" read -r line; do 
@@ -107,11 +124,17 @@ compile(){
     local dir="$(dirname "$1")"; local file="$(basename "$1")"; cd "$dir" &>/dev/null
     { cat_requires "$file" ; echo -e "#\n# application code\n#\n"; cat "$file"; } | lint_pipe > $tmpfile
   fi
-  [[ ! $PIPE == 2 ]] && echo -e "#!/bin/bash\n$settings"
+  [[ ! $PIPE == 2 ]] && {
+    echo -e "#!/bin/$runtime\n"
+    [[ ! $runtime == "bash" ]] && echo -e "$polyfill"
+    echo -e "$settings"
+  }
   transpile_sugar "$tmpfile" | grep -v "^#" > $tmpfile.code
   transpile_functions $tmpfile.code
-  cat $tmpfile.code
-  [[ ! $PIPE == 2 ]] && for i in ${!footer[@]}; do echo "${footer[$i]}"; done 
+  {
+    cat $tmpfile.code
+    [[ ! $PIPE == 2 ]] && for i in ${!footer[@]}; do echo "${footer[$i]}"; done 
+  } | transpile_sh
   rm $tmpfile
 }
 

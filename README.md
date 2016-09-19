@@ -5,8 +5,17 @@
 ## Usage
 
     $ wget "https://raw.githubusercontent.com/coderofsalvation/powscript/master/powscript" -O /usr/local/bin/powscript && chmod 755 /usr/local/bin/powscript
-    $ powscript myscript.pow                        # run directly
-    $ powscript --compile myscript.pow > myscript   # output bashscript
+    $ powscript myscript.pow                              # run directly
+    $ powscript --compile myscript.pow > myscript         # output bashscript
+    $ powscript --compile --sh myscript.pow > myscript.sh # output sh-script
+
+## Wiki
+
+* [Syntax reference](https://github.com/coderofsalvation/powscript/wiki/Reference)
+* [Modules](https://github.com/coderofsalvation/powscript/wiki/Modules)
+* [Developer info / Contributions](https://github.com/coderofsalvation/powscript/wiki/Contributing)
+* [Similar projects](https://github.com/coderofsalvation/powscript/wiki/Similar-projects)
+* [Why](https://github.com/coderofsalvation/powscript/wiki/Why)
 
 ## Example
 
@@ -59,6 +68,16 @@ Then hitting ctrl-p in your console will enter powscript mode:
     line=2,foo2,bar2,flop2
     > 
 
+## POSIX /bin/sh compatibility
+
+Powscript can produce 'kindof' POSIX `/bin/sh`-compatible output by removing bashisms, by introducing the `--sh` flag:
+
+    $ powscript --compile foo.pow      > foo.bash
+    $ powscript --sh --compile foo.pow > foo.sh
+
+This however, is not 100% tested, so please remove bashisms manually using docs/tools like [bashism guide](http://mywiki.wooledge.org/Bashism) or [https://linux.die.net/man/1/checkbashisms](checkbashisms)
+The general rule for POSIX sh-output is: `don't write bashfeatures in powscript`
+
 ## Live expansion inside editor
 
 > HINT: use live expansion inside vim.
@@ -66,11 +85,3 @@ Then hitting ctrl-p in your console will enter powscript mode:
 
     vmap p> :!PIPE=2 powscript --compile<CR>                                
     nmap p> ggVG:!PIPE=2 powscript --compile<CR>
-
-## Wiki
-
-* [Syntax reference](https://github.com/coderofsalvation/powscript/wiki/Reference)
-* [Modules](https://github.com/coderofsalvation/powscript/wiki/Modules)
-* [Developer info / Contributions](https://github.com/coderofsalvation/powscript/wiki/Contributing)
-* [Similar projects](https://github.com/coderofsalvation/powscript/wiki/Similar-projects)
-* [Why](https://github.com/coderofsalvation/powscript/wiki/Why)
