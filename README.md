@@ -85,3 +85,12 @@ The general rule for POSIX sh-output is: `don't write bashfeatures in powscript`
 
     vmap p> :!PIPE=2 powscript --compile<CR>                                
     nmap p> ggVG:!PIPE=2 powscript --compile<CR>
+
+## OSX users
+
+OSX might protest since it isn't quite GNU focused. Please run these commands after installing:
+
+    $ brew install bash
+    $ brew install coreutils gnu-sed grep gawk --default-names
+    $ echo 'export PATH=/usr/local/opt/coreutils/libexec/gnubin:$PATH' >> ~/.bashrc
+    $ sed -i 's|#!/bin/bash|#!/usr/local/bin/bash|g' powscript
