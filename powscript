@@ -425,7 +425,10 @@ transpile_functions(){
   local odel="\\\($anydel" # open delimiters
   local cdel="\\\)$anydel" # close delimiters
   local nodel="[^\\\(\\\)$anydel]"
-  local regex="[$odel]?$allfuncs[$cdel]?"
+  local namechar='[a-zA-Z0-9_-]'
+  local startsname='(?<!'"${namechar}"')'
+  local endsname='(?!'"${namechar}"')'
+  local regex="[$odel]?${startsname}$allfuncs${endsname}[$cdel]?"
   while IFS="" read -r line; do
     matched_funcs="$(echo "$line" | grep -oP "$regex" | grep -oP "($nodel)+" || printf '')"
     for func in $matched_funcs; do
