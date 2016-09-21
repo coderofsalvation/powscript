@@ -1,6 +1,11 @@
 #!/bin/bash
 
 ./powscript --compile test/code-1.pow
+./powscript --compile test/compilation/strict-function-inclusion.pow | {
+  included="$(grep -E "(map|on) \(\)")"
+  { echo "$included" | grep "map"; } || exit 1
+  { echo "$included" | grep "on" ; } && exit 1 || exit 0
+} || exit 1
 for file in test/*.pow; do 
   echo "-> $file"
   ./powscript $file
