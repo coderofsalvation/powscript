@@ -74,9 +74,23 @@ transpile_for(){
   echo -e "$code" | transpile_all
 }
 
+transpile_while(){
+  push stack "done"
+  code="$(transpile_condition while "$1" "$2")"
+  code="$code; do"
+  echo "$code" | transpile_all
+}
+
 transpile_if(){
   push stack "fi"
-  code="${1/if not/if \!}"
+  code="$(transpile_condition "if" "$1" "$2")"
+  code="$code; then"
+  echo "$code" | transpile_all
+}
+
+transpile_condition(){
+  form=$1
+  code="${2/$form not/$form \!}"
   firstvar="${code/\! /}"
   firstvar="$(echo "$firstvar" | awk '{ print $2 }')"
   code="${code// and / && }"
@@ -86,12 +100,11 @@ transpile_if(){
   code="${code//< /-lt }"
   code="${code//<= /-le }"
   code="${code//!= /-ne }"
-  [[ "$code" =~ (if[ ]) && "$firstvar" =~ ^([\"\$-]) ]] && code="${code/if /if [[ }"
+  [[ "$code" =~ ($form[ ]) && "$firstvar" =~ ^([\"\$-]) ]] && code="${code/$form /$form [[ }"
   code="${code/match /=~ }"
   [[ "$code" =~ "[[" ]] && code="$code ]]"
-  code="$code; then"
   code="${code// is / == }"
-  echo "$code" | transpile_all
+  echo "$code"
 }
 
 transpile_then(){
@@ -121,11 +134,6 @@ transpile_when_done(){
 transpile_switch(){
   push stack "esac"
   echo "${1/switch/case} in" 
-}
-
-transpile_while(){
-  push stack "done"
-  echo "$1""; do"
 }
 
 transpile_case(){

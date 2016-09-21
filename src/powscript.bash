@@ -80,7 +80,7 @@ transpile_sugar(){
     [[ "$line" =~ ^([ ]*await .* then)                ]] && transpile_then "$line"                       && continue
     [[ "$line" =~ ^([ ]*if )                          ]] && transpile_if  "$line"                        && continue
     [[ "$line" =~ ^([ ]*switch )                      ]] && transpile_switch "$line"                     && continue
-    [[ "$line" =~ ^([ ]*while )                       ]] && transpile_while "$line"                     && continue
+    [[ "$line" =~ ^([ ]*while )                       ]] && transpile_while "$line"                      && continue
     [[ "$line" =~ ^([ ]*case )                        ]] && transpile_case "$line"                       && continue
     [[ "$line" =~ ([a-zA-Z_0-9]\+=)                   ]] && transpile_array_push "$line"                 && continue
     [[ "$line" =~ ^([a-zA-Z_0-9]*\([a-zA-Z_0-9, ]*\)) ]] && transpile_function "$line"                   && continue
