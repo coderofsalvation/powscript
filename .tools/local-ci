@@ -1,0 +1,14 @@
+#!/usr/bin/env bash
+
+if [[ -x $(command -v docker) ]]; then
+  docker build -t travis-powscript-test .
+  if [[ $1 =~ ("-i"|"--interactive") ]]; then
+    docker run -it travis-powscript-test /bin/bash
+  else
+    docker run travis-powscript-test
+  fi
+else
+  echo -e "please install docker.\n"
+fi
+
+
