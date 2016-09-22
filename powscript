@@ -353,16 +353,19 @@ fi
 
 empty "$1" && {
   echo 'Usage:
-     powscript <file.pow>
-     powscript --compile [--sh] <file.pow>
-     powscript --lint <file.pow>
-     powscript --evaluate <powscript string>
-     powscript --interactive
-     echo <powscript string> | PIPE=1 powscript --compile
-     echo <powscript string> | PIPE=1 powscript --evaluate
-     cat foo.bash            | powscript --tosh > foo.sh
-
-     note: PIPE=1 allows input from stdin, PIPE=2 as well but produces bare output
+   _ 
+   powscript <file.pow>                                     run powscript directly                        
+   powscript --compile [--sh] <file.pow>                    compile to bash [or (experimental) POSIX sh]  
+   powscript --lint <file.pow>                              crude linter                                  
+   powscript --evaluate <powscript string>                  run powscript string directly                 
+   powscript --interactive                                  interactive console                            
+   echo <powscript string> | PIPE=1 powscript --compile     output bashcode                               
+   echo <powscript string> | PIPE=1 powscript --evaluate    run bashcode                                  
+   cat foo.bash            | powscript --tosh > foo.sh      convert bash to sh (experimental)             
+                                                                                                          
+                                                                                                          
+   note: PIPE=1 allows input from stdin, PIPE=2 as well   ┌─────────────────────────────────────────────────────┐
+   but without the fat                                    │ docs: https://github.com/coderofsalvation/powscript │
   ';
 }
 

@@ -41,33 +41,15 @@ Check <a href="https://github.com/coderofsalvation/powscript/wiki/Reference">her
 * safetynets: automatic quoting, halt on error or missing dependency (require_cmd)
 * comfort: [easy arrays, easy async, functional programming](https://github.com/coderofsalvation/powscript/wiki/Reference), named variables instead of positionals
 * [Modules / bundling](https://github.com/coderofsalvation/powscript/wiki/Modules)
+* [remote/local packages & dependencies](https://github.com/coderofsalvation/powscript/wiki/Dependencies)
 * written in bash 4, 'zero'-dependency solution
 * hasslefree: easy installation without gcc compilation/3rd party software
 
 ## Examples
 
 * [m3uchecker (19 lines powscript vs 57 lines bash)](https://gist.github.com/coderofsalvation/b1313d287c1f0a7e6cdf)
+* [pm.sh](https://github.com/coderofsalvation/pm.hs)
 * [Collection of codesnippets](https://github.com/coderofsalvation/powscript/wiki/Reference)
-
-## Packages & dependency handling
-
-Installed commands can be checked at runtime using `require_cmd`:
-
-    #!/usr/bin/env powscript
-    require_cmd 'echo'    
-
-    echo 'hello world'
-
-Remote packages can be included using [aap](https://github.com/coderofsalvation/aap), which is npm for bash+git
-
-    $ wget "https://github.com/coderofsalvation/aap/raw/master/aap" -O ~/bin/aap && chmod 755 ~/bin/aap
-    $ aap init
-    $ aap install ssh+git://user@github.com/username/powscriptrepo.git --save
-
-    #!/usr/bin/env powscript
-    require 'username/powscriptrepo/foo.pow'    
-
-    echo 'hello world'
 
 ## Interactive mode (experimental)
 
