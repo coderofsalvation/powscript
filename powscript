@@ -87,8 +87,14 @@ stack_update(){
   if ((indent_current < indent_last)); then stack_pop "$1"; fi
 }
 
+get_array_code(){
+  printf '"'
+  printf "\${$1[$2]}"
+  printf '"'
+}
+
 transpile_all(){
-  cat - | while IFS="" read -r line; do
+  while IFS="" read -r line; do
     i=$(getindent "$line")
     [[ "$line" =~ ^(#) ]] && local _comment="#"
     [[ "$line" =~ "={}" ]] && echo "$_comment$(makeindent $i)declare -A ${line/=\{\}/}" && continue
@@ -108,21 +114,35 @@ transpile_for(){
   if [[ "$code" =~ [a-zA-Z_0-9],[a-zA-Z_0-9] ]]; then
     local key="$(echo "$code" | awk '{ print $2 }' | awk -F',' '{ print $1 }')"
     local value="$(echo "$code" | awk '{ print $2 }' | awk -F',' '{ print $2 }')"
-    code="$code\n$indent$value=\"\${$arr[\$$key]}\""
+    code="$code\n$indent$value=$(get_array_code $arr "\$$key")"
     code="${code/,$value/}"
     code="${code/ of / in }"
-    code="${code/ $arr/ \"\${!$arr\[@\]\}\"}";
-  else
+    code="${code/ $arr/ $(get_array_code "!$arr" @)}";
+  elif [[ ! "$arr" == "\$@" ]]; then
     # iterate over indexed array
     local key="$(echo "$code" | awk '{ print $2 }')"
-    [[ ! "$arr" == "\$@" ]] && code="${code/ $arr/ \"\${$arr\[@\]\}\"}"
+    code="${code/ $arr/ $(get_array_code $arr @)}"
   fi
   echo -e "$code" | transpile_all
 }
 
+transpile_while(){
+  push stack "done"
+  code="$(transpile_condition while "$1" "$2")"
+  code="$code; do"
+  echo "$code" | transpile_all
+}
+
 transpile_if(){
   push stack "fi"
-  code="${1/if not/if \!}"
+  code="$(transpile_condition "if" "$1" "$2")"
+  code="$code; then"
+  echo "$code" | transpile_all
+}
+
+transpile_condition(){
+  form=$1
+  code="${2/$form not/$form !}"
   firstvar="${code/\! /}"
   firstvar="$(echo "$firstvar" | awk '{ print $2 }')"
   code="${code// and / && }"
@@ -132,12 +152,11 @@ transpile_if(){
   code="${code//< /-lt }"
   code="${code//<= /-le }"
   code="${code//!= /-ne }"
-  [[ "$code" =~ (if[ ]) && "$firstvar" =~ ^([\"\$-]) ]] && code="${code/if /if [[ }"
+  [[ "$code" =~ ($form[ ]) && "$firstvar" =~ ^([\"\$-]) ]] && code="${code/$form /$form [[ }"
   code="${code/match /=~ }"
   [[ "$code" =~ "[[" ]] && code="$code ]]"
-  code="$code; then"
   code="${code// is / == }"
-  echo "$code" | transpile_all
+  echo "$code"
 }
 
 transpile_then(){
@@ -169,11 +188,6 @@ transpile_switch(){
   echo "${1/switch/case} in" 
 }
 
-transpile_while(){
-  push stack "done"
-  echo "$1""; do"
-}
-
 transpile_case(){
   push stack "  ;;"
   echo "${1/case /})"
@@ -185,7 +199,7 @@ transpile_array_push(){
 }
 
 transpile_array_get(){
-  code="${1/\$/\"\$\{}"
+  code="${1/\$/\"\${}"
   echo "$code}\""
 }
 
@@ -279,7 +293,7 @@ map(){
 }
 mappipe(){
   func="$1"; shift
-  cat - | while read -r line; do $func "$@" "$line"; done
+  ( while read -r line; do $func "$@" "$line"; done )
 }
 math(){
   if [[ -n "$2" ]]; then
@@ -406,7 +420,7 @@ transpile_sugar(){
     [[ "$line" =~ ^([ ]*await .* then)                ]] && transpile_then "$line"                       && continue
     [[ "$line" =~ ^([ ]*if )                          ]] && transpile_if  "$line"                        && continue
     [[ "$line" =~ ^([ ]*switch )                      ]] && transpile_switch "$line"                     && continue
-    [[ "$line" =~ ^([ ]*while )                       ]] && transpile_while "$line"                     && continue
+    [[ "$line" =~ ^([ ]*while )                       ]] && transpile_while "$line"                      && continue
     [[ "$line" =~ ^([ ]*case )                        ]] && transpile_case "$line"                       && continue
     [[ "$line" =~ ([a-zA-Z_0-9]\+=)                   ]] && transpile_array_push "$line"                 && continue
     [[ "$line" =~ ^([a-zA-Z_0-9:]*\([a-zA-Z_0-9, ]*\)) ]] && transpile_function "$line"                   && continue
@@ -434,7 +448,10 @@ transpile_functions(){
   local odel="\\\($anydel" # open delimiters
   local cdel="\\\)$anydel" # close delimiters
   local nodel="[^\\\(\\\)$anydel]"
-  local regex="[$odel]?$allfuncs[$cdel]?"
+  local namechar='[a-zA-Z0-9_-]'
+  local startsname='(?<!'"${namechar}"')'
+  local endsname='(?!'"${namechar}"')'
+  local regex="[$odel]?${startsname}$allfuncs${endsname}[$cdel]?"
   while IFS="" read -r line; do
     matched_funcs="$(echo "$line" | grep -oP "$regex" | grep -oP "($nodel)+" || printf '')"
     for func in $matched_funcs; do
@@ -469,6 +486,7 @@ compile(){
     [[ ! $PIPE == 2 ]] && for i in ${!footer[@]}; do echo "${footer[$i]}"; done 
   } | transpile_sh
   rm $tmpfile
+  rm $tmpfile.code
 }
 
 
