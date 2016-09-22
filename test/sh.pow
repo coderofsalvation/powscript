@@ -1,0 +1,5 @@
+foo()
+  if -n $SHELL
+    echo yes
+
+foo

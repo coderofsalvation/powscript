@@ -95,7 +95,6 @@ transpile_sugar(){
 }
 
 cat_requires(){
-  dependencies=""
   while IFS="" read -r line; do 
     [[ "$line" =~ ^(require_cmd ) ]] && {                                           # include require_cmd dependency checks
       local cmd="${line//*require_cmd /}"; cmd="${cmd//[\"\']/}"
@@ -103,11 +102,15 @@ cat_requires(){
     };
     [[ "$line" =~ ^(require ) ]] && {                                               # include require-calls
       local file="${line//*require /}"; file="${file//[\"\']/}"
-      echo -e "#\n# $line (included by powscript\n#\n"
-      cat "$file";
+      if [[ ! -f "$file" ]]; then
+        echo "could not require: $line" 1>&2; exit 1;
+        break;
+      else
+        echo -e "#\n# $line (included by powscript\n#\n"
+        cat "$file";
+      fi
     };
   done <  $1
-  echo "" 
 }
 
 transpile_functions(){
@@ -142,6 +145,7 @@ compile(){
     cat - | lint_pipe > $tmpfile
   else
     local dir="$(dirname "$1")"; local file="$(basename "$1")"; cd "$dir" &>/dev/null
+    [[ ! -f "$file" ]] && { echo "no such file: $file"; exit 1; }
     { cat_requires "$file" ; echo -e "#\n# application code\n#\n"; cat "$file"; } | lint_pipe > $tmpfile
   fi
   [[ ! $PIPE == 2 ]] && {
