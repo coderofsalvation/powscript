@@ -75,7 +75,7 @@ transpile_sh(){
 transpile_sugar(){
   while IFS="" read -r line; do 
     stack_update "$line"
-    [[ "$line" =~ ^(require |#)                       ]] && continue
+    [[ "$line" =~ ^(require |require_cmd|#)           ]] && continue
     [[ "$line" =~ (\$[a-zA-Z_0-9]*\[)                 ]] && transpile_array_get "$line"                  && continue
     [[ "$line" =~ ^([ ]*for line from )               ]] && transpile_foreachline_from "$line"           && continue
     [[ "$line" =~ ^([ ]*for )                         ]] && transpile_for "$line"                        && continue
@@ -95,7 +95,12 @@ transpile_sugar(){
 }
 
 cat_requires(){
+  dependencies=""
   while IFS="" read -r line; do 
+    [[ "$line" =~ ^(require_cmd ) ]] && {                                           # include require_cmd dependency checks
+      local cmd="${line//*require_cmd /}"; cmd="${cmd//[\"\']/}"
+      printf "%-30s %s\n" "which $cmd &>/dev/null" "|| { echo \"dependency error: it seems '$cmd' is not installed (please install it)\"; exit 1; }"
+    };
     [[ "$line" =~ ^(require ) ]] && {                                               # include require-calls
       local file="${line//*require /}"; file="${file//[\"\']/}"
       echo -e "#\n# $line (included by powscript\n#\n"

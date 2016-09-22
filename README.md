@@ -21,6 +21,7 @@
 
     #!/usr/bin/env powscript
     require 'foo'
+    require_cmd 'echo'
     
     usage(app)
       echo "$app <number>"
@@ -39,7 +40,7 @@ Check <a href="https://github.com/coderofsalvation/powscript/wiki/Reference">her
 
 * indentbased, memorizable, coffeescript-inspired syntax
 * more human-like, less semantic noise like { ! [[ @ ]] || ~=
-* safetynets: automatic quoting, halt on error
+* safetynets: automatic quoting, halt on error or missing dependency (require_cmd)
 * comfort: [easy arrays, easy async, functional programming](https://github.com/coderofsalvation/powscript/wiki/Reference), named variables instead of positionals
 * [Modules / bundling](https://github.com/coderofsalvation/powscript/wiki/Modules)
 * written in bash 4, 'zero'-dependency solution
