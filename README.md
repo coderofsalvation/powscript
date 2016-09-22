@@ -42,7 +42,7 @@ Check <a href="https://github.com/coderofsalvation/powscript/wiki/Reference">her
 * comfort: [easy arrays, easy async, functional programming](https://github.com/coderofsalvation/powscript/wiki/Reference), named variables instead of positionals
 * [Modules / bundling](https://github.com/coderofsalvation/powscript/wiki/Modules)
 * [remote/local packages & dependencies](https://github.com/coderofsalvation/powscript/wiki/Dependencies)
-* written in bash 4, 'zero'-dependency solution
+* written/generated for bash >= 4.x, 'zero'-dependency solution
 * hasslefree: easy installation without gcc compilation/3rd party software
 
 ## Examples

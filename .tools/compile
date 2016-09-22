@@ -7,7 +7,9 @@ for i in lang/*; do
   [[ ! "$lang" =~ "bash" ]] && continue
   { 
     echo "#!/bin/bash" 
+    echo "$(<lang/bash/.strictmode)"
     echo "settings='$(<lang/bash/.settings)'"
+    echo "strictmode='$(<lang/bash/.strictmode)'"
     echo "polyfill='$(<lang/bash/.polyfill)'"
     cat lang/$lang/.settings lang/$lang/.util lang/$lang/.transpile 
     echo "######################### begin-of-powscript-functions"
