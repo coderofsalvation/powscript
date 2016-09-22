@@ -1,4 +1,10 @@
 #!/bin/bash
+shopt compat40 2>&1 | grep invalid &>/dev/null && { echo "this app runs on bash >= 4.x, please upgrade"; exit 1;  }
+{ 
+  # enable strict bash 4.0 mode by disabling higher modes
+  for mode in compat49 compat48 compat47 compat46 compat45 compat44 compat43 compat42 compat41; do shopt -u $mode; done
+  shopt -s compat40
+} &>/dev/null # hide errors of old 4.x versions
 settings='# powscript general settings
 set -e                         # halt on error
 set +m                         #
@@ -9,6 +15,12 @@ shopt -s extglob               # regular expressions
 path="$(pwd)"
 selfpath="$( dirname "$(readlink -f "$0")" )"
 tmpfile="/tmp/$(basename $0).tmp.$(whoami)"'
+strictmode='shopt compat40 2>&1 | grep invalid &>/dev/null && { echo "this app runs on bash >= 4.x, please upgrade"; exit 1;  }
+{ 
+  # enable strict bash 4.0 mode by disabling higher modes
+  for mode in compat49 compat48 compat47 compat46 compat45 compat44 compat43 compat42 compat41; do shopt -u $mode; done
+  shopt -s compat40
+} &>/dev/null # hide errors of old 4.x versions'
 polyfill='# here comes a bash polyfill
 # it tries to substitute missing bash commands 
 # to provide somewhat compatibility in other shells like bin/sh
@@ -344,6 +356,7 @@ ps1="${PS1//\\u/$USER}"; p="${p//\\h/$HOSTNAME}"
 evalstr=""
 evalstr_cache=""
 shopt -s extglob
+shopt -s compat40
 [[ -n $runtime ]] && runtime=$runtime || runtime=bash
 
 input=$1
@@ -353,7 +366,7 @@ fi
 
 empty "$1" && {
   echo 'Usage:
-   _ 
+    
    powscript <file.pow>                                     run powscript directly                        
    powscript --compile [--sh] <file.pow>                    compile to bash [or (experimental) POSIX sh]  
    powscript --lint <file.pow>                              crude linter                                  

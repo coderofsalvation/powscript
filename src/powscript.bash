@@ -9,6 +9,7 @@ ps1="${PS1//\\u/$USER}"; p="${p//\\h/$HOSTNAME}"
 evalstr=""
 evalstr_cache=""
 shopt -s extglob
+shopt -s compat40
 [[ -n $runtime ]] && runtime=$runtime || runtime=bash
 
 input=$1
@@ -18,7 +19,7 @@ fi
 
 empty "$1" && {
   echo 'Usage:
-   _ 
+    
    powscript <file.pow>                                     run powscript directly                        
    powscript --compile [--sh] <file.pow>                    compile to bash [or (experimental) POSIX sh]  
    powscript --lint <file.pow>                              crude linter                                  
