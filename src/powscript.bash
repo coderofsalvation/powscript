@@ -6,6 +6,7 @@ includefuncs=""
 requires=""
 tmpfile="/tmp/.$(whoami).pow.$date_$rand"
 ps1="${PS1//\\u/$USER}"; p="${p//\\h/$HOSTNAME}"
+bashliveindex='https://raw.github.com/coderofsalvation/bashlive.repo/master/index.txt'
 evalstr=""
 evalstr_cache=""
 shopt -s extglob
@@ -24,6 +25,8 @@ empty "$1" && {
    powscript --lint <file.pow>                              crude linter                                  
    powscript --evaluate <powscript string>                  run powscript string directly                 
    powscript --interactive                                  interactive console                            
+   powscript search function <searchquery>                  search thru bashlive functions
+   powscript download function <number>                     install bashlive function in 'lib/<functionname>'
    echo <powscript string> | PIPE=1 powscript --compile     output bashcode                               
    echo <powscript string> | PIPE=1 powscript --evaluate    run bashcode                                  
    cat foo.bash            | powscript --tosh > foo.sh      convert bash to sh (experimental)             
@@ -292,6 +295,33 @@ console(){
 runfile(){
   file=$1; shift;
   eval "$(compile "$file")"
+}
+
+install_bashlive(){
+  [[ -f ~/.bashlive/cache.index ]] && return 0
+  echo "downloading bashlive cache"
+  mkdir ~/.bashlive
+  cd ~/.bashlive
+  curl -L "$bashliveindex" | cat -n > ~/.bashlive/cache.index
+}
+
+doquery(){
+  set -x
+  regex="($(echo "$*" | sed 's/ /|/g'))"
+  cat ~/.bashlive/cache.index | grep -E "$regex"
+}
+
+search(){
+  shift;shift;
+  install_bashlive
+  doquery "$@" | awk -F'\t' '{ print $1" "$2 }'
+}
+
+download(){
+  install_bashlive
+  echo 1=$1
+  exit
+  cat ~/.bashlive/cache | sed -n "$1p"
 }
 
 ${startfunction} "$@" #"${0//.*\./}"
