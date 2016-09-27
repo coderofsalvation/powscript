@@ -1,5 +1,8 @@
 #!/bin/bash
 
-./powscript --compile test/compilation/strict-function-inclusion.pow | grep -E '(map\(\)|on\(\))' && { echo 'map or on was included'; exit 1; }
-echo "OK: map or on were not included"
-exit 0
+PIPE=1 ./powscript --compile < <(echo "'I saw it once in a map.'") | {
+  included="$(grep -E "(map|on) \(\)")"
+  { echo "$included" | grep "map"; } || exit 1
+  { echo "$included" | grep "on" ; } && exit 1 || exit 0
+} || exit 1
+

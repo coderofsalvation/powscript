@@ -1,26 +1,97 @@
 #!/bin/bash
-set -e # remove allowance errors (and exit 1)
-echo -e "todo: powscript should return error code\n\n"
 
-printline(){
-  cat | awk "{ print \"$*> \"\$0 }"
+set -E
+
+export ErrorTracker=$(mktemp)
+echo "0" > $ErrorTracker
+
+NoIndent="_noIdent--##$RANDOM"
+
+format() {
+  while IFS='' read -e -r line; do
+    if [[ ! "$line" =~ "$NoIndent".* ]]; then
+      printf "  $line\n"
+    else
+      printf "${line/$NoIndent/}\n"
+    fi
+  done
 }
 
-for file in test/*.bash; do 
-  [[ -x $file ]] && $file | printline $file
-done
+trap 'echo $? > "$ErrorTracker"' ERR
 
-for file in test/compilation/*.bash; do 
-  [[ -x $file ]] && $file | printline $file
-done
+{
 
-for file in test/*.pow; do 
-  ./powscript $file | printline $file
-done
+Info="\033[1;35m"
+File="\033[1;34m"
+Pass="\033[1;32m"
+Error="\033[1;31m"
+Nc="\033[0;00m"
 
-for file in test/interactive/*.pow; do 
-  ./powscript --interactive < $file | printline $file
-done
+decl_file() {
+  printf "${NoIndent}${File}$1\n${Nc}"
+}
 
-echo 'OK'
-exit 0
+checktest() {
+  if [ -n "$2" ]; then
+    wait "$2"
+    local exitcode=$?
+  else
+    local exitcode=$1
+  fi
+  if [[ $exitcode == "0" ]]; then
+    printf "${NoIndent}${Pass}Tests passed!\n${Nc}\n"
+  else
+    printf "${NoIndent}${Error}Tests failed!\n${Nc}\n"
+    exit 1
+  fi
+}
+
+header() {
+  printf "${NoIndent}${Info}$1${Nc}\n"
+}
+
+finish() {
+  printf "${NoIndent}${Info}OK!${Nc}\n"
+}
+
+testdirectory() {
+  local directory="$1"
+  local command="$2"
+  local varname="$3"
+  local pattern="$4"
+  [[ ! -n $pattern ]] && pattern=".*"
+
+  for file in "$directory"/*; do
+    if [[ $file =~ $pattern ]]; then
+      decl_file "$file"
+      local rq_file="${file//\//\\/}"
+      eval "$(sed -E "s/\\\$[{]?${varname}[}]?/\"${rq_file}\"/" < <(echo "${command}"))"
+      checktest "$?" "$!" || exit 1
+    fi
+  done
+}
+
+header "Compilation tests:"
+testdirectory "test/compilation" './${file}' 'file'
+
+header "Evaluation tests:"
+testdirectory "test" './powscript ${file}' 'file' '.*\.pow$'
+
+header "Interactive mode tests:"
+testdirectory "test/interactive" './powscript --interactive < ${file}' 'file'
+
+header "Other:"
+testdirectory "test/etc" './${file}' 'file'
+
+finish
+
+} | format
+
+Err="$(cat "$ErrorTracker")"
+rm $ErrorTracker
+
+if [[ $Err != 0 ]]; then
+  echo "Error code: ${Err}"
+fi
+
+exit $Err
