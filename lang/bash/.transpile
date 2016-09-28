@@ -159,8 +159,11 @@ transpile_array_push(){
 }
 
 transpile_array_get(){
-  code="${1/\$/\"\${}"
-  echo "$code}\""
+  postfix=${1/*\]/}
+  code="${1/\]*/}]"
+  code="${code/\$/\"\${}"
+  code="${code/\]/]}}\""
+  echo "$code""$postfix"
 }
 
 transpile_foreachline_from(){

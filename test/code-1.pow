@@ -43,6 +43,9 @@ associative_arrays()
     echo k=$k
     echo v=$v
   echo $foo["bar"]
+  echo $foo["bar"] > /tmp/foo
+  rm /tmp/foo
+
 
 switch()
   switch $foo
