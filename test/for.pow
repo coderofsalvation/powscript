@@ -1,0 +1,16 @@
+
+
+foo={}
+foo['one']="foo"
+foo['two']="bar"
+
+for k,v of foo
+  echo $k
+  echo $v
+
+for i in one two
+  echo $i
+
+str="four five"
+for i in $str
+  echo $i
