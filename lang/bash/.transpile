@@ -61,14 +61,19 @@ transpile_all(){
 
 transpile_for(){
   push stack "done"
+  local semicolons="${1//[^;]}"
   local arr="$(echo "$1" | awk '{ print $4 }' )"
   local arr2nd="$(echo "$1" | awk '{ print $5 }' )"
   local i=$(( $(getindent "$code") + 2 ))
   args=""
   code="$1; do"
   indent="$(makeindent $i)"
+  # traditional for loop
+  if [[ ${#semicolons} == 2  ]]; then 
+    code="${code/for /for (( }"
+    code="${code/; do/ )); do}"
   # iterate over string (starts with $ or has more than 1 argument)
-  if [[ ${arr:0:1} =~ ^([$]) || ${#arr2nd} != 0 ]]; then 
+  elif [[ ${arr:0:1} =~ ^([$]) || ${#arr2nd} != 0 ]]; then 
     args="--noquotes"
   # iterate over associative array
   elif [[ "$code" =~ [a-zA-Z_0-9],[a-zA-Z_0-9] ]]; then
