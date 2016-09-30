@@ -271,15 +271,29 @@ transpile_function(){
   last_keyword=function
 }
 
+is_even(){
+  a=$1
+  [[ $((a%2)) -eq 0  ]] && return 0 || return 1
+}
+
 get_quotes_in_line(){
   quotes="${1//[^\'\"]}"
   echo ${#quotes}
 }
 
+is_quote(){
+  [[ "$1" =~ ([\"\']) ]] && return 0 || return 1
+}
+
 line_is_multistring(){
-  quotes=$(get_quotes_in_line "$1")
-  (( $quotes == 0 )) && return 1
+  line="$1"
+  i=$((${#line}-1))
+  lastchar="${line:$i:1}"
+  quotes=$(get_quotes_in_line "$line")
   (( $quotes == 1 )) && return 0
+  (( $quotes == 0 )) && return 1
+  is_even $quotes && return 1
+  [[ "$line" =~ ([]a-zA-Z_0-9]=\"|[]a-zA-Z_0-9]=\') ]] && return 0
   return 1 # TODO: strip first line
 }
 
