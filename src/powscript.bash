@@ -78,22 +78,27 @@ transpile_sh(){
 
 transpile_sugar(){
   while IFS="" read -r line; do 
-    stack_update "$line"
-    [[ "$line" =~ ^(require |require_cmd|#)           ]] && continue
-    [[ "$line" =~ (\$[a-zA-Z_0-9]*\[)                 ]] && transpile_array_get "$line"                  && continue
-    [[ "$line" =~ ^([ ]*for line from )               ]] && transpile_foreachline_from "$line"           && continue
-    [[ "$line" =~ ^([ ]*for )                         ]] && transpile_for "$line"                        && continue
-    [[ "$line" =~ ^([ ]*when done)                    ]] && transpile_when_done "$line"                  && continue
-    [[ "$line" =~ ^([ ]*await .* then for line)       ]] && transpile_then "$line" "pl" "pipe_each_line" && continue
-    [[ "$line" =~ ^([ ]*await .* then \|)             ]] && transpile_then "$line" "p"  "pipe"           && continue
-    [[ "$line" =~ ^([ ]*await .* then)                ]] && transpile_then "$line"                       && continue
-    [[ "$line" =~ ^([ ]*if )                          ]] && transpile_if  "$line"                        && continue
-    [[ "$line" =~ ^([ ]*switch )                      ]] && transpile_switch "$line"                     && continue
-    [[ "$line" =~ ^([ ]*while )                       ]] && transpile_while "$line"                      && continue
-    [[ "$line" =~ ^([ ]*case )                        ]] && transpile_case "$line"                       && continue
-    [[ "$line" =~ ([a-zA-Z_0-9]\+=)                   ]] && transpile_array_push "$line"                 && continue
-    [[ "$line" =~ ^([a-zA-Z_0-9:]*\([a-zA-Z_0-9, ]*\)) ]] && transpile_function "$line"                   && continue
-    echo "$line" | transpile_all
+    check_literal "$line"  # this will flip literal to 0 or 1 in case of multiline literal strings
+    if [[ $literal == 0 ]]; then
+      stack_update "$line"
+      [[ "$line" =~ ^(require |require_cmd|#)            ]] && continue
+      [[ "$line" =~ (\$[a-zA-Z_0-9]*\[)                  ]] && transpile_array_get "$line"                  && continue
+      [[ "$line" =~ ^([ ]*for line from )                ]] && transpile_foreachline_from "$line"           && continue
+      [[ "$line" =~ ^([ ]*for )                          ]] && transpile_for "$line"                        && continue
+      [[ "$line" =~ ^([ ]*when done)                     ]] && transpile_when_done "$line"                  && continue
+      [[ "$line" =~ ^([ ]*await .* then for line)        ]] && transpile_then "$line" "pl" "pipe_each_line" && continue
+      [[ "$line" =~ ^([ ]*await .* then \|)              ]] && transpile_then "$line" "p"  "pipe"           && continue
+      [[ "$line" =~ ^([ ]*await .* then)                 ]] && transpile_then "$line"                       && continue
+      [[ "$line" =~ ^([ ]*if )                           ]] && transpile_if  "$line"                        && continue
+      [[ "$line" =~ ^([ ]*switch )                       ]] && transpile_switch "$line"                     && continue
+      [[ "$line" =~ ^([ ]*while )                        ]] && transpile_while "$line"                      && continue
+      [[ "$line" =~ ^([ ]*case )                         ]] && transpile_case "$line"                       && continue
+      [[ "$line" =~ ([a-zA-Z_0-9]\+=)                    ]] && transpile_array_push "$line"                 && continue
+      [[ "$line" =~ ^([a-zA-Z_0-9:]*\([a-zA-Z_0-9, ]*\)) ]] && transpile_function "$line"                   && continue
+      echo "$line" | transpile_all
+    else 
+      echo "$line"
+    fi
   done <  "$1"
   stack_update ""
 }
@@ -264,7 +269,6 @@ help(){
   
   ' | less
 }
-
 
 lint(){
   cat "$1" | lint_pipe

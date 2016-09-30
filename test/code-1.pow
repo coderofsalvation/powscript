@@ -111,4 +111,12 @@ switch $1
     echo "Usage: $help" and exit
 
 exit 0
+
+# check literal multiline string
+
+foo='
+  literalfunc()
+    this should not be parsed as powscript
+'
+
 #filter foo myfunc 
