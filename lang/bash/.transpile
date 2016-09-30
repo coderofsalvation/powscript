@@ -30,6 +30,7 @@ stack_pop(){
   unset stack["$index"]
   [[ -n $IGNORE        ]] && return 0 
   [[ ${#lastitem} == 0 ]] && return 
+  [[ $lastitem =~ "fi" ]] && [[ "$line" =~ "else" ]] && return 0  # if/else is a tricky one
   echo -e "$(makeindent $((indent_last-2)) )$lastitem"
   if ! (( (indent_last-2) == indent_current )); then 
     indent_last=$((indent_last-2))
@@ -92,6 +93,7 @@ transpile_for(){
     code="${code/ $arr/ $(get_array_code $arr @)}"
   fi
   echo -e "$code" | transpile_all ${args}
+  last_keyword=for
 }
 
 transpile_while(){
@@ -99,10 +101,11 @@ transpile_while(){
   code="$(transpile_condition while "$1" "$2")"
   code="$code; do"
   echo "$code" | transpile_all
+  last_keyword=while
 }
 
 transpile_if(){
-  push stack "fi"
+  push stack "fi" 
   code="$(transpile_condition "if" "$1" "$2")"
   code="$code; then"
   echo "$code" | transpile_all
@@ -113,11 +116,10 @@ transpile_else(){
   local curindent=$(getindent "$1")
   curindent=$(( curindent+2 ))
   local indent="$(makeindent $curindent)"
-  if [[ $last_keyword == "else" ]]; then 
-    push stack ""
-    echo "$indent""fi"
-  fi
+  local indent="$(makeindent $curindent)"
+  [[ $last_keyword == "else" ]] && echo "$indent""fi"
   echo -e "$1"
+  [[ $last_keyword == "else" ]] || push stack "fi"
   last_keyword=else
 }
 
@@ -167,6 +169,7 @@ transpile_when_done(){
 transpile_switch(){
   push stack "esac"
   echo "${1/switch/case} in" 
+  last_keyword=switch
 }
 
 transpile_case(){
@@ -193,6 +196,7 @@ transpile_foreachline_from(){
   local indent="$(makeindent $curindent)"
   echo "$indent""while IFS=\"\" read -r line; do"
   push stack $indent"done < $file"
+  last_keyword=foreachline
 }
 
 transpile_function(){
@@ -206,6 +210,7 @@ transpile_function(){
   echo "${1//\(*\)/()}{"
   local i=1; 
   for field in $fields; do echo "$indent""local $field=\"\${$i}\""; i=$((i+1)); done
+  last_keyword=function
 }
 
 get_quotes_in_line(){

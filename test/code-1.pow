@@ -12,6 +12,30 @@ if $i is "foo"
 else
   echo "bar"
 
+foo()
+  local appname="${1}"
+  local pidfile=$(process:getpidfile "$appname")
+  if -f $pidfile
+    cat $pidfile
+  else 
+    echo -1
+
+webserver:onrequest(request)
+  if $request =~ (POST .*\/pull)
+    appname="${request/POST \/}"
+    appname="${appname/\/pull*/}"
+    deffile=$(process:gettmpfile $appname).def
+    if -f $deffile
+      workdir=$(apps:getworkdir $deffile)
+      if -d $workdir/.git
+        cd $workdir
+        echo -e "received webhook: pull $appname, performing git pull"
+      else
+        echo -e "received webhook: pull $appname (error: $workdir is not a git repo)"
+    else
+      echo -e "received webhook: pull $appname (error: no such app)"
+   
+
 if not $j is "foo" and $x is "bar"
   if $j is "foo" or $j is "xfoo"
     if $j > $y and $j != $y or $j >= $y

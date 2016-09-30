@@ -78,9 +78,10 @@ transpile_sh(){
 
 transpile_sugar(){
   while IFS="" read -r line; do 
-    [[ ! "$line" =~ ([  ]*else$) ]] && stack_update "$line"
+    line="${line%"${line##*[![:space:]]}"}" # remove trailing whitespace
     check_literal "$line"  # this will flip literal to 0 or 1 in case of multiline literal strings
     if [[ $literal == 0 ]]; then
+      stack_update "$line"
       [[ "$line" =~ ^(require |require_cmd|#)            ]] && continue
       [[ "$line" =~ ^([ ]*else$)                         ]] && transpile_else "$line"                       && continue
       [[ "$line" =~ (\$[a-zA-Z_0-9]*\[)                  ]] && transpile_array_get "$line"                  && continue
