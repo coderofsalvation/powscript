@@ -61,6 +61,7 @@ indent_last=0
 stack=()
 anonymous_funcs=0
 literal=0
+last_keyword=""
 
 getindent(){
   [[ ! ${1:0:1} =~ ([ \t]) ]] && echo 0 && return 0 
@@ -83,9 +84,10 @@ stack_pop(){
   index=${#stack[@]}
   index=$((index-1))
   [[ $index == "-1" ]] && return 0
-  [[ "$1" =~ ^([ ]*else) ]] && echo "$1" && continue # ignore else
   lastitem="${stack[$index]}"
   unset stack["$index"]
+  [[ -n $IGNORE        ]] && return 0 
+  [[ ${#lastitem} == 0 ]] && return 
   echo -e "$(makeindent $((indent_last-2)) )$lastitem"
   if ! (( (indent_last-2) == indent_current )); then 
     indent_last=$((indent_last-2))
@@ -162,6 +164,19 @@ transpile_if(){
   code="$(transpile_condition "if" "$1" "$2")"
   code="$code; then"
   echo "$code" | transpile_all
+  last_keyword=if
+}
+
+transpile_else(){
+  local curindent=$(getindent "$1")
+  curindent=$(( curindent+2 ))
+  local indent="$(makeindent $curindent)"
+  if [[ $last_keyword == "else" ]]; then 
+    push stack ""
+    echo "$indent""fi"
+  fi
+  echo -e "$1"
+  last_keyword=else
 }
 
 transpile_condition(){
@@ -256,17 +271,11 @@ get_quotes_in_line(){
   echo ${#quotes}
 }
 
-# TODO: this doesn't seem to work correctly when called by line_is_multistring_open
-is_even(){
-  a=$1
-  [ $((a%2)) -eq 0  ] && return 0 || return 1
-}
-
 line_is_multistring(){
   quotes=$(get_quotes_in_line "$1")
   (( $quotes == 0 )) && return 1
   (( $quotes == 1 )) && return 0
-  return 1 #is_even $(get_quotes_in_line "$1") && return 1 || return 0 
+  return 1 # TODO: strip first line
 }
 
 check_literal(){
@@ -468,10 +477,11 @@ transpile_sh(){
 
 transpile_sugar(){
   while IFS="" read -r line; do 
+    [[ ! "$line" =~ ([  ]*else$) ]] && stack_update "$line"
     check_literal "$line"  # this will flip literal to 0 or 1 in case of multiline literal strings
     if [[ $literal == 0 ]]; then
-      stack_update "$line"
       [[ "$line" =~ ^(require |require_cmd|#)            ]] && continue
+      [[ "$line" =~ ^([ ]*else$)                         ]] && transpile_else "$line"                       && continue
       [[ "$line" =~ (\$[a-zA-Z_0-9]*\[)                  ]] && transpile_array_get "$line"                  && continue
       [[ "$line" =~ ^([ ]*for line from )                ]] && transpile_foreachline_from "$line"           && continue
       [[ "$line" =~ ^([ ]*for )                          ]] && transpile_for "$line"                        && continue

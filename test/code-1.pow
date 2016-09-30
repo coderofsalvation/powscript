@@ -17,6 +17,17 @@ if not $j is "foo" and $x is "bar"
     if $j > $y and $j != $y or $j >= $y
       echo "foo"
 
+if not $j is "foo" and $x is "bar"
+  if $j is "foo" or $j is "xfoo"
+    if $j > $y and $j != $y or $j >= $y
+      echo "foo"
+    else
+      flop
+  else
+    echo flip
+else
+  echo flap
+
 # extended pattern matching 
 # (google 'extglob' for more
 
