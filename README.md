@@ -11,7 +11,8 @@
 
 ## Wiki
 
-* [Syntax reference / Modules / Developer Info / Contribution / Similar Projects / Why ](https://github.com/coderofsalvation/powscript/wiki)
+* [Syntax reference](https://github.com/coderofsalvation/powscript/blob/master/doc/reference.md)
+* [ Modules / Developer Info / Contribution / Similar Projects / Why ](https://github.com/coderofsalvation/powscript/wiki)
 
 ## Example
 
