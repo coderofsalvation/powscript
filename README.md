@@ -38,7 +38,7 @@ Check <a href="https://github.com/coderofsalvation/powscript/wiki/Reference">her
 * safetynets: automatic quoting, halt on error or missing dependency (require_cmd)
 * comfort: [easy arrays, easy async, functional programming](https://github.com/coderofsalvation/powscript/blob/master/doc/reference.md), named variables instead of positionals
 * [Modules / bundling](https://github.com/coderofsalvation/powscript/blob/master/doc/modules-example.md)
-* [remote/local packages & dependencies]https://github.com/coderofsalvation/powscript/wiki/Dependencie://github.com/coderofsalvation/powscript/blob/master/doc/dependencies-and-packages.md()
+* [remote/local packages & dependencies](http://github.com/coderofsalvation/powscript/blob/master/doc/dependencies-and-packages.md)
 * written/generated for bash >= 4.x, 'zero'-dependency solution
 * hasslefree: easy installation without gcc compilation/3rd party software
 
