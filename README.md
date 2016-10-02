@@ -39,9 +39,9 @@ Check <a href="https://github.com/coderofsalvation/powscript/wiki/Reference">her
 * indentbased, memorizable, coffeescript-inspired syntax
 * more human-like, less semantic noise like { ! [[ @ ]] || ~=
 * safetynets: automatic quoting, halt on error or missing dependency (require_cmd)
-* comfort: [easy arrays, easy async, functional programming](https://github.com/coderofsalvation/powscript/wiki/Reference), named variables instead of positionals
-* [Modules / bundling](https://github.com/coderofsalvation/powscript/wiki/Modules)
-* [remote/local packages & dependencies](https://github.com/coderofsalvation/powscript/wiki/Dependencies)
+* comfort: [easy arrays, easy async, functional programming](https://github.com/coderofsalvation/powscript/blob/master/doc/reference.md), named variables instead of positionals
+* [Modules / bundling](https://github.com/coderofsalvation/powscript/blob/master/doc/modules-example.md)
+* [remote/local packages & dependencies]https://github.com/coderofsalvation/powscript/wiki/Dependencie://github.com/coderofsalvation/powscript/blob/master/doc/dependencies-and-packages.md()
 * written/generated for bash >= 4.x, 'zero'-dependency solution
 * hasslefree: easy installation without gcc compilation/3rd party software
 
@@ -49,7 +49,7 @@ Check <a href="https://github.com/coderofsalvation/powscript/wiki/Reference">her
 
 * [m3uchecker (19 lines powscript vs 57 lines bash)](https://gist.github.com/coderofsalvation/b1313d287c1f0a7e6cdf)
 * [pm.sh](https://github.com/coderofsalvation/pm.hs)
-* [Collection of codesnippets](https://github.com/coderofsalvation/powscript/wiki/Reference)
+* [Collection of codesnippets](https://github.com/coderofsalvation/powscript/blob/master/doc/reference.md)
 
 ## Interactive mode (experimental)
 
