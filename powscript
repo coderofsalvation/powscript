@@ -738,7 +738,7 @@ runfile(){
 
 testdir(){
   find -L "$1" -name "*.pow"  > $tmpfile.test
-  find -L "$1" -name "*.bash" > $tmpfile.test
+  find -L "$1" -name "*.bash" >> $tmpfile.test
   {
     ntest=0
     error=0
