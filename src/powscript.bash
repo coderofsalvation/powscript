@@ -1,10 +1,12 @@
 # parse args
+POW_VERSION=1.1
 date=$(date +%Y%m%d%H%M%S)
 rand=$(cat /dev/urandom | tr -cd [:alnum:] | head -c 4)
 ID=$date"_"$rand
 includefuncs=""
 requires=""
 tmpfile="/tmp/.$(whoami).pow.$date_$rand"
+selfpath="$( dirname "$(readlink -f "$0")" )"
 ps1="${PS1//\\u/$USER}"; p="${p//\\h/$HOSTNAME}"
 evalstr=""
 evalstr_cache=""
@@ -28,10 +30,13 @@ empty "$1" && {
    echo <powscript string> | PIPE=1 powscript --compile     output bashcode                               
    echo <powscript string> | PIPE=1 powscript --evaluate    run bashcode                                  
    cat foo.bash            | powscript --tosh > foo.sh      convert bash to sh (experimental)             
+
+   powscript --test <dir> && echo "OK"                      testsuite mode: run all *.pow files in dir recursively 
                                                                                                           
                                                                                                           
    note: PIPE=1 allows input from stdin, PIPE=2 as well   ┌─────────────────────────────────────────────────────┐
-   but without the fat                                    │ docs: https://github.com/coderofsalvation/powscript │
+   but without the fat                                    │ powscript version '$POW_VERSION'                               │
+                                                          │ docs: https://github.com/coderofsalvation/powscript │
   ';
 }
 
@@ -59,6 +64,10 @@ for arg in "$@"; do
       ;;
     --compile) 
       startfunction=compile
+      shift
+      ;;
+    --test) 
+      startfunction=testdir
       shift
       ;;
   esac
@@ -301,4 +310,35 @@ runfile(){
   eval "$(compile "$file")"
 }
 
+testdir(){
+  find -L "$1" -name "*.pow"  > $tmpfile.test
+  find -L "$1" -name "*.bash" > $tmpfile.test
+  {
+    ntest=0
+    error=0
+    C_FILE="\033[1;34m"
+    C_DEFAULT="\033[0;00m"
+    C_INFO="\033[1;32m"
+    C_ERROR="\033[1;31m"
+    _print(){
+      local C="$2"
+      printf "${C}$1\n${C_DEFAULT}"
+    }
+    while IFS="" read test; do
+      _print "▶ $test\n" "$C_FILE"
+      if [[ "$test" =~ ".pow" ]]; then
+        $selfpath/powscript $test 2>&1 || error=$((error+1))
+      else
+        [[ -x $test ]] && $test 2>&1 || error=$((error+1))
+      fi
+      echo ""
+    done < $tmpfile.test 
+    (( error > 0 )) && C="$C_ERROR" || C="$C_INFO"
+    _print "▶ ERRORS: $error\n\n" "$C"
+  } | awk '{ if( $0~/▶/ ){ print $0; }else{ print "    "$0; } }'
+  exit $error
+}
+
 ${startfunction} "$@" #"${0//.*\./}"
+
+rm "$tmpfile".*
