@@ -341,4 +341,5 @@ testdir(){
 
 ${startfunction} "$@" #"${0//.*\./}"
 
-rm "$tmpfile".*
+rm "$tmpfile".* &>/dev/null
+exit 0
