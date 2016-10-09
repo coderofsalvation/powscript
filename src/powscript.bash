@@ -341,5 +341,7 @@ testdir(){
 
 ${startfunction} "$@" #"${0//.*\./}"
 
-rm "$tmpfile".* &>/dev/null
+for file in "$tmpfile"*; do
+  [[ -f $file ]] && rm "$file"
+done
 exit 0
