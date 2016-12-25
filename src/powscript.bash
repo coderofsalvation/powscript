@@ -311,8 +311,8 @@ runfile(){
 }
 
 testdir(){
-  find -L "$1" -name "*.pow"  > $tmpfile.test
-  find -L "$1" -name "*.bash" >> $tmpfile.test
+  find -L "$1" -maxdepth 15 -name "*.pow"  > $tmpfile.test
+  find -L "$1" -maxdepth 15 -name "*.bash" >> $tmpfile.test
   {
     ntest=0
     error=0
@@ -340,6 +340,7 @@ testdir(){
 }
 
 ${startfunction} "$@" #"${0//.*\./}"
+retcode=$?
 
 rm "$tmpfile".* &>/dev/null
-exit 0
+exit $retcode

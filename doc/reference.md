@@ -399,6 +399,28 @@ when done
   </tr>
 
   <tr>
+    <td><b>JSON decode</b></td>
+    <td>
+      <pre>
+        <code>
+json={}      
+cat package.json | json_decode json 
+echo $json['repository.url']
+
+# outputs: git+https://coderofsalvation@github.com/coderofsalvation/powscript.git 
+        </code>
+      </pre>
+    </td>
+    <td>
+      <pre>
+        <code>
+
+        </code>
+      </pre>
+    </td>
+  </tr>
+
+  <tr>
     <td><b>FP: curry</b></td>
     <td>
       <pre>

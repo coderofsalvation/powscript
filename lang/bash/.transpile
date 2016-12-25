@@ -58,7 +58,7 @@ transpile_all(){
     [[ "$line" =~ ^(#)  ]] && local _comment="#"
     [[ "$line" =~ "={}" ]] && echo "$_comment$(makeindent $i)declare -A ${line/=\{\}/}" && continue
     [[ "$line" =~ "=[]" ]] && echo "$_comment$(makeindent $i)declare -a ${line/=\[\]/}" && continue
-    [[ ! $NO_QUOTES     ]] && [[ "$line" =~ ([ ]\$[A-Za-z_0-9@]) ]] && line="$(echo "$line" | sed -E 's/([ =])\$([a-zA-Z_0-9@]+)/\1"$\2"/gi' )"
+    [[ ! -n $NO_QUOTES  ]] && [[ ! "$line" =~ ([\'\"]\{) ]] && [[ "$line" =~ ([ ]\$[A-Za-z_0-9@]) ]] && line="$(echo "$line" | sed -E 's/([ =])\$([a-zA-Z_0-9@]+)/\1"$\2"/gi' )"
     echo "$line"
   done
 }

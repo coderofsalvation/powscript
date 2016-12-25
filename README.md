@@ -20,7 +20,12 @@
 
     usage(app)
       echo "$app <number>"
-      
+
+    get_repo_url()
+      json={}      
+      curl "https://raw.githubusercontent.com/coderofsalvation/powscript/master/package.json" | json_decode json 
+      echo $json['repository.url']
+
     switch $1
       case [0-9]*
         echo "arg 1 is a number"
