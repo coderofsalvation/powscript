@@ -1,6 +1,6 @@
 {
   "name": "powscript",
-  "version": "1.0.25",
+  "version": "1.0.26",
   "description": "bash dialect transpiler in bash: painless shellscript / indentbased / coffeescript for shellscript / bash for hipsters",
   "main": "powscript",
   "directories": {
