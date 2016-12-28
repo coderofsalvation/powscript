@@ -149,6 +149,6 @@ json_decode(){
 
   varname="$1"
   code="$code$( sed 'N;s/\n//g' | json_tokenize | json_parse | awk '{print "'$varname'"$0}')"
-  code="$(echo -e "$code" | sed  's/.*\[\].*//g;s/\t/=/g;s/",/./g;s/[,.]"/./g;s/.*=[{\[].*//g;s/\"\]=/]=/g;s/\]=/"\]=/g' | grep -vE '(-.*".*:)' )"
+  code="$(echo -e "$code" | sed  's/.*\[\].*//g;s/\t/=/g;s/",/./g;s/[,.]"/./g;s/.*=[{\[].*//g;s/\"\]=/]=/g;s/\]=/"\]=/g' | sed -r 's/([A-Za-z_0-9])([\.-])([A-Za-z_0-9])"]/\1-\3"]/g' )"
   eval "$code"
 } 
