@@ -23,7 +23,7 @@ empty "$1" && {
   echo 'Usage:
     
    powscript <file.pow>                                     run powscript directly                        
-   powscript --compile [--sh] <file.pow>                    compile to bash [or (experimental) POSIX sh]  
+   powscript --compile [--sh] [--sourceable] <file.pow>     compile to bash [or (experimental) POSIX sh] [sourceable output] 
    powscript --lint <file.pow>                              crude linter                                  
    powscript --evaluate <powscript string>                  run powscript string directly                 
    powscript --interactive                                  interactive console                            
@@ -35,7 +35,7 @@ empty "$1" && {
                                                                                                           
                                                                                                           
    note: PIPE=1 allows input from stdin, PIPE=2 as well   ┌─────────────────────────────────────────────────────┐
-   but without the fat                                    │ powscript version '$POW_VERSION'                               │
+   but without the fat (no header/footercode)             │ powscript version '$POW_VERSION'                               │
                                                           │ docs: https://github.com/coderofsalvation/powscript │
   ';
 }
@@ -44,6 +44,10 @@ for arg in "$@"; do
   case "$arg" in
     --sh)
       runtime=sh
+      shift
+      ;;
+    --sourceable)
+      noheaderfooter=1
       shift
       ;;
     --tosh)
@@ -81,7 +85,7 @@ transpile_sh(){
       | sed "s/\[\[/\[/g;s/\]\]/\]/g"               \
       | sed "s/ == / = /g"                          \
       | sed "s/\&>\(.*[^;]\)[; $]/1>\1 2>\1; /g"    \
-      | transpile_all
+      | transpile_all                               
   fi
 }
 
@@ -105,7 +109,7 @@ transpile_sugar(){
       [[ "$line" =~ ^([ ]*while )                        ]] && transpile_while "$line"                      && continue
       [[ "$line" =~ ^([ ]*case )                         ]] && transpile_case "$line"                       && continue
       [[ "$line" =~ ([a-zA-Z_0-9]\+=)                    ]] && transpile_array_push "$line"                 && continue
-      [[ "$line" =~ ^([a-zA-Z_0-9:]*\([a-zA-Z_0-9, ]*\)) ]] && transpile_function "$line"                   && continue
+      [[ "$line" =~ ^([a-zA-Z_0-9:\.]*\([a-zA-Z_0-9, ]*\)) ]] && transpile_function "$line"                   && continue
       echo "$line" | transpile_all
     else 
       echo "$line"
@@ -169,10 +173,11 @@ compile(){
     echo -e "$settings"
   }
   transpile_sugar "$tmpfile" | grep -v "^#" > $tmpfile.code
+  sed -i 's/\\#/#/g' $tmpfile.code
   transpile_functions $tmpfile.code
   {
     cat $tmpfile.code
-    [[ ! $PIPE == 2 ]] && for i in ${!footer[@]}; do echo "${footer[$i]}"; done 
+    [[ ! $PIPE == 2 && ! -n $noheaderfooter ]] && for i in ${!footer[@]}; do echo "${footer[$i]}"; done 
   } | transpile_sh
   rm $tmpfile
   rm $tmpfile.code
@@ -286,7 +291,7 @@ lint(){
 }
 
 lint_pipe(){
-  code="$(cat -)"
+  code="$(cat)"
   output="$(echo "$code" | awk -F"[  ]" '{ j=0; for(i=1;i<=NF && ($i=="");i++); j++; if( ((i-1)%2) != 0 ){ print "indent error: "$j" "$i; }  }')"
   if [[ ${#output} != 0 ]]; then 
     echo "$output" 1>&2

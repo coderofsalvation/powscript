@@ -17,31 +17,37 @@
 ## Example
 
     #!/usr/bin/env powscript
+    require_cmd 'curl'
 
     usage(app)
-      echo "$app <number>"
+      echo "$app <jsonkey>"
 
-    get_repo_url()
+    print_json(key)
       json={}      
       curl "https://raw.githubusercontent.com/coderofsalvation/powscript/master/package.json" | json_decode json 
-      echo $json['repository.url']
+      echo $json[$key]
 
-    switch $1
-      case [0-9]*
-        echo "arg 1 is a number"
-      case *
-        if empty $1
-          help=$(usage myapp)
-          echo "Usage: $help" && exit
+    run()
+      if empty $1
+        help=$(usage myapp)
+        echo "Usage: $help" && exit
+      print_json $1
+
+    run $@
+
+Output:
+
+    $ ./myapp version
+    1.0.26
 
 Check <a href="https://github.com/coderofsalvation/powscript/wiki/Reference">here</a> for more examples
 
 ## Features
 
 * indentbased, memorizable, coffeescript-inspired syntax
-* more human-like, less semantic noise like { ! [[ @ ]] || ~=
+* removes semantic noise like { ! [[ @ ]] || ~=
 * safetynets: automatic quoting, halt on error or missing dependency (require_cmd)
-* comfort: [easy arrays, easy async, functional programming](https://github.com/coderofsalvation/powscript/blob/master/doc/reference.md), named variables instead of positionals
+* comfort: [json, easy arrays, easy async, functional programming](https://github.com/coderofsalvation/powscript/blob/master/doc/reference.md), named variables instead of positionals
 * [Modules / bundling](https://github.com/coderofsalvation/powscript/blob/master/doc/modules-example.md)
 * [remote/local packages & dependencies](http://github.com/coderofsalvation/powscript/blob/master/doc/dependencies-and-packages.md)
 * written/generated for bash >= 4.x, 'zero'-dependency solution
@@ -84,6 +90,10 @@ This however, is experimental, as well as the standalone bash2sh converter:
 
 > NOTE: remove bashisms manually using docs/tools like [bashism guide](http://mywiki.wooledge.org/Bashism) or [checkbashisms](https://linux.die.net/man/1/checkbashisms)
 > The general rule for POSIX sh-output is: `don't write bashfeatures in powscript`
+
+## Debug your powscript syntax
+
+See [FAQ](doc/FAQ.md)
 
 ## Live expansion inside editor
 

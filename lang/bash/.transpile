@@ -41,7 +41,7 @@ stack_pop(){
 stack_update(){
   indent_last="$indent_current"
   indent_current=$(getindent "$1")
-  [[ -n $DEBUG ]] && echo ">> $indent_last|$indent_current|stacksize:${#stack[@]}"
+  [[ -n $DEBUG ]] && echo "\# debug: $indent_current|$indent_last|${#stack[@]} (indentlevel|last indentlevel|stackposition) "
   if ((indent_current < indent_last)); then stack_pop "$1"; fi
 }
 
@@ -240,7 +240,8 @@ line_is_multistring(){
 }
 
 check_literal(){
-  if line_is_multistring "$1"; then 
+  local line="${1/ # */}"
+  if line_is_multistring "$line"; then 
     if (( literal == 0 )); then 
       literal=1
     else

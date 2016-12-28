@@ -14,3 +14,4 @@ for i in one two
 str="four five"
 for i in $str
   echo $i
+
