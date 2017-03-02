@@ -56,7 +56,7 @@ Check <a href="https://github.com/coderofsalvation/powscript/wiki/Reference">her
 ## Examples
 
 * [m3uchecker (19 lines powscript vs 57 lines bash)](https://gist.github.com/coderofsalvation/b1313d287c1f0a7e6cdf)
-* [pm.sh](https://github.com/coderofsalvation/pm.hs)
+* [pm.sh](https://github.com/coderofsalvation/pm.sh)
 * [Collection of codesnippets](https://github.com/coderofsalvation/powscript/blob/master/doc/reference.md)
 
 ## Interactive mode (experimental)
