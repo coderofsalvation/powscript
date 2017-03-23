@@ -44,6 +44,7 @@ for arg in "$@"; do
   case "$arg" in
     --sh)
       runtime=sh
+      settings="$sh_settings"
       shift
       ;;
     --sourceable)
@@ -179,8 +180,6 @@ compile(){
     cat $tmpfile.code
     [[ ! $PIPE == 2 && ! -n $noheaderfooter ]] && for i in ${!footer[@]}; do echo "${footer[$i]}"; done 
   } | transpile_sh
-  rm $tmpfile
-  rm $tmpfile.code
 }
 
 
@@ -347,5 +346,8 @@ testdir(){
 ${startfunction} "$@" #"${0//.*\./}"
 retcode=$?
 
-rm "$tmpfile".* &>/dev/null
+for tmpf in "$tmpfile"*; do
+  rm "$tmpf"
+done
+
 exit $retcode
