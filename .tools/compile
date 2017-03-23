@@ -8,7 +8,9 @@ for i in lang/*; do
   { 
     echo "#!/bin/bash" 
     echo "$(<lang/bash/.strictmode)"
-    echo "settings='$(<lang/bash/.settings)'"
+    echo "bash_settings='$(<lang/bash/.settings)'"
+    echo "sh_settings='$(<lang/sh/.settings)'"
+    echo "settings=\"\$bash_settings\""
     echo "strictmode='$(<lang/bash/.strictmode)'"
     echo "polyfill='$(<lang/bash/.polyfill)'"
     cat lang/$lang/.settings lang/$lang/.util lang/$lang/.transpile 
