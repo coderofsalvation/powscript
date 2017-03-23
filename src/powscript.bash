@@ -346,8 +346,10 @@ testdir(){
 ${startfunction} "$@" #"${0//.*\./}"
 retcode=$?
 
-for tmpf in "$tmpfile"*; do
-  rm "$tmpf"
-done
+if [[ -n "$tmpfile" ]]; then
+  for tmpf in "$tmpfile"*; do
+    rm "$tmpf"
+  done
+fi
 
 exit $retcode
