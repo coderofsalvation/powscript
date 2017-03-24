@@ -15,8 +15,8 @@
       set -e
     ..
 
-Since powscript only does indentbased syntactical sugar, sometimes you want to 
+Since powscript only does indentbased syntactical sugar, sometimes you want to
 see how the powscript gets parsed. Setting the `DEBUG` envvar will output extra lines:
 
-    # current indentation | last indentation | stack position 
+    # current indentation | last indentation | stack position
 

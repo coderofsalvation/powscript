@@ -6,19 +6,19 @@ literal=0
 last_keyword=""
 
 getindent(){
-  [[ ! ${1:0:1} =~ ([ \t]) ]] && echo 0 && return 0 
+  [[ ! ${1:0:1} =~ ([ \t]) ]] && echo 0 && return 0
   echo "$1" | sed "s/\n/ /g" | awk '{ match($0, /^ */); printf("%d", RLENGTH) }' | sed 's/00/0/g'
 }
-  
+
 add_anonymous_func(){
   anonymous_funcs=$((anonymous_funcs+1))
 }
 
-push (){ 
-  var="$1"; shift 1; eval "$var+=($(printf "'%s' " "$@"))"; 
+push (){
+  var="$1"; shift 1; eval "$var+=($(printf "'%s' " "$@"))";
 }
 
-makeindent(){  
+makeindent(){
   for((i=0;i<$1;i++)); do printf " "; done
 }
 
@@ -28,11 +28,11 @@ stack_pop(){
   [[ $index == "-1" ]] && return 0
   lastitem="${stack[$index]}"
   unset stack["$index"]
-  [[ -n $IGNORE        ]] && return 0 
-  [[ ${#lastitem} == 0 ]] && return 
+  [[ -n $IGNORE        ]] && return 0
+  [[ ${#lastitem} == 0 ]] && return
   [[ $lastitem =~ "fi" ]] && [[ "$line" =~ "else" ]] && return 0  # if/else is a tricky one
   echo -e "$(makeindent $((indent_last-2)) )$lastitem"
-  if ! (( (indent_last-2) == indent_current )); then 
+  if ! (( (indent_last-2) == indent_current )); then
     indent_last=$((indent_last-2))
     stack_pop "$1"
   fi
@@ -131,11 +131,11 @@ transpile_for(){
   code="$1; do"
   indent="$(makeindent $i)"
   # traditional for loop
-  if [[ ${#semicolons} == 2  ]]; then 
+  if [[ ${#semicolons} == 2  ]]; then
     code="${code/for /for (( }"
     code="${code/; do/ )); do}"
   # iterate over string (starts with $ or has more than 1 argument)
-  elif [[ ${arr:0:1} =~ ^([$]) || ${#arr2nd} != 0 ]]; then 
+  elif [[ ${arr:0:1} =~ ^([$]) || ${#arr2nd} != 0 ]]; then
     args="--noquotes"
   # iterate over associative array
   elif [[ "$code" =~ [a-zA-Z_0-9],[a-zA-Z_0-9] ]]; then
@@ -163,7 +163,7 @@ transpile_while(){
 }
 
 transpile_if(){
-  push stack "fi" 
+  push stack "fi"
   code="$(transpile_condition "if" "$1" "$2")"
   code="$code; then"
   echo "$code" | transpile_all
@@ -204,7 +204,7 @@ transpile_then(){
   cmd="${*/await /}"
   cmd="$(echo "$cmd" | sed "s/'/\"/g")" # ugly hack..*FIXME*
   [[ ! -n $3 ]] && category="then" || category="$3"
-  add_anonymous_func 
+  add_anonymous_func
   funcindex=$anonymous_funcs
   echo -e "\n# async code"
   echo "_"$category"_$funcindex(){"
@@ -226,7 +226,7 @@ transpile_when_done(){
 
 transpile_switch(){
   push stack "esac"
-  echo "${1/switch/case} in" 
+  echo "${1/switch/case} in"
   last_keyword=switch
 }
 
@@ -266,7 +266,7 @@ transpile_function(){
   fields="${fields// /}"
   fields="${fields//,/ }"
   echo "${1//\(*\)/()}{"
-  local i=1; 
+  local i=1;
   for field in $fields; do echo "$indent""local $field=\"\${$i}\""; i=$((i+1)); done
   last_keyword=function
 }
@@ -299,8 +299,8 @@ line_is_multistring(){
 
 check_literal(){
   local line="${1/ # */}"
-  if line_is_multistring "$line"; then 
-    if (( literal == 0 )); then 
+  if line_is_multistring "$line"; then
+    if (( literal == 0 )); then
       literal=1
     else
       literal=0

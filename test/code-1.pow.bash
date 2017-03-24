@@ -2,12 +2,12 @@ foo="1 2 3 4 5"
 
 # comparison
 i="foo"
-if [[ "$i" == "foo" ]]; then 
-  echo "foo" 
+if [[ "$i" == "foo" ]]; then
+  echo "foo"
 fi
 
-if [[ ! "$j" == "foo" ]]; then 
-  echo "not foo" 
+if [[ ! "$j" == "foo" ]]; then
+  echo "not foo"
 fi
 
 simple_arrays(){

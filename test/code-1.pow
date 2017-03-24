@@ -5,10 +5,10 @@ foo="1 2 3 4 5"
 # comparison
 i="foo"
 if "$i" is "foo"
-  echo "foo" 
+  echo "foo"
 
 if $i is "foo"
-  echo "foo" 
+  echo "foo"
 else
   echo "bar"
 
@@ -17,7 +17,7 @@ foo()
   local pidfile=$(process:getpidfile "$appname")
   if -f $pidfile
     cat $pidfile
-  else 
+  else
     echo -1
 
 webserver:onrequest(request)
@@ -34,7 +34,7 @@ webserver:onrequest(request)
         echo -e "received webhook: pull $appname (error: $workdir is not a git repo)"
     else
       echo -e "received webhook: pull $appname (error: no such app)"
-   
+
 
 if not $j is "foo" and $x is "bar"
   if $j is "foo" or $j is "xfoo"
@@ -52,13 +52,13 @@ if not $j is "foo" and $x is "bar"
 else
   echo flap
 
-# extended pattern matching 
+# extended pattern matching
 # (google 'extglob' for more
 
 if $f match ^([f]oo)
-  echo "foo found!"  
+  echo "foo found!"
 
-for k,v of foo 
+for k,v of foo
   for j,x of bla
     for v,f of bla
       echo "foo"
@@ -101,7 +101,7 @@ bar()
 bar one $@
 
 printitem()
-  echo "key=$1 value=$2"  
+  echo "key=$1 value=$2"
 
 foo={}
 foo["one"]="foo"
@@ -154,4 +154,4 @@ foo='
     this should not be parsed as powscript
 '
 
-#filter foo myfunc 
+#filter foo myfunc

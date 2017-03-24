@@ -3,11 +3,11 @@ async_pipe_each_line() {
   cb=$1   ; shift
   pcb=$1  ; shift
   func=$1 ; shift
-  { 
+  {
     set +e
-    $func "$@" | while IFS='' read line; do 
+    $func "$@" | while IFS='' read line; do
       $pcb "$line"
-    done; 
+    done;
     $cb $?
   }&
   ASYNC=1

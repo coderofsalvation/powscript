@@ -71,7 +71,7 @@ esac
       <pre>
         <code>
 if $i is "foo"
-  echo "foo" 
+  echo "foo"
 else
   echo "bar"
 
@@ -87,7 +87,7 @@ if not $j is "foo" and $x is "bar"
       <pre>
         <code>
 if [[ "$i" == "foo" ]]; then
-  echo "foo" 
+  echo "foo"
 else
   echo "bar"
 fi
@@ -115,7 +115,7 @@ foo["bar"]="a value"
 for k,v in foo
   echo k=$k
   echo v=$v
-  
+
 echo $foo["bar"]
         </code>
       </pre>
@@ -198,18 +198,18 @@ for line from $selfpath/foo.txt
       <pre>
         <code>
 if $f match ^([f]oo)
-  echo "foo found!"  
+  echo "foo found!"
         </code>
       </pre>
     </td>
     <td>
       <pre>
         <code>
-# extended pattern matching 
+# extended pattern matching
 # (google 'extglob' for more
 
 if [[ "$f" =~ ^([f]oo) ]]; then
-  echo "foo found!"  
+  echo "foo found!"
 fi
         </code>
       </pre>
@@ -221,13 +221,13 @@ fi
     <td>
       <pre>
         <code>
-# include bash- or powscript 
+# include bash- or powscript
 # at compiletime (=portable)
-require 'mymodule.pow' 
+require 'mymodule.pow'
 
-# include remote bashscript 
+# include remote bashscript
 # at runtime
-source foo.bash 
+source foo.bash
         </code>
       </pre>
     </td>
@@ -238,7 +238,7 @@ source foo.bash
       </pre>
     </td>
   </tr>
-  
+
   <tr>
     <td><b>empty / isset checks</b></td>
     <td>
@@ -250,7 +250,7 @@ bar()
   if not empty $1
     echo "string given"
 
-foo "$@"    
+foo "$@"
         </code>
       </pre>
     </td>
@@ -266,12 +266,12 @@ foo(){
   fi
 }
 
-foo "$@"        
+foo "$@"
         </code>
       </pre>
     </td>
   </tr>
-  
+
   <tr>
     <td><b>mappipe unwraps a pipe</b></td>
     <td>
@@ -294,7 +294,7 @@ echo -e "foo\nbar\n" | mappipe myfunc
       </pre>
     </td>
   </tr>
-  
+
   <tr>
     <td><b>easy math</b></td>
     <td>
@@ -303,7 +303,7 @@ echo -e "foo\nbar\n" | mappipe myfunc
 math '9 / 2'
 math '9 / 2' 4
 # outputs: '4' and '4.5000'
-# NOTE: the second requires bc 
+# NOTE: the second requires bc
 # to be installed for floatingpoint math
         </code>
       </pre>
@@ -403,11 +403,11 @@ when done
     <td>
       <pre>
         <code>
-json={}      
-cat package.json | json_decode json 
+json={}
+cat package.json | json_decode json
 echo $json['repository.url']
 
-# outputs: git+https://coderofsalvation@github.com/coderofsalvation/powscript.git 
+# outputs: git+https://coderofsalvation@github.com/coderofsalvation/powscript.git
         </code>
       </pre>
     </td>
@@ -443,7 +443,7 @@ echo -e "foo\nbar\n" | mappipe curriedfunc
       </pre>
     </td>
   </tr>
-    
+
   <tr>
     <td><b>FP: array values, keys</b></td>
     <td>
@@ -466,14 +466,14 @@ map foo values # prints value per line
       </pre>
     </td>
   </tr>
-  
+
   <tr>
     <td><b>FP: map</b></td>
     <td>
       <pre>
         <code>
 printitem()
-  echo "key=$1 value=$2"  
+  echo "key=$1 value=$2"
 
 foo={}
 foo["one"]="foo"
@@ -490,7 +490,7 @@ map foo printitem
       </pre>
     </td>
   </tr>
-  
+
   <tr>
     <td><b>FP: pick</b></td>
     <td>
