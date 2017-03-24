@@ -146,9 +146,67 @@ transpile_all(){
     [[ "$line" =~ ^(#)  ]] && local _comment="#"
     [[ "$line" =~ "={}" ]] && echo "$_comment$(makeindent $i)declare -A ${line/=\{\}/}" && continue
     [[ "$line" =~ "=[]" ]] && echo "$_comment$(makeindent $i)declare -a ${line/=\[\]/}" && continue
-    [[ ! -n $NO_QUOTES  ]] && [[ ! "$line" =~ ([\'\"]\{) ]] && [[ "$line" =~ ([ ]\$[A-Za-z_0-9@]) ]] && line="$(echo "$line" | sed -E 's/([ =])\$([a-zA-Z_0-9@]+)/\1"$\2"/gi' )"
+    if [[ ! $NO_QUOTES ]] && [[ "$line" =~ (\$[A-Za-z_0-9@\(\[\{]) ]]; then
+      _last_interpol_size=$(mktemp)
+      line="$(transpile_interpolate "$line" 0)"
+      rm $_last_interpol_size
+    fi
     echo "$line"
   done
+}
+
+transpile_interpolate() {
+  local i="$2"
+  local line="$1"
+  local escape=false
+  local interpol=false
+  local single_quotes=false
+  local double_quotes=false
+  local len=${#line}
+  while (($i < $len)); do
+    local char=${line:$i:1}
+    if { ! $escape && { ! $double_quotes || $interpol ; } ; }; then
+      if [[ $char =~ ('('|'['|'{') ]]; then
+        local res="$(transpile_interpolate "$line" $(($i+1)))"
+        printf "$char"
+        printf "$res"
+        i=$(($(cat $_last_interpol_size)+1))
+        $interpol && ! $double_quotes && { printf '"'; interpol=false; }
+        continue
+      elif [[ $char =~ (')'|'}'|']') ]]; then
+        $interpol && ! $double_quotes && { printf '"'; interpol=false; }
+        printf "$char"
+        break
+      fi
+    fi
+    if $escape; then
+      escape=false
+    elif [[ $char == '\' ]]; then
+      escape=true
+    elif $double_quotes; then
+      case $char in
+        '"') double_quotes=false && interpol=false ; ;;
+        '$') interpol=true ; ;;
+      esac
+    elif $single_quotes; then
+      [[ $char == "'" ]] && single_quotes=false
+    elif $interpol; then
+      if [[ $char =~ ^([^A-Za-z_0-9@]?)$ ]]; then
+        interpol=false
+        $double_quotes || printf '"'
+      fi
+    else
+      case $char in
+        '"') double_quotes=true ; ;;
+        "'") single_quotes=true ; ;;
+        '$') printf '"' && interpol=true ; ;;
+      esac
+    fi
+    i=$(($i+1))
+    printf "$char"
+  done
+  $interpol && printf '"'
+  echo $i > $_last_interpol_size
 }
 
 transpile_for(){
