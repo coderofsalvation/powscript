@@ -19,7 +19,7 @@ await myfunc 456 then |
 when done
   echo "'await .... then |' done"
 
-sleep 4s 
+sleep 4s
 
 await myfunc 789 then for line
   if $line match (two|one)

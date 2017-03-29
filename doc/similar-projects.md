@@ -8,9 +8,9 @@ Powscript, only requires bash only instead, which can be handy for IoT/embedded 
 
 [bish](https://github.com/tdenniston/bish)
 > language: c++
-> needs user compiler / compilation 
+> needs user compiler / compilation
 
-[bash](https://github.com/shelljs/shelljs) 
+[bash](https://github.com/shelljs/shelljs)
 > language: javascript
 > needs nodejs install
 

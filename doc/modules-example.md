@@ -24,7 +24,7 @@ to include external scripts / cmd
 
       function bar(){
       echo "hi im a bash module"
-    
+
       }
 
 # Bundle all modules

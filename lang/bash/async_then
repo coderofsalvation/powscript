@@ -2,7 +2,7 @@
 async_then() {
   {
     set +e
-    done="$1";  shift ; "$@" 
+    done="$1";  shift ; "$@"
     $done $? # callback
   }&
   ASYNC=1

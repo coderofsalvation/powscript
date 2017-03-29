@@ -25,8 +25,8 @@ write shellscript in a powful way!
       echo "$app <jsonkey>"
 
     print_json(key)
-      json={}      
-      curl "https://raw.githubusercontent.com/coderofsalvation/powscript/master/package.json" | json_decode json 
+      json={}
+      curl "https://raw.githubusercontent.com/coderofsalvation/powscript/master/package.json" | json_decode json
       echo $json[$key]
 
     run()
@@ -65,7 +65,7 @@ Check <a href="https://github.com/coderofsalvation/powscript/wiki/Reference">her
 
 Put this line in your `.inputrc`:
 
-    "\C-p" "powscript --interactive\n" 
+    "\C-p" "powscript --interactive\n"
 
 Then hitting ctrl-p in your console will enter powscript mode:
 
@@ -77,7 +77,7 @@ Then hitting ctrl-p in your console will enter powscript mode:
     > run
     line=1,foo,bar,flop
     line=2,foo2,bar2,flop2
-    > 
+    >
 
 ## POSIX /bin/sh compatibility
 
@@ -102,7 +102,7 @@ See [FAQ](doc/FAQ.md)
 > HINT: use live expansion inside vim.
 > Put the lines below in .vimrc and hit 'p>' in normal/visual mode to expand powscript
 
-    vmap p> :!PIPE=2 powscript --compile<CR>                                
+    vmap p> :!PIPE=2 powscript --compile<CR>
     nmap p> ggVG:!PIPE=2 powscript --compile<CR>
 
 ## OSX users

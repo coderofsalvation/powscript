@@ -1,4 +1,4 @@
 # example: foreach foo values
 values(){
-  echo "$2"  
+  echo "$2"
 }

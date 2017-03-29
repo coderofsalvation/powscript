@@ -65,7 +65,7 @@ json_decode(){
         do
           parse_value "$1" "$index"
           index=$((index+1))
-          ary="$ary""$value" 
+          ary="$ary""$value"
           read -r token
           case "$token" in
             ']') break ;;
@@ -100,7 +100,7 @@ json_decode(){
           esac
           read -r token
           parse_value "$1" "$key"
-          obj="$obj$key:$value"        
+          obj="$obj$key:$value"
           read -r token
           case "$token" in
             '}') break ;;
@@ -151,4 +151,4 @@ json_decode(){
   code="$code$( sed 'N;s/\n//g' | json_tokenize | json_parse | awk '{print "'$varname'"$0}')"
   code="$(echo -e "$code" | sed  's/.*\[\].*//g;s/\t/=/g;s/",/./g;s/[,.]"/./g;s/.*=[{\[].*//g;s/\"\]=/]=/g;s/\]=/"\]=/g' | sed -r 's/([A-Za-z_0-9])([\.-])([A-Za-z_0-9])"]/\1-\3"]/g' )"
   eval "$code"
-} 
+}
