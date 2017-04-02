@@ -1,0 +1,10 @@
+#!/bin/sh
+
+(
+  GitHooks="pre-push"
+
+  cd "$(git rev-parse --show-toplevel)"
+  for hook in $GitHooks; do
+    cp .tools/hooks/$hook .git/hooks/$hook
+  done
+)

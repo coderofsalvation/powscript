@@ -80,6 +80,9 @@ testdirectory "test" './powscript ${file}' 'file' '.*\.pow$'
 header "Interactive mode tests:"
 testdirectory "test/interactive" './powscript --interactive < ${file}' 'file'
 
+header "Repository maintainance tests:"
+testdirectory "test/repo" './${file}' 'file' '.*\.sh'
+
 header "Other:"
 testdirectory "test/etc" './${file}' 'file'
 
