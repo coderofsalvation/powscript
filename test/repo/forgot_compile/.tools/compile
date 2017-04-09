@@ -1,0 +1,4 @@
+DirName="$(readlink -m "$(dirname $0)/..")"
+
+mv "$DirName/powscript"   "$DirName/powscript.2"
+mv "$DirName/powscript.1" "$DirName/powscript"

@@ -1,0 +1,127 @@
+#!/bin/sh
+
+## Check if githook is up to date
+
+if [ -f '.git/hooks/pre-push' ] && ! diff "$0" '.git/hooks/pre-push' > /dev/null; then
+  echo "You're using an outdated git pre-push hook! Please update it before pushing your changes."
+  echo
+  exit 1
+fi
+
+
+## Utilities
+
+deref() {
+  eval "echo \"\$$1\""
+}
+
+append() {
+  local varname="$1"
+  local value="$2"
+  if [ -n "$(deref $varname)" ]; then
+    local arg1="$(deref $varname)"
+    local arg2="$value"
+    eval "$varname=\"\$(printf '%s\n%s' '$arg1' '$arg2')\""
+  else
+    eval "$varname='$value'"
+  fi
+}
+
+
+## Helper functions for finding and highlighting trailing whitespace
+
+find_trailing_whitespace() {
+  local found_trailing=""
+  for file in "$@"; do
+    if [ -d "$file" ] && [ ! -f "$file"/.ignore_trailing_whitespace ]; then
+      append found_trailing "$(find_trailing_whitespace "$file/"*)"
+    elif [ -f "$file" ]; then
+      if echo "$file" | grep -q -E '\.pow$'; then
+        local pattern='\S\s+$'
+      else
+        local pattern='\s+$'
+      fi
+      local found_trailing_file="$(grep -n -E "$pattern" "$file")"
+      if [ -n "$found_trailing_file" ]; then
+        local filename_color='\033[1;34m'
+        local reset='\033[0m'
+        append found_trailing "${filename_color}${file}:${reset}"
+        append found_trailing "$found_trailing_file"
+      fi
+    fi
+  done
+  echo "$found_trailing"
+}
+
+highlight_trailing_whitespace() {
+  local text="$1"
+
+  local arrow_color='\\033[33m'
+  local whitespace_bg='\\033[41m'
+  local reset='\\033[0m'
+
+  local find_trailing='\([ \t]\+\)$'
+  local found_trailing='\1'
+
+
+  local highlighted="$(echo "$text" | sed -e "s/${find_trailing}/${arrow_color}>>${whitespace_bg}${found_trailing}${reset}${arrow_color}<<${reset}/")"
+  local indented="$(echo "$highlighted" | sed -e 's/^\(.*\)>\(.*\)$/  \1>\2/')"
+  echo "$indented"
+}
+
+
+## Error if trailing whitespace is found.
+
+case "$POWSCRIPT_PREPUSH_NOWHITESPACE" in
+  yes|on|ok) ;;
+  *)
+    FoundTrailing="$(find_trailing_whitespace *)"
+    if [ -n "$FoundTrailing" ]; then
+      echo "Found trailing whitespace:"
+      printf '%b\n' "$(highlight_trailing_whitespace "$FoundTrailing")"
+      echo "Please fix it before pushing your changes."
+      exit 1
+    fi
+  ;;
+esac
+
+
+## Error if user forgot to compile
+
+case "$POWSCRIPT_PREPUSH_NOCOMPILE" in
+  yes|on|ok) ;;
+  *)
+    .tools/compile
+    if [ -n "$(git --no-pager diff powscript)" ]; then
+      case "$POWSCRIPT_PREPUSH_NOINTERACTIVE" in
+        yes|on|ok)
+          echo "Compilation created unstaged changes! Please commit them before pushing your changes."
+          exit 1
+        ;;
+        *)
+          echo "Compilation created unstaged changes! Commit message: (leave blank to cancel)"
+          exec < /dev/tty
+          read -r commit_message
+          exec <&-
+          if [ -n "$commit_message" ]; then
+            [ "$PAGER" = "less" ] && { PAGER="less -K" git diff powscript || exit 1; }
+            git add powscript
+            git commit -m "$commit_message"
+            git rebase -i HEAD~"$(($(git rev-list --count "$1"/master..)+1))"
+          else
+            exit 1
+          fi
+        ;;
+      esac
+    fi
+  ;;
+esac
+
+## Error if tests fail
+
+case "$POWSCRIPT_PREPUSH_NOTESTS" in
+  yes|on|ok) ;;
+  *) .tools/runtests || exit 1 ;;
+esac
+
+exit 0
