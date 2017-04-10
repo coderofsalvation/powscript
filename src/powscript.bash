@@ -19,6 +19,8 @@ if [[ ! -n $startfunction ]]; then
   startfunction=runfile
 fi
 
+flop
+
 empty "$1" && {
   echo 'Usage:
 
