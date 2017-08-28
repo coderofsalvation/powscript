@@ -1,5 +1,11 @@
 #!/bin/sh
 
+## Ignore script if POWSCRIPT_NOPREPUSH is set
+
+case $POWSCRIPT_NOPREPUSH in
+  yes|on|ok) exit 0;;
+esac
+
 ## Check if githook is up to date
 
 if [ -f '.git/hooks/pre-push' ] && ! diff "$0" '.git/hooks/pre-push' > /dev/null; then
