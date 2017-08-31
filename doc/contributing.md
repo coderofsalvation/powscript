@@ -10,6 +10,13 @@ running `./.tools/compile` will produce `powscript`, which is a bundle of:
 
     ./.tools/runtests
 
+
+## Git Hooks
+
+    ./.tools/install_hooks
+
+This will install a pre-push git hook that will check for trailing whitespace, automatically performs the tests and checks if you've compiled the source code. See `./.tools/install_hooks --help` for more information.
+
 ## Philosophy / Scope
 
 * powscript limits itself to functional & procedural programming (no OOP)

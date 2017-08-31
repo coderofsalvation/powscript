@@ -1,5 +1,35 @@
 #!/bin/sh
 
+if [ "$1" = "--help" ] || [ "$1" = "-h" ]; then
+  echo 'install_hooks
+
+  Installs git hooks in the powscript local repository.
+
+  Currently only a pre-push hook exists, it will check before each push to
+  remote if there is no trailling whitespace, .tools/compile was executed
+  (easy to forget!) and that all tests pass. There are a few enviroment
+  variables that affect the pre-push script:
+
+  POWSCRIPT_PREPUSH_NOWHITESPACE:
+    If set to 'yes' the script will not check for trailling whitespace
+
+  POWSCRIPT_PREPUSH_NOCOMPILE:
+    If set to 'yes' the script will not check for compilation
+
+  POWSCRIPT_PREPUSH_NOTESTS:
+    If set to 'yes' the script will not run the tests
+
+  POWSCRIPT_NOPREPUSH:
+    If set to 'yes' the script will not do anything
+
+  To uninstall the hook simply run `rm .git/hooks/pre-push` on the main powscript directory.
+  '
+  exit 0
+elif [ "$#" -gt 0 ]; then
+  echo 'Invalid arguments to install_hooks script.
+  To execute the script run `install_hooks` with no arguments or run `install_hooks --help` to get more information.
+  '
+fi
 (
   GitHooks="pre-push"
 
