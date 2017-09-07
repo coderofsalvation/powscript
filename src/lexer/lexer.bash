@@ -1,14 +1,11 @@
 #!/bin/bash
 
-SrcDir="$(readlink -m "$(dirname ${BASH_SOURCE[0]})/..")"
-
-. $SrcDir/helper.bash            #<<INCLUDE>>
-. $SrcDir/tokenizer/stream.bash  #<<INCLUDE>>
-. $SrcDir/tokenizer/tokens.bash  #<<INCLUDE>>
-. $SrcDir/tokenizer/states.bash  #<<INCLUDE>>
+powscript_source lexer/stream.bash
+powscript_source lexer/tokens.bash
+powscript_source lexer/states.bash
 
 
-# get_token varname
+# parse_token varname
 # read a token from input and place it's id in the given variable
 #
 # e.g.
@@ -22,16 +19,7 @@ SrcDir="$(readlink -m "$(dirname ${BASH_SOURCE[0]})/..")"
 #  abc
 #  name
 
-get_token() {
-  # separated in two functions to avoid name conflicts
-  # between the passed variable and the locals.
-  local __token_id_var
-
-  _get_token __token_id_var
-  printf -v "$1" '%s' "$__token_id_var"
-}
-
-_get_token() {
+parse_token() {
   local token_id_var="$1"   # variables where the token id will be stored
 
   local linenumber_start    # tokens store starting and ending line and collumn
@@ -67,7 +55,7 @@ _get_token() {
     get_character c
 
     case $state in
-      escape)
+      quoted-escape)
         # if the escaped character is special, expand it before
         # putting it in the token, otherwise just put the character
         case "$c" in
@@ -75,6 +63,15 @@ _get_token() {
           *)        token="$token$c" ;;
         esac
         state=double-quotes
+        ;;
+
+      unquoted-escape)
+        # for escaped spaces and newlines
+        case "$c" in
+          $'\n') ;;
+          *) token="$token$c" ;;
+        esac
+        pop_state state
         ;;
 
       single-quotes)
@@ -93,7 +90,7 @@ _get_token() {
         # substitution is finished
         case "$c" in
           '\')
-            state=escape
+            state=quoted-escape
             ;;
           '$')
             class=string
@@ -114,6 +111,7 @@ _get_token() {
         if [ "$c" = ' ' ]; then
           token="$token$c"
         else
+          token=${#token}
           move=false
           class=whitespace
           state_end=true
@@ -158,7 +156,9 @@ _get_token() {
       comment)
         # ignore all until newline
         if [ "$c" = $'\n' ]; then
-          pop_state state
+          token="$c"
+          class=newline
+          state_end=true
         fi
         ;;
 
@@ -190,10 +190,16 @@ _get_token() {
             fi
             ;;
 
-          ':'|';'|'=')
+          ':'|';'|','|'=')
             belongs=false
+            skip_term=false
             next_class=special
             ;;
+
+          '\')
+            state='unquoted-escape'
+            ;;
+
 
           '$')
             belongs=false
@@ -202,14 +208,15 @@ _get_token() {
             ;;
 
           $'\n')
+            [ -z "$token" ] && glued=false
             belongs=false
-            skip_term=false
             next_class=newline
             ;;
 
           ' ')
             if line_start; then
               belongs=false
+              skip_term=false
               next_state=whitespace
             elif [ -n "$token" ]; then
               belongs=false
@@ -284,7 +291,13 @@ _get_token() {
         class=eof
       fi
     else
-      unfinished_input_error "$state" "$linenumber_start" "$collumn_start"
+      if ${POWSCRIPT_ALLOW_INCOMPLETE-false}; then
+        POWSCRIPT_INCOMPLETE_STATE="$state"
+        token=eof
+        class=eof
+      else
+        unfinished_input_error "$state" "$linenumber_start" "$collumn_start"
+      fi
     fi
   fi
 
@@ -296,6 +309,23 @@ _get_token() {
     "$linenumber_start" "$linenumber_end"\
     "$collumn_start" "$collumn_end"\
     "$token_id_var"
+}
+noshadow parse_token
+
+get_token() {
+  if in_topmost_token; then
+    parse_token "$1"
+  else
+    get_selected_token "$1"
+    forward_token
+  fi
+}
+
+
+get_token_and_set() {
+  local __token
+  get_token __token
+  all_from_token $__token "$@"
 }
 
 unfinished_input_error() {
@@ -312,8 +342,8 @@ unfinished_input_error() {
   if [ -n "$opener" ]; then
     find_token_by value "$opener" token
     if [ ! $token = -1 ]; then
-      from_token $token linenumber-start line
-      from_token $token collumn-start collumn
+      from_token $token linenumber_start line
+      from_token $token collumn_start collumn
       parse_error "unclosed ${state/-/ }, last open one found in line $line, collumn $collumn"
     else
       parse_error "unclosed ${state/-/ }"
@@ -329,29 +359,26 @@ unfinished_input_error() {
   fi
 }
 
-
-
-
-
-
-
 parse_error() {
   >&2 echo "${1//%line/$(get_line_number)}"
   exit 1
 }
 
-read_all_tokens() {
+tokens_to_json() {
   local token
   init_stream
+
+  echo '{'
   while ! end_of_file; do
     get_token token
     from_token $token value value
     from_token $token class class
     from_token $token glued glued
-    echo "id   : $token"
-    echo "value: $value"
-    echo "class: $class"
-    echo "glued: $glued"
-    echo "---"
+    echo "  ${token}: {"
+    echo "    'value': '$value'"
+    echo "    'class': '$class'"
+    echo "    'glued': $glued"
+    echo '  }'
   done
+  echo '}'
 }

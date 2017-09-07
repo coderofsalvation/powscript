@@ -1,4 +1,4 @@
-declare -A States
+declare -gA States
 
 States[index]=0
 

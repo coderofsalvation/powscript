@@ -1,0 +1,4 @@
+# usage: filter foo myfunc
+filter(){
+  map $1 | pipemap $2
+}

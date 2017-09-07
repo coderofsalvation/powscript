@@ -1,0 +1,8 @@
+# compose function out of 2 functions
+# example:
+#   compose functionname func2 func1
+#   functionname "this is input"
+compose() {
+  result_fun=$1; shift ; f1=$1; shift ; f2=$1; shift
+  eval "$result_fun() { $f1 \"\$($f2 \"\$*\")\"; }"
+}

@@ -1,4 +1,4 @@
-declare -A Stream
+declare -gA Stream
 
 init_stream() {
   Stream[line]=""

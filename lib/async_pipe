@@ -1,0 +1,8 @@
+# async_then <done_callback> <pipe_function> <function> <args..>
+async_pipe() {
+  cb=$1   ; shift
+  pcb=$1  ; shift
+  func=$1 ; shift
+  { set +e; $func "$@" | $pcb; $cb $?; }&
+  ASYNC=1
+}

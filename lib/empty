@@ -1,0 +1,4 @@
+# example: empty "" && echo "empty string"
+empty(){
+  [[ "${#1}" == 0 ]] && return 0 || return 1
+}

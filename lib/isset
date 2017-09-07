@@ -1,0 +1,4 @@
+# example: isset "" && echo "not empty string" || echo "empty string"
+isset(){
+  [[ ! "${#1}" == 0 ]] && return 0 || return 1
+}

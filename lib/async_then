@@ -1,0 +1,9 @@
+# async_then <done_callback> <function> <args..>
+async_then() {
+  {
+    set +e
+    done="$1";  shift ; "$@"
+    $done $? # callback
+  }&
+  ASYNC=1
+}

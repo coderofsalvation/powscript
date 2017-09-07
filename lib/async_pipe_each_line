@@ -1,0 +1,14 @@
+# async_then <done_callback> <pipe_line_function> <function> <args..>
+async_pipe_each_line() {
+  cb=$1   ; shift
+  pcb=$1  ; shift
+  func=$1 ; shift
+  {
+    set +e
+    $func "$@" | while IFS='' read line; do
+      $pcb "$line"
+    done;
+    $cb $?
+  }&
+  ASYNC=1
+}
