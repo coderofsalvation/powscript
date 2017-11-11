@@ -126,7 +126,7 @@ cat_requires(){
       printf "%-30s %s\n" "which $cmd &>/dev/null" "|| { echo \"dependency error: it seems '$cmd' is not installed (please install it)\"; }"
     fi
     if [[ "$line" =~ ^(require ) ]]; then                                               # include require-calls
-      local file="${line//*require /}"; file="${file//[\"\']/}"
+      local file="${line//*require /}"; file="${file//[\"\']/}"; file="${file//[$'\t\r\n']}";
       if [[ ! -f $file ]]; then echo "echo 'compile error: couldn't find required file: $file'; exit 1;"; exit 1; fi
       echo -e "#\n# $line (included by powscript\n#\n"
       cat "$file";
