@@ -1,6 +1,0 @@
-# example: pick foo "index"
-pick(){
-  [[ ! -n $2 ]] && return 1
-  local output="$(eval "echo \${$1[$2]}")"
-  [[ ! ${#output} == 0 ]] && echo "$output"
-}

@@ -32,6 +32,10 @@ ast_test_indentation() {
   else
     if [ $found -eq $req ]; then
       result=ok
+
+    elif [ $found -eq -1 ]; then
+      result=error-eof
+
     elif [ $found -lt $req ]; then
       ast_pop_indentation
       ast_indentation_required req
@@ -67,11 +71,11 @@ ast_indentation_required() {
 }
 
 ast_count_indentation() {
-  if [ "$2" = whitespace ]; then
-    setvar "$3" "$1"
-  else
-    setvar "$3" 0
-  fi
+  case "$2" in
+    whitespace) setvar "$3" "$1" ;;
+    eof)        setvar "$3" -1   ;;
+    *)          setvar "$3" 0    ;;
+  esac
 }
 
 ast_indentation_layers() {

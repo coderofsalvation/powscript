@@ -26,6 +26,51 @@ bash_compile() {
       setvar "$out" "$result"
       ;;
 
+    if|elif)
+      local expr_children
+      local condition block post_if
+
+      from_ast $expr children expr_children
+      expr_children=( $expr_children )
+
+      bash_compile ${expr_children[0]} condition
+      bash_compile ${expr_children[1]} block
+      bash_compile ${expr_children[2]} post_if
+
+      setvar "$out" "$expr_head $condition; then"$'\n'"${block:2:$((${#block}-4))}"$'\n'"$post_if"
+      ;;
+    else)
+      local expr_children
+      local block
+
+      from_ast $expr children expr_children
+      expr_children=( $expr_children )
+
+      bash_compile ${expr_children[0]} block
+
+      setvar "$out" "else"$'\n'"${block:2:$((${#block}-4))}"$'\n'"fi"
+      ;;
+
+    end_if)
+      setvar "$out" "fi"
+      ;;
+
+    simple-substitution)
+      local name
+      from_ast $expr value name
+      setvar "$out" "\"\${$name}\""
+      ;;
+
+    command-substitution)
+      local call_ast call
+
+      from_ast $expr children call_ast
+
+      bash_compile $call_ast call
+
+      setvar "$out" '$('"$call"')'
+      ;;
+
     call)
       local command argument compiled result
       from_ast $expr children expr_children
@@ -52,8 +97,8 @@ bash_compile() {
       ;;
 
     function-def)
-      local name args_ast block_ast block
-      local args arg locals_ast argname_ast
+      local name args_ast arg_assign_ast argval_ast block_ast block
+      local args arg argval argnum locals_ast argname_ast
 
       from_ast $expr children expr_children
       expr_children=( $expr_children )
@@ -64,12 +109,18 @@ bash_compile() {
       block_ast=${expr_children[2]}
 
 
-      parse_ast locals_ast <<< "local"
+      new_ast locals_ast
+      ast_set $locals_ast head local
 
       from_ast $args_ast children args
 
+
+      argnum=1
       for arg in $args; do
-        ast_push_child $local_arg $arg
+        make_ast argval_ast simple-substitution $argnum
+        make_ast arg_assign_ast assign '' $arg $argval_ast
+        ast_push_child $locals_ast $arg_assign_ast
+        argnum=$((argnum+1))
       done
       ast_unshift_child $block_ast $locals_ast
 
@@ -103,29 +154,41 @@ bash_compile() {
       setvar "$out" "$result"
       ;;
 
-    binary-test)
+    condition)
       local op left right quoted=no
+      from_ast $expr value op
       from_ast $expr children expr_children
       expr_children=( $expr_children )
 
-      bash_compile ${expr_children[1]} left
-      bash_compile ${expr_children[2]} right
+      case "$op" in
+        command)
+          bash_compile ${expr_children[0]} "$out"
+          ;;
+        not)
+          bash_compile ${expr_children[0]} right
+          setvar "$out" "! $right"
+          ;;
+        *)
+          bash_compile ${expr_children[0]} left
+          bash_compile ${expr_children[1]} right
 
-      case "${expr_children[0]}" in
-        'is'|'=')  op='='    quoted=single ;;
-        '>')       op='-gt'  quoted=single ;;
-        '>=')      op='-ge'  quoted=single ;;
-        '<')       op='-lt'  quoted=single ;;
-        '<=')      op='-le'  quoted=single ;;
-        'match')   op='=~'   quoted=double ;;
-        'and')     op='&&' ;;
-        'or')      op='||' ;;
-      esac
+          case "$op" in
+            'is'|'=')  op='='    quoted=single ;;
+            '>')       op='-gt'  quoted=single ;;
+            '>=')      op='-ge'  quoted=single ;;
+            '<')       op='-lt'  quoted=single ;;
+            '<=')      op='-le'  quoted=single ;;
+            'match')   op='=~'   quoted=double ;;
+            'and')     op='&&' ;;
+            'or')      op='||' ;;
+          esac
 
-      case $quoted in
-        double) setvar "$out" "[[ $left $op $right ]]" ;;
-        single) setvar "$out"  "[ $left $op $right ]"  ;;
-        no)     setvar "$out"    "$left $op $right"    ;;
+          case $quoted in
+            double) setvar "$out" "[[ $left $op $right ]]" ;;
+            single) setvar "$out"  "[ $left $op $right ]"  ;;
+            no)     setvar "$out"    "$left $op $right"    ;;
+          esac
+          ;;
       esac
       ;;
   esac

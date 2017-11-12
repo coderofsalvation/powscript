@@ -21,5 +21,5 @@ powscript_clean_up() {
   exit 0
 }
 
-trap 'powscript_clean_up' ERR
+trap 'powscript_clean_up' ERR EXIT
 

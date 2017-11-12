@@ -26,6 +26,17 @@ new_ast() {
 }
 noshadow new_ast
 
+make_ast() {
+  local __newast __newchild
+  new_ast __newast
+  ast_set "$__newast" head  "$2"
+  ast_set "$__newast" value "$3"
+  for __newchild in ${@:3}; do
+    ast_push_child "$__newast" $__newchild
+  done
+  setvar "$1" "$__newast"
+}
+
 from_ast() {
   setvar "$3" "${Asts["$2-$1"]}"
 }
@@ -44,6 +55,15 @@ ast_push_child() {
 
 ast_unshift_child() {
   Asts["children-$1"]="$2 ${Asts["children-$1"]}"
+}
+
+ast_clear_all() {
+  unset Asts
+  declare -gA Asts
+
+  Asts[index]=0
+  Asts[length]=0
+  Asts[required-indent]=0
 }
 
 ast_print() {
@@ -65,6 +85,14 @@ ast_print_child() {
     name)
       printf "%s" "$ast_value"
       ;;
+    cat)
+      local child
+      for child in ${child_array[@]:0:$((${#child_array[@]}-1))}; do
+        ast_print_child $child
+        printf '%s' ' '
+      done
+      ast_print_child ${child_array[${#child_array[@]}-1]}
+      ;;
     string)
       printf "'%s'" "$ast_value"
       ;;
@@ -83,6 +111,14 @@ ast_print_child() {
       ast_print_child $name
       printf '='
       ast_print_child $value
+      ;;
+    simple-substitution)
+      printf '$%s' "$ast_value"
+      ;;
+    command-substitution)
+      printf '$('
+      ast_print_child ${child_array[0]}
+      printf ')'
       ;;
     function-def)
       local name=${child_array[0]} args=${child_array[1]} block=${child_array[2]}

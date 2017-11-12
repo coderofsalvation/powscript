@@ -3,6 +3,8 @@ declare -gA Tokens
 Tokens[index]=0
 Tokens[length]=0
 
+TokenMark=0
+
 store_token() {
   local idvar="$8"
   local index="${Tokens[length]}"
@@ -45,6 +47,13 @@ clear_tokens() {
   fi
 }
 
+clear_all_tokens() {
+  unset Tokens
+  declare -gA Tokens
+  Tokens[index]=0
+  Tokens[length]=0
+}
+
 backtrack_token() {
   Tokens[index]=$((${Tokens[index]}-1))
 }
@@ -56,6 +65,16 @@ forward_token() {
 in_topmost_token() {
   [ ${Tokens[index]} = ${Tokens[length]} ]
 }
+
+
+mark_token_position() {
+  TokenMark=${Tokens[index]}
+}
+
+return_token_to_mark() {
+  Tokens[index]=$TokenMark
+}
+
 
 find_token_by() {
   local field="$1"

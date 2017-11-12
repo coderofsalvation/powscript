@@ -13,7 +13,7 @@ bash_interactive() {
     while true; do
       IFS= read -r $line <'$wfifo'
       if [ \"\$$line\" = '#<<END>>' ] ; then
-        eval \"\$$code\" >>'$rfifo'
+        2>&1 eval \"\$$code\" >>'$rfifo'
         echo '#<<END.$end>>' >>'$rfifo'
         $code=
       else
