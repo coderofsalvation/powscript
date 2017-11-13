@@ -18,3 +18,9 @@ ast_last_state() {
   setvar "$1" "${AstStates[${AstStates[index]}]}"
 }
 
+ast_clear_states() {
+  unset AstStates
+  declare -gA AstStates
+  AstStates[index]=0
+  AstStates[0]=top
+}

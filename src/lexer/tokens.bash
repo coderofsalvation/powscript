@@ -54,7 +54,7 @@ clear_all_tokens() {
   Tokens[length]=0
 }
 
-backtrack_token() {
+move_back_token_index() {
   Tokens[index]=$((${Tokens[index]}-1))
 }
 

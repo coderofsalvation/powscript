@@ -17,4 +17,11 @@ in_topmost_state() {
   [ ${States[index]} = 1 ]
 }
 
+clear_states() {
+  unset States
+  declare -gA States
+  States[index]=0
+  push_state top
+}
+
 push_state top

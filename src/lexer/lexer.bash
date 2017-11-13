@@ -321,6 +321,26 @@ get_token() {
   fi
 }
 
+peek_token() {
+  if in_topmost_token; then
+    parse_token "$1"
+    backtrack_token
+  else
+    get_selected_token "$1"
+  fi
+}
+
+backtrack_token() {
+  local last_token
+  move_back_token_index
+  peek_token last_token
+
+  case $last_token in
+    '('|'$('|'['|'$['|'{'|'${')
+      pop_state
+      ;;
+  esac
+}
 
 get_token_and_set() {
   local __token

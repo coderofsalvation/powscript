@@ -5,7 +5,7 @@ interactive_mode() {
   local proc rfifo wfifo end_token result
   local powhistory="${POWSCRIPT_HISTORY_FILE-$HOME/.powscript_history}"
   local extra_line=''
-  local compile_flag=false ast_flag=false echo_flag=false
+  local compile_flag=false ast_flag=false echo_flag=false incomplete_flag=false
 
   [ ! -f "$powhistory" ] && echo >"$powhistory"
   history -c
@@ -42,20 +42,21 @@ interactive_mode() {
       '.echo')
         toggle_flag echo_flag
         ;;
+      '.incomplete')
+        toggle_flag incomplete_flag
+        ;;
       '.show '*)
         show_ast "${code//.show /}"
         echo
         ;;
       *)
         state=none
-        while [ ! $state = top ]; do
-          ast_clear_all
-          clear_all_tokens
-          state="$( { init_stream; try_parse_ast; } <<< "$code" )"
+        while [ ! "$state" = top ]; do
+          clear_compilation
+          state="$( { init_stream; POWSCRIPT_SHOW_INCOMPLETE_MESSAGE=$incomplete_flag try_parse_ast; } <<< "$code" )"
           case "$state" in
             top)
-              ast_clear_all
-              clear_all_tokens
+              clear_compilation
               { init_stream; parse_ast ast; } <<< "$code"$'\n'
               ;;
             error*)
@@ -64,7 +65,7 @@ interactive_mode() {
               code=
               ;;
             *)
-              read_powscript $state line
+              read_powscript "$state" line
               code="$code"$'\n'"$line"
               ;;
           esac
@@ -107,6 +108,13 @@ interactive_mode() {
 
   rm $wfifo
   rm $rfifo
+}
+
+clear_compilation() {
+  clear_all_tokens
+  clear_states
+  ast_clear_all
+  ast_clear_states
 }
 
 show_ast() {

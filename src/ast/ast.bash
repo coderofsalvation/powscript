@@ -39,6 +39,9 @@ ast_error() {
 
   if ${POWSCRIPT_ALLOW_INCOMPLETE-false}; then
     POWSCRIPT_INCOMPLETE_STATE="error: $message"
+    if ${POWSCRIPT_SHOW_INCOMPLETE_MESSAGE-false}; then
+      >&2 echo "$message"
+    fi
   else
     >&2 echo "$message"
   fi
@@ -110,12 +113,18 @@ parse_ast_expr() {
   local out="$1"
   local value class glued=true
   local state=first
-  local expression child
+  local expression child catnum=0
 
   new_ast expression
 
+  #>&2 echo "-----"
   while [ ! $state = finished ]; do
     get_token_and_set value class glued
+    while [ $class = whitespace ]; do
+      get_token_and_set value class glued
+    done
+
+    #>&2 echo "token: $class $value"
 
     if $glued || [ $state = first ]; then
       case $state in
@@ -124,20 +133,16 @@ parse_ast_expr() {
           state=second
           ;;
         second)
-          case "$class: $value" in
-            'special: =')
-              ;;
-            *)
-              new_ast expression
-              ast_set $expression head cat
-              ast_push_child $expression $child
-              new_ast child
-              state=cat
-              ;;
-          esac
+          new_ast expression
+          ast_set $expression head cat
+          ast_push_child $expression $child
+          new_ast child
+          state=cat
+          catnum=1
           ;;
         cat)
           new_ast child
+          catnum=$((catnum+1))
           ;;
       esac
 
@@ -160,7 +165,17 @@ parse_ast_expr() {
               ast_set_to_overwrite $child
               parse_ast_command_substitution child
               ;;
+            '(')
+              if [ $state = cat ]; then
+                backtrack_token
+                state=finished
+              else
+                ast_set_to_overwrite $child
+                parse_ast_list child
+              fi
+              ;;
             ')')
+              #>&2 echo "xyz"
               local ast_state
               ast_last_state ast_state
               if [ $state = cat ]; then
@@ -179,12 +194,16 @@ parse_ast_expr() {
           esac
           ;;
         newline|eof)
-          if [ $state = second ]; then
-            ast_set $expression head newline
-          else
-            backtrack_token
-          fi
-          state=finished
+          case $state in
+            first|second)
+              ast_set $expression head $class
+              state=finished
+              ;;
+            *)
+              backtrack_token
+              state=finished
+              ;;
+          esac
           ;;
       esac
       [ $state = cat ] && ast_push_child $expression $child
@@ -193,9 +212,27 @@ parse_ast_expr() {
       state=finished
     fi
   done
-  setvar "$out" $expression
+  #>&2 echo "expr: $(from_ast $expression head) $(ast_print $expression) / $catnum"
+  if [ $catnum = 1 ]; then
+    from_ast $expression children child
+    setvar "$out" $child
+  else
+    setvar "$out" $expression
+  fi
 }
 noshadow parse_ast_expr
+
+parse_ast_specific_expr() {
+  local expr expr_head required="$1" out="$2"
+  parse_ast_expr expr
+  from_ast $expr head expr_head
+  if [ $expr_head = $required ]; then
+    setvar "$out" $expr
+  else
+   ast_error "Wrong expression: Found a $expr_head when a $required was required"
+ fi
+}
+noshadow parse_ast_specific_expr 1
 
 parse_ast_substitution() {
   local subst out="$1"
@@ -244,13 +281,13 @@ noshadow parse_ast_curly_substitution
 
 parse_ast_command_substitution() {
   local out="$1"
-  local command call
+  local cmd call
 
   make_ast "$out" command-substitution ''
 
   ast_push_state '$('
-  parse_ast_expr command
-  parse_ast_commandcall $command call
+  parse_ast_expr cmd
+  parse_ast_commandcall $cmd call
   ast_pop_state
 
   ast_push_child "${!out}" $call
@@ -314,15 +351,39 @@ noshadow parse_ast_commandcall 1
 
 parse_ast_arguments() {
   local expr="$1"
-  local expr_head=none child unfinished=true
+  local expr_head=none child unfinished=true state state_s
+
+  ast_last_state state
+  case $state in
+    '$(')
+      state_s='c'
+      ;;
+    top)
+      state_s='t'
+      ;;
+    *)
+      state_s='o'
+      ;;
+  esac
+
 
   while $unfinished; do
     parse_ast_expr child
     from_ast $child head expr_head
 
-    case $expr_head in
-      newline|command-substitution-end)
+    case "$state_s/$expr_head" in
+      'c/command-substitution-end'|'t/newline'|'t/eof'|'o/newline')
         unfinished=false
+        ;;
+      *eof)
+        if ${POWSCRIPT_ALLOW_INCOMPLETE-false}; then
+          POWSCRIPT_INCOMPLETE_STATE=$state
+          exit
+        else
+          ast_error "unexpected end of file while parsing command."
+        fi
+        ;;
+      *newline)
         ;;
       *)
         ast_push_child $expr $child
@@ -465,10 +526,9 @@ parse_ast_function_definition() {
   local name=$1 out="$2"
   local expr args block
 
-  new_ast expr
-  ast_set $expr head function-def
+  make_ast expr function-def
 
-  parse_ast_list args
+  parse_ast_specific_expr list args
   parse_ast_require_newline "function definition"
   parse_ast_block fn block
 
@@ -484,7 +544,18 @@ parse_ast_require_newline() {
   local nl nl_head
   parse_ast_expr nl
   from_ast $nl head nl_head
-  [ $nl_head = newline ] || ast_error "trailing expression after ${1}: $(ast_print $nl)"
+  case $nl_head in
+    newline)
+      ;;
+    eof)
+      if ! ${POWSCRIPT_ALLOW_INCOMPLETE-false}; then
+        ast_error "unexpected end of file after $1"
+      fi
+      ;;
+    *)
+      ast_error "trailing expression after ${1}: $(ast_print $nl) :: $(from_ast $nl head)"
+      ;;
+  esac
 }
 
 parse_ast_block() {
@@ -552,7 +623,6 @@ parse_ast_list() {
   new_ast expr
   ast_set $expr head list
 
-  get_token t
   while $open; do
     get_token_and_set value class
 
