@@ -254,21 +254,23 @@ noshadow parse_ast_substitution
 
 parse_ast_curly_substitution() {
   local out="$1"
-  local subst value class name
+  local subst varname delimiter
 
-  get_token_and_set value class
-  if [ ! "$class" = name ]; then
-    ast_error "unexpected $class token '$value' in variable substitution"
-  fi
-  name="$value"
+  get_specific_token name varname
+  get_specific_token special delimiter
 
-  get_token_and_set value class
-  if [ ! "$class" = special ]; then
-    ast_error "unexpected $class token '$value' in variable substitution"
-  fi
-  case "$value" in
+  case "$delimiter" in
     '}')
-      make_ast subst simple-substitution "$name"
+      make_ast subst simple-substitution "$varname"
+      ;;
+    '[')
+      local index
+      make_ast subst indexing-substitution "$varname"
+      parse_ast_specific_expr name index
+      ast_push_child $subst $index
+
+      require_token special ']'
+      require_token special '}'
       ;;
     *)
       ast_error "unimplemented"
@@ -341,7 +343,7 @@ parse_ast_commandcall() {
   local command_ast=$1 out="$2"
   local expression child expr_head=none
 
-  make_ast expression call $command_ast
+  make_ast expression call '' $command_ast
 
   parse_ast_arguments $expression
 

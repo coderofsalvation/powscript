@@ -61,6 +61,17 @@ bash_compile() {
       setvar "$out" "\"\${$name}\""
       ;;
 
+    indexing-substitution)
+      local name index expr_children
+
+      from_ast $expr children expr_children
+      expr_children=( $expr_children )
+
+      from_ast $expr value name
+      bash_compile ${expr_children[0]} index
+
+      setvar "$out" "\"\${$name[$index]}\""
+      ;;
     command-substitution)
       local call_ast call
 
@@ -94,6 +105,20 @@ bash_compile() {
       bash_compile ${expr_children[1]} value
 
       setvar "$out" "$name=$value"
+      ;;
+
+    list)
+      local expr_children child_ast child result
+
+      from_ast $expr children expr_children
+
+      result="( "
+      for child_ast in $expr_children; do
+        bash_compile $child_ast child
+        result="$result$child "
+      done
+
+      setvar "$out" "$result)"
       ;;
 
     function-def)

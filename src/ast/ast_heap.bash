@@ -31,7 +31,7 @@ make_ast() {
   new_ast __newast
   ast_set "$__newast" head  "$2"
   ast_set "$__newast" value "$3"
-  for __newchild in ${@:3}; do
+  for __newchild in ${@:4}; do
     ast_push_child "$__newast" $__newchild
   done
   setvar "$1" "$__newast"
@@ -114,6 +114,11 @@ ast_print_child() {
       ;;
     simple-substitution)
       printf '$%s' "$ast_value"
+      ;;
+    indexing-substitution)
+      printf '${%s[' "ast_value"
+      ast_print_child ${child_array[0]}
+      printf ']}'
       ;;
     command-substitution)
       printf '$('

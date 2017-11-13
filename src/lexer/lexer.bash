@@ -342,6 +342,27 @@ backtrack_token() {
   esac
 }
 
+get_specific_token() {
+  local value class required="$1" out="$2"
+  get_token_and_set value class
+  if [ ! $class = $required ]; then
+    parse_error "Wrong token: found a $class of value $value when a $required was required"
+  else
+    setvar "$out" "$value"
+  fi
+}
+noshadow get_specific_token 1
+
+require_token() {
+  local req_class="$1" req_value="$2"
+  local value class
+
+  get_token_and_set value class
+  if [ ! "$req_class $req_value" = "$class $value" ]; then
+    parse_error "Wrong token: found a $class of value $value when a $req_class of value $req_value was required"
+  fi
+}
+
 get_token_and_set() {
   local __token
   get_token __token
@@ -380,8 +401,17 @@ unfinished_input_error() {
 }
 
 parse_error() {
-  >&2 echo "${1//%line/$(get_line_number)}"
-  exit 1
+  local message="error: ${1//%line/$(get_line_number)}"
+  if ${POWSCRIPT_ALLOW_INCOMPLETE-false}; then
+    if ${POWSCRIPT_SHOW_INCOMPLETE_MESSAGE-false}; then
+      >&2 echo "$message"
+    fi
+    POWSCRIPT_INCOMPLETE_STATE="$message"
+    exit
+  else
+    >&2 echo "$message"
+    exit 1
+  fi
 }
 
 tokens_to_json() {
