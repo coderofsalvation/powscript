@@ -1,4 +1,4 @@
-powscript_source ast/ast_heap.bash
+powscript_source ast/ast_heap.bash #<<EXPAND>>
 
 
 # try_parse_ast
@@ -245,7 +245,16 @@ parse_ast_substitution() {
        ast_error "unimplemented"
        ;;
     name)
-      make_ast subst simple-substitution "$value"
+      if next_token_is special "["; then
+        local index
+        make_ast subst indexing-substitution "$value"
+        skip_token
+        parse_ast_specific_expr name index
+        ast_push_child $subst $index
+        require_token special "]"
+      else
+        make_ast subst simple-substitution "$value"
+      fi
       ;;
   esac
   setvar "$out" $subst

@@ -1,4 +1,4 @@
-powscript_source lang/bash/interactive.bash
+powscript_source lang/bash/interactive.bash #<<EXPAND>>
 
 bash_compile() {
   local expr=$1 out="$2"

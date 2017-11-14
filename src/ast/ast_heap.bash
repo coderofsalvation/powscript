@@ -4,8 +4,8 @@ Asts[index]=0
 Asts[length]=0
 Asts[required-indent]=0
 
-powscript_source ast/ast_indent.bash
-powscript_source ast/ast_states.bash
+powscript_source ast/ast_indent.bash #<<EXPAND>>
+powscript_source ast/ast_states.bash #<<EXPAND>>
 
 new_ast() {
   local index="${Asts[index]}"
@@ -89,7 +89,6 @@ ast_print_child() {
       local child
       for child in ${child_array[@]:0:$((${#child_array[@]}-1))}; do
         ast_print_child $child
-        printf '%s' ' '
       done
       ast_print_child ${child_array[${#child_array[@]}-1]}
       ;;
@@ -116,7 +115,7 @@ ast_print_child() {
       printf '$%s' "$ast_value"
       ;;
     indexing-substitution)
-      printf '${%s[' "ast_value"
+      printf '${%s[' "$ast_value"
       ast_print_child ${child_array[0]}
       printf ']}'
       ;;

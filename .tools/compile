@@ -1,26 +1,38 @@
-#!/bin/bash 
-selfpath="$( dirname "$(readlink -f "$0")" )"
-cd $selfpath/..
+#!/bin/bash
 
-for i in lang/*; do
-  lang="$(basename $i)"
-  [[ ! "$lang" =~ "bash" ]] && continue
-  { 
-    echo "#!/bin/bash" 
-    echo "$(<lang/bash/.strictmode)"
-    echo "bash_settings='$(<lang/bash/.settings)'"
-    echo "sh_settings='$(<lang/sh/.settings)'"
-    echo "settings=\"\$bash_settings\""
-    echo "strictmode='$(<lang/bash/.strictmode)'"
-    echo "polyfill='$(<lang/bash/.polyfill)'"
-    cat lang/$lang/.settings lang/$lang/.util lang/$lang/.transpile 
-    echo "######################### begin-of-powscript-functions"
-    cd lang/$lang &>/dev/null
-    echo "powfunctions=\"$(echo *)\""
-    cd - &>/dev/null
-    cat lang/$lang/*
-    echo "######################### end-of-powscript-functions"
-    cat src/powscript.bash
-  } > powscript && chmod 755 powscript
-done
-  
+set -E
+
+Dir="$(readlink -m "$(dirname "${BASH_SOURCE[0]}")/..")"
+PowscriptSourceDirectory="$Dir/src"
+
+if [ -f ./powscript ]; then
+  mv "$Dir/powscript" "$Dir/.powscript.backup"
+  trap '{ mv "$Dir/.powscript.backup" "$Dir/powscript"; exit; }' ERR
+fi
+
+printf '' >"$Dir/powscript"
+read_file() {
+  local line file
+  while IFS='' read -r line || [ -n "$line" ]; do
+    if [[ "$line" =~ .*'#<<EXPAND>>' ]]; then
+      file=${line//*source/}
+      file=${file//#*/}
+      file=${file// /}
+      read_file "$Dir/src/$file"
+    elif [[ "$line" =~ .*'#<<INCLUDE>>' ]]; then
+      file=${line//*source/}
+      file=${file//#*/}
+      file=${file// /}
+      read_file "$(eval echo "$file")"
+    else
+      echo "$line" >>"$Dir/powscript"
+    fi
+  done <"$1"
+}
+
+read_file "$Dir/src/powscript.bash"
+chmod +x "$Dir/powscript"
+
+if [ -f "$Dir/.powscript.backup" ]; then
+  rm "$Dir/.powscript.backup"
+fi

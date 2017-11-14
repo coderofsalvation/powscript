@@ -1,8 +1,8 @@
 #!/bin/bash
 
-powscript_source lexer/stream.bash
-powscript_source lexer/tokens.bash
-powscript_source lexer/states.bash
+powscript_source lexer/stream.bash #<<EXPAND>>
+powscript_source lexer/tokens.bash #<<EXPAND>>
+powscript_source lexer/states.bash #<<EXPAND>>
 
 
 # parse_token varname
@@ -329,6 +329,34 @@ peek_token() {
     get_selected_token "$1"
   fi
 }
+
+skip_token() {
+  local _
+  if in_topmost_token; then
+    parse_token _
+  else
+    forward_token
+  fi
+}
+
+next_token_is() {
+  local token
+  peek_token token
+  case $# in
+    1)
+      local class
+      from_token $token class class
+      [ $class = $1 ]
+      ;;
+    2)
+      local class value
+      all_from_token $token class value
+      [ "$class" = $1 -a "$value" = $2 ]
+      ;;
+  esac
+}
+
+
 
 backtrack_token() {
   local last_token
