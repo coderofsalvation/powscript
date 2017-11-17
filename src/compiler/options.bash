@@ -17,6 +17,11 @@ powscript_parse_options() {
         PowscriptInteractiveMode=yes
         shift
         ;;
+      '-d'|'--debug')
+        PowscriptInteractiveMode=false
+        PowscriptCompileFile=false
+        shift $#
+        ;;
       '--to')
         shift
         case "$1" in
@@ -51,11 +56,17 @@ powscript_parse_options() {
     >&2 echo "No input files given"
   fi
 
-  if [ $PowscriptInteractiveMode = nofile ] && [ "$PowscriptFileNumber" -gt 0 ]; then
-    PowscriptInteractiveMode=false
-  else
-    PowscriptInteractiveMode=true
-  fi
+  case $PowscriptInteractiveMode in
+    no)  PowscriptInteractiveMode=false; ;;
+    yes) PowscriptInteractiveMode=true; ;;
+    nofile)
+      if [ "$PowscriptFileNumber" -gt 0 ]; then
+        PowscriptInteractiveMode=false
+      else
+        PowscriptInteractiveMode=true
+      fi
+      ;;
+  esac
 }
 
 powscript_is_interactive() {

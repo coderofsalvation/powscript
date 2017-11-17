@@ -1,6 +1,6 @@
 #!/bin/bash
 
-source "$PWD/src/powscript.bash"
+source "$PWD/src/powscript.bash" -d
 
 test_tokens() {
   local value  class  glued

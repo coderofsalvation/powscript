@@ -1,12 +1,11 @@
 echo 'hello world'
 
-f() {
+f()
   printf -v x "x: $1"
   if $x
     echo 10
-}
 
-(
+X=(
  echo "a
  b
  c

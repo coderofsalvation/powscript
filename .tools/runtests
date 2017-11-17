@@ -71,14 +71,17 @@ testdirectory() {
   done
 }
 
+header "Parser tests:"
+testdirectory "test/parser" './${file}' 'file'
+
 header "Compilation tests:"
 testdirectory "test/compilation" './${file}' 'file'
 
-header "Evaluation tests:"
-testdirectory "test" './powscript ${file}' 'file' '.*\.pow$'
+#header "Evaluation tests:"
+#testdirectory "test" './powscript ${file}' 'file' '.*\.pow$'
 
-header "Interactive mode tests:"
-testdirectory "test/interactive" './powscript --interactive < ${file}' 'file'
+#header "Interactive mode tests:"
+#testdirectory "test/interactive" './powscript --interactive < ${file}' 'file'
 
 header "Repository maintainance tests:"
 testdirectory "test/repo" './${file}' 'file' '.*\.sh'
