@@ -5,7 +5,7 @@ Tokens[length]=0
 
 TokenMark=0
 
-store_token() {
+store_token() { #<<NOSHADOW>>
   local idvar="$8"
   local index="${Tokens[length]}"
 
@@ -28,13 +28,49 @@ from_token() {
 }
 
 all_from_token() {
-  local __token="$1"
-  shift
+  local __token="${@:$#}"
 
-  for var in "$@"; do
-    from_token "$__token" "$var" "$var"
+  while [ $# -gt 1 ]; do
+    case "$1" in
+      '-v'|'--value')
+        from_token $__token value "$2"
+        shift 2
+        ;;
+      '-c'|'--class')
+        from_token $__token class "$2"
+        shift 2
+        ;;
+      '-ls'|'--line-start')
+        from_token $__token linenumber_start "$2"
+        shift 2
+        ;;
+      '-le'|'--line-end')
+        from_token $__token linenumber_end "$2"
+        shift 2
+        ;;
+      '-g'|'--glued')
+        from_token $__token glued "$2"
+        shift 2
+        ;;
+      '-cs'|'--glued')
+        from_token $__token collumn_start "$2"
+        shift 2
+        ;;
+      '-ce'|'--glued')
+        from_token $__token collumn_end "$2"
+        shift 2
+        ;;
+      '-i'|'--id')
+        setvar "$2" $__token
+        shift 2
+        ;;
+      *)
+        parse_error "unexpected argument $1, expecting -(v|c|ls|le|cs|ce|g|i), on line %line"
+        ;;
+    esac
   done
 }
+
 
 get_selected_token() {
   setvar "$1" $((${Tokens[index]}))
@@ -76,7 +112,7 @@ return_token_to_mark() {
 }
 
 
-find_token_by() {
+find_token_by() { #<<NOSHADOW>>
   local field="$1"
   local value="$2"
   local token="${Tokens[index]}"

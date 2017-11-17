@@ -7,15 +7,15 @@ Asts[required-indent]=0
 powscript_source ast/ast_indent.bash #<<EXPAND>>
 powscript_source ast/ast_states.bash #<<EXPAND>>
 
-new_ast() {
+new_ast() { #<<NOSHADOW>>
   local index="${Asts[index]}"
   local length="${Asts[length]}"
 
   setvar "$1" "$index"
 
-  Asts[type-$index]=
+  Asts[head-$index]=
   Asts[value-$index]=
-  Asts[children-$index]=""
+  Asts[children-$index]=
 
   if [ ! $index = $length ]; then
     Asts[index]=$(($index+1))
@@ -49,12 +49,48 @@ ast_set_to_overwrite() {
   Asts[index]="$1"
 }
 
+ast_is() {
+  local ast_head ast_value
+  from_ast $1 head  ast_head
+  from_ast $1 value ast_value
+
+  case $# in
+    2)
+      [ $ast_head = "$2" ]
+      ;;
+    3)
+      [ $ast_head = "$2" ] && [ "$ast_value" = "$3" ]
+      ;;
+  esac
+}
+
+
 ast_push_child() {
   Asts["children-$1"]="${Asts["children-$1"]} $2"
 }
 
 ast_unshift_child() {
   Asts["children-$1"]="$2 ${Asts["children-$1"]}"
+}
+
+ast_children() { #<<NOSHADOW>>
+  local ast="$1" ast_children children_array child i
+  from_ast $ast children ast_children
+  children_array=( $ast_children )
+
+  i=0
+  for child_name in ${@:2}; do
+    setvar "$child_name" ${children_array[$i]}
+    i=$((i+1))
+  done
+}
+noshadow ast_children 1 @
+
+
+ast_clear() {
+  unset Asts["value-$1"]
+  unset Asts["head-$1"]
+  unset Asts["children-$1"]
 }
 
 ast_clear_all() {
@@ -109,6 +145,14 @@ ast_print_child() {
       local name=${child_array[0]} value=${child_array[1]}
       ast_print_child $name
       printf '='
+      ast_print_child $value
+      ;;
+    indexing-assign)
+      local name=${child_array[0]} index=${child_array[1]} value=${child_array[2]}
+      ast_print_child $name
+      printf '['
+      ast_print_child $index
+      printf ']='
       ast_print_child $value
       ;;
     simple-substitution)

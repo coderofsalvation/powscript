@@ -1,6 +1,7 @@
 PowscriptBackend=bash
 PowscriptInteractiveMode=nofile
 PowscriptCompileFile=false
+PowscriptOutput='/dev/stdout'
 
 declare -gA PowscriptFiles
 PowscriptFileNumber=0
@@ -8,7 +9,11 @@ PowscriptFileNumber=0
 powscript_parse_options() {
   while [ "$#" -gt 0 ]; do
     case "$1" in
-      '-i'|'-interactive')
+      '-o'|'--output')
+        PowscriptOutput="$2"
+        shift 2
+        ;;
+      '-i'|'--interactive')
         PowscriptInteractiveMode=yes
         shift
         ;;

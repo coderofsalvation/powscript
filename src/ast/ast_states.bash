@@ -18,6 +18,12 @@ ast_last_state() {
   setvar "$1" "${AstStates[${AstStates[index]}]}"
 }
 
+ast_state_is() {
+  local state
+  ast_last_state state
+  [ "$state" = "$1" ]
+}
+
 ast_clear_states() {
   unset AstStates
   declare -gA AstStates

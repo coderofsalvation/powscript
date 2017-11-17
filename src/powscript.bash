@@ -17,7 +17,9 @@ select_backend $PowscriptBackend
 if powscript_is_interactive; then
   interactive_mode
 else
-  echo "TODO: COMPILATION"
+  for file in "${PowscriptFiles[@]}"; do
+    powscript_compile_file "$PowscriptOutput" <"$file"
+  done
 fi
 
 ${POWSCRIPT_DEBUG-false} || powscript_clean_up

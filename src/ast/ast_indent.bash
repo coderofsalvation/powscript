@@ -15,7 +15,7 @@ ast_new_indentation() {
 }
 
 
-ast_test_indentation() {
+ast_test_indentation() { #<<NOSHADOW>>
   local value="$1" class="$2" out="$3"
   local req found result temp_result
   ast_indentation_required req
@@ -33,17 +33,8 @@ ast_test_indentation() {
     if [ $found -eq $req ]; then
       result=ok
 
-    elif [ $found -eq -1 ]; then
-      result=error-eof
-
     elif [ $found -lt $req ]; then
-      ast_pop_indentation
-      ast_indentation_required req
-      if [ $found -eq $req ]; then
-        result=end
-      else
-        result=error-exact
-      fi
+      result=end
     else
       result=error-exact
     fi

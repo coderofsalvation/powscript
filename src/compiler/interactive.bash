@@ -24,7 +24,7 @@ interactive_mode() {
   while ps -p $proc >/dev/null; do
     result=
 
-    if [ -n "$extra_line" ]; then
+    if [ -n "${extra_line// /}" ]; then
       line="$extra_line"
       extra_line=""
     else
@@ -63,6 +63,7 @@ interactive_mode() {
               >&2 echo "$state"
               state=none
               code=
+              line=
               ;;
             *)
               read_powscript "$state" line
@@ -70,9 +71,9 @@ interactive_mode() {
               ;;
           esac
         done
-        if [ ! "$line" = '' ] && [ ! "$line" = "$code" ]; then
-          code="$(echo "$code" | head -n -1)"$'\n'
-          extra_line="$line"
+        if ! end_of_file; then
+          get_remaining_input extra_line
+          code="${code:0:$(($# - ${#extra_line}))}"
         fi
 
         history -s "$code"
@@ -109,6 +110,14 @@ interactive_mode() {
   rm $wfifo
   rm $rfifo
 }
+
+get_remaining_input() { #<<NOSHADOW>>
+  local collumn out="$1"
+  peek_token -cs collumn <<< ""
+  jump_to_collumn $collumn
+  get_rest_of_line "$out"
+}
+noshadow get_remaining_input
 
 clear_compilation() {
   clear_all_tokens

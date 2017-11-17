@@ -1,6 +1,6 @@
 powscript_source lang/bash/interactive.bash #<<EXPAND>>
 
-bash_compile() {
+bash_compile() { #<<NOSHADOW>>
   local expr=$1 out="$2"
   local expr_head expr_value expr_children
 
@@ -107,6 +107,17 @@ bash_compile() {
       setvar "$out" "$name=$value"
       ;;
 
+    indexing-assign)
+      local name index value
+      from_ast $expr children expr_children
+      expr_children=( $expr_children )
+
+      bash_compile ${expr_children[0]} name
+      bash_compile ${expr_children[1]} index
+      bash_compile ${expr_children[2]} value
+
+      setvar "$out" "$name[$index]=$value"
+      ;;
     list)
       local expr_children child_ast child result
 
@@ -187,7 +198,8 @@ bash_compile() {
 
       case "$op" in
         command)
-          bash_compile ${expr_children[0]} "$out"
+          bash_compile ${expr_children[0]} left
+          setvar "$out" "$left"
           ;;
         not)
           bash_compile ${expr_children[0]} right
@@ -198,14 +210,15 @@ bash_compile() {
           bash_compile ${expr_children[1]} right
 
           case "$op" in
-            'is'|'=')  op='='    quoted=single ;;
-            '>')       op='-gt'  quoted=single ;;
-            '>=')      op='-ge'  quoted=single ;;
-            '<')       op='-lt'  quoted=single ;;
-            '<=')      op='-le'  quoted=single ;;
-            'match')   op='=~'   quoted=double ;;
-            'and')     op='&&' ;;
-            'or')      op='||' ;;
+            'is'|'=')     op='='    quoted=single ;;
+            'isnt'|'!=')  op='!='   quoted=single ;;
+            '>')          op='-gt'  quoted=single ;;
+            '>=')         op='-ge'  quoted=single ;;
+            '<')          op='-lt'  quoted=single ;;
+            '<=')         op='-le'  quoted=single ;;
+            'match')      op='=~'   quoted=double ;;
+            'and'|'&&')   op='&&' ;;
+            'or'|'||')    op='||' ;;
           esac
 
           case $quoted in

@@ -19,7 +19,7 @@ powscript_source lexer/states.bash #<<EXPAND>>
 #  abc
 #  name
 
-parse_token() {
+parse_token() { #<<NOSHADOW>>
   local token_id_var="$1"   # variables where the token id will be stored
 
   local linenumber_start    # tokens store starting and ending line and collumn
@@ -47,7 +47,7 @@ parse_token() {
 
   # states are stored in a stack, to allow strings like 'a b$(echo c)d e'
   # to be handled by the lexer, where the tokens will be
-  # 'a b', $, (, echo, c, ), 'd e'.
+  # 'a b', $(, echo, c, ), 'd e'.
   pop_state state
 
   # the token is done when its class is identified
@@ -136,7 +136,7 @@ parse_token() {
             ;;
 
           [0-9a-zA-Z_]) next_state=variable ;;
-          *)            class=string ;;
+          *)            class=name ;;
         esac
         ;;
 
@@ -190,12 +190,21 @@ parse_token() {
             fi
             ;;
 
-          ':'|';'|','|'=')
+          ':'|';'|',')
             belongs=false
             skip_term=false
             next_class=special
             ;;
 
+          '=')
+            if [[ "$token" =~ [a-zA-Z_][a-zA-Z_0-9]* ]]; then
+              belongs=false
+              skip_term=false
+              next_class=special
+            else
+              token="$token$c"
+            fi
+            ;;
           '\')
             state='unquoted-escape'
             ;;
@@ -292,6 +301,11 @@ parse_token() {
       fi
     else
       if ${POWSCRIPT_ALLOW_INCOMPLETE-false}; then
+        case "$state" in
+          parentheses)  state='('; ;;
+          brackets)     state='['; ;;
+          curly-braces) state='{'; ;;
+        esac
         POWSCRIPT_INCOMPLETE_STATE="$state"
         token=eof
         class=eof
@@ -312,7 +326,7 @@ parse_token() {
 }
 noshadow parse_token
 
-get_token() {
+get_token_id() {
   if in_topmost_token; then
     parse_token "$1"
   else
@@ -321,7 +335,7 @@ get_token() {
   fi
 }
 
-peek_token() {
+peek_token_id() {
   if in_topmost_token; then
     parse_token "$1"
     backtrack_token
@@ -339,40 +353,49 @@ skip_token() {
   fi
 }
 
+
+get_token() {
+  local __get_token__token
+  get_token_id __get_token__token
+  all_from_token "$@" $__get_token__token
+}
+
+
+peek_token() {
+  local __peek_token__token
+  peek_token_id __peek_token__token
+  all_from_token "$@" $__peek_token__token
+}
+
+
 next_token_is() {
-  local token
-  peek_token token
+  local value class
+  peek_token -v value -c class
   case $# in
     1)
-      local class
-      from_token $token class class
-      [ $class = $1 ]
+      [ "$class" = "$1" ]
       ;;
     2)
-      local class value
-      all_from_token $token class value
-      [ "$class" = $1 -a "$value" = $2 ]
+      [[ "$class" = "$1" ]] && [[ "$value" = "$2" ]]
       ;;
   esac
 }
 
+
+token_ignore_whitespace() {
+  if next_token_is whitespace; then
+    skip_token
+  fi
+}
 
 
 backtrack_token() {
-  local last_token
   move_back_token_index
-  peek_token last_token
-
-  case $last_token in
-    '('|'$('|'['|'$['|'{'|'${')
-      pop_state
-      ;;
-  esac
 }
 
-get_specific_token() {
+get_specific_token() { #<<NOSHADOW>>
   local value class required="$1" out="$2"
-  get_token_and_set value class
+  get_token -v value -c class
   if [ ! $class = $required ]; then
     parse_error "Wrong token: found a $class of value $value when a $required was required"
   else
@@ -385,17 +408,12 @@ require_token() {
   local req_class="$1" req_value="$2"
   local value class
 
-  get_token_and_set value class
+  get_token -v value -c class
   if [ ! "$req_class $req_value" = "$class $value" ]; then
     parse_error "Wrong token: found a $class of value $value when a $req_class of value $req_value was required"
   fi
 }
 
-get_token_and_set() {
-  local __token
-  get_token __token
-  all_from_token $__token "$@"
-}
 
 unfinished_input_error() {
   local token
@@ -448,7 +466,7 @@ tokens_to_json() {
 
   echo '{'
   while ! end_of_file; do
-    get_token token
+    get_token -v value -c class -g glued
     from_token $token value value
     from_token $token class class
     from_token $token glued glued

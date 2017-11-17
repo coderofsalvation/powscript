@@ -21,6 +21,7 @@ get_character() {
 }
 
 next_character() {
+  local line
   if [ ${Stream[index]} = ${#Stream[line]} ]; then
     if IFS='' read -r line || [ -n "$line" ]; then
       Stream[line]="$line"
@@ -34,12 +35,25 @@ next_character() {
   fi
 }
 
+get_rest_of_line() { #<<NOSHADOW>>
+  local line collumn out="$1"
+  line="${Stream[line]}"
+  get_collumn collumn
+  setvar "$out" "${line:$collumn}"
+}
+noshadow get_rest_of_line
+
+
 end_of_file() {
   ${Stream[eof]}
 }
 
 line_start() {
   [ ${Stream[index]} = 0 ]
+}
+
+jump_to_collumn() {
+  Stream[index]=$1
 }
 
 get_line_number() {

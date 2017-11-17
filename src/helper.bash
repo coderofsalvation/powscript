@@ -64,11 +64,14 @@ noshadow() {
       ;;
     *)
       arguments="$(printf_seq 1 $argnumber '"$%N" ')"
+
       case $varnumber in
         '@')
+          local argshift="shift $((argnumber-1))"
+          [ $argnumber = 0 ] && argshift=
 
           set_variables="
-          shift $argnumber
+          $argshift
           for ${prefix}n in \$(seq $((argnumber+1)) \$#); do
             setvar \"\$$((argnumber+1))\" \"\${!${prefix}all[\$${prefix}n]}\"
             shift
@@ -91,15 +94,15 @@ noshadow() {
       ;;
   esac
 
-  eval "
-    __$name() $(declare -f $name | tail -n +2)
+  ${ShadowingOp-eval} "
+    __shadowing_$name() $(${ShadowingGetFunc-declare} -f $name | tail -n +2)
 
     $name() {
       if [ -z \${$prefix+x} ]; then
         local $prefix
         $intermediary_definition
       fi
-      __$name $arguments $intermediary_variables
+      __shadowing_$name $arguments $intermediary_variables
       $set_variables
     }
   "

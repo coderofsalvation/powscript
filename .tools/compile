@@ -12,18 +12,40 @@ fi
 
 printf '' >"$Dir/powscript"
 read_file() {
-  local line file
+  local line file noshadow_mode=false noshadow_func=""
+  export ShadowingOp=echo
+  export ShadowingGetFunc=get_noshadow_func
+  get_noshadow_func() {
+    echo "$noshadow_func"
+  }
+
   while IFS='' read -r line || [ -n "$line" ]; do
     if [[ "$line" =~ .*'#<<EXPAND>>' ]]; then
       file=${line//*source/}
       file=${file//#*/}
       file=${file// /}
       read_file "$Dir/src/$file"
+      echo "# FILE: $file">>"$Dir/powscript"
+
     elif [[ "$line" =~ .*'#<<INCLUDE>>' ]]; then
       file=${line//*source/}
       file=${file//#*/}
       file=${file// /}
       read_file "$(eval echo "$file")"
+      source "$(eval echo "$file")"
+      echo "# FILE: $file">>"$Dir/powscript"
+
+    elif [[ "$line" =~ .*'#<<NOSHADOW>>' ]]; then
+      noshadow_func="dummy()"$'\n'"{"
+      noshadow_mode=true
+
+    elif $noshadow_mode; then
+      if [[ "$line" =~ noshadow.* ]]; then
+        eval "$line" >>"$Dir/powscript"
+        noshadow_mode=false
+      else
+        noshadow_func="$noshadow_func"$'\n'"$line"
+      fi
     else
       echo "$line" >>"$Dir/powscript"
     fi
