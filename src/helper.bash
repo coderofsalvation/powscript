@@ -70,20 +70,18 @@ noshadow() {
           local argshift="shift $((argnumber-1))"
           [ $argnumber = 0 ] && argshift=
 
-          set_variables="
+          set_variables="#
           $argshift
           for ${prefix}n in \$(seq $((argnumber+1)) \$#); do
             setvar \"\$$((argnumber+1))\" \"\${!${prefix}all[\$${prefix}n]}\"
             shift
-          done
-          "
+          done"
 
           intermediary_variables="\"\${${prefix}all[@]}\""
           intermediary_definition="declare -A ${prefix}all
           for ${prefix}n in \$(seq $((argnumber+1)) \$#); do
             ${prefix}all[\$${prefix}n]=${prefix}\$${prefix}n
-          done
-          "
+          done"
           ;;
         *)
           set_variables="$(printf_seq $((argnumber+1)) $((varnumber+argnumber)) "setvar \"\$%N\" \"\$$prefix%N\"\n")"
@@ -95,17 +93,17 @@ noshadow() {
   esac
 
   ${ShadowingOp-eval} "
-    __shadowing_$name() $(${ShadowingGetFunc-declare} -f $name | tail -n +2)
+__shadowing_$name() $(${ShadowingGetFunc-declare} -f $name | tail -n +2)
 
-    $name() {
-      if [ -z \${$prefix+x} ]; then
-        local $prefix
-        $intermediary_definition
-      fi
-      __shadowing_$name $arguments $intermediary_variables
-      $set_variables
-    }
-  "
+$name() {
+  if [ -z \${$prefix+x} ]; then
+    local $prefix
+    $intermediary_definition
+  fi
+  __shadowing_$name $arguments $intermediary_variables
+  $set_variables
+}
+"
   ClearShadowingCounter=$(($ClearShadowingCounter+1))
 }
 

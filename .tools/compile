@@ -13,8 +13,15 @@ fi
 printf '' >"$Dir/powscript"
 read_file() {
   local line file noshadow_mode=false noshadow_func=""
-  export ShadowingOp=echo
+  export ShadowingOp=trimming_echo
   export ShadowingGetFunc=get_noshadow_func
+  trimming_echo() {
+    local line
+    while IFS='' read -r line || [ -n "$line" ]; do
+      line="${line% }"
+      echo "$line"
+    done <<< "$1"
+  }
   get_noshadow_func() {
     echo "$noshadow_func"
   }
