@@ -163,7 +163,7 @@ format_powscript_prompt() {
   local prompt="${POWSCRIPT_PS1-$default_prompt}"
 
   prompt="${prompt//%L/$(printf '%.3d' $InteractiveFileLineNumber)}"
-  prompt="${prompt//%S/$(printf '%3s'  $state)}"
+  prompt="${prompt//%S/$(printf '%4s'  $state)}"
 
   echo "$prompt"
 }

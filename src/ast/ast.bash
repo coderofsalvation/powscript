@@ -86,6 +86,7 @@ parse_ast_top() { #<<NOSHADOW>>
       from_ast $expr value expr_value
       case "$expr_value" in
         'if')      parse_ast_if 'if' "$out" ;;
+        'for')     parse_ast_for     "$out" ;;
         'while')   parse_ast_while   "$out" ;;
         'switch')  parse_ast_switch  "$out" ;;
         'require') parse_ast_require "$out" ;;
@@ -519,6 +520,30 @@ parse_ast_post_if() {
       ;;
   esac
 }
+
+parse_ast_for() { #<<NOSHADOW>>
+  local out="$1"
+  local value class elements_ast block_ast
+
+  get_token -v value -c class
+
+  if [ ! "$class" = name ]; then
+    ast_error "Expected a variable name in 'for' expression, found a $class token instead."
+  else
+    require_token name "in"
+
+    make_ast elements_ast elements
+    parse_ast_arguments $elements_ast
+
+    parse_ast_block 'for' block_ast
+
+  fi
+
+  make_ast "$out" 'for' "$value" $elements_ast $block_ast
+}
+noshadow parse_ast_for
+
+
 
 parse_ast_conditional() { #<<NOSHADOW>>
   local out="$1"

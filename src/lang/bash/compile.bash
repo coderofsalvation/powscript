@@ -37,7 +37,7 @@ bash_compile() { #<<NOSHADOW>>
       bash_compile ${expr_children[1]} block
       bash_compile ${expr_children[2]} post_if
 
-      setvar "$out" "$expr_head $condition; then"$'\n'"${block:2:$((${#block}-4))}"$'\n'"$post_if"
+      setvar "$out" "$expr_head $condition; then"$'\n'"${block:2:-2}"$'\n'"$post_if"
       ;;
     else)
       local expr_children
@@ -48,11 +48,37 @@ bash_compile() { #<<NOSHADOW>>
 
       bash_compile ${expr_children[0]} block
 
-      setvar "$out" "else"$'\n'"${block:2:$((${#block}-4))}"$'\n'"fi"
+      setvar "$out" "else"$'\n'"${block:2:-2}"$'\n'"fi"
       ;;
 
     end_if)
       setvar "$out" "fi"
+      ;;
+
+    for)
+      local varname elements_ast block_ast
+      local elements block
+
+      from_ast $expr value varname
+      ast_children $expr elements_ast block_ast
+
+      bash_compile $elements_ast elements
+      bash_compile $block_ast block
+
+      setvar "$out" "for $varname in $elements; do"$'\n'"${block:2:-2}"$'\ndone'
+      ;;
+
+    elements)
+      local e elements r result
+
+      from_ast $expr children elements
+
+      for e in $elements; do
+        bash_compile $e r
+        result="$result$r "
+      done
+
+      setvar "$out" "${result:0:-1}"
       ;;
 
     simple-substitution)
