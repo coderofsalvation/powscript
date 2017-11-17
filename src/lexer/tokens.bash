@@ -52,11 +52,11 @@ all_from_token() {
         from_token $__token glued "$2"
         shift 2
         ;;
-      '-cs'|'--glued')
+      '-cs'|'--collumn-start')
         from_token $__token collumn_start "$2"
         shift 2
         ;;
-      '-ce'|'--glued')
+      '-ce'|'--collumn-end')
         from_token $__token collumn_end "$2"
         shift 2
         ;;

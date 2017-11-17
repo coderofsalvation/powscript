@@ -18,6 +18,7 @@ powscript_make_fifo() {
 
 powscript_clean_up() {
   [ -d "$PowscriptTempDirectory" ] && rm -r "$PowscriptTempDirectory"
+  [ -n "$PowscriptGuestProcess"  ] && ps -p "$PowscriptGuestProcess" >/dev/null && kill STOP "$PowscriptGuestProcess"
   exit 0
 }
 

@@ -258,11 +258,11 @@ all_from_token() {
         from_token $__token glued "$2"
         shift 2
         ;;
-      '-cs'|'--glued')
+      '-cs'|'--collumn-start')
         from_token $__token collumn_start "$2"
         shift 2
         ;;
-      '-ce'|'--glued')
+      '-ce'|'--collumn-end')
         from_token $__token collumn_end "$2"
         shift 2
         ;;
@@ -2422,6 +2422,7 @@ powscript_make_fifo() {
 
 powscript_clean_up() {
   [ -d "$PowscriptTempDirectory" ] && rm -r "$PowscriptTempDirectory"
+  [ -n "$PowscriptGuestProcess"  ] && ps -p "$PowscriptGuestProcess" >/dev/null && kill STOP "$PowscriptGuestProcess"
   exit 0
 }
 
@@ -2535,6 +2536,7 @@ interactive_mode() {
 
   interactive_compile_target "$wfifo" "$rfifo" "$end_token" &
   proc="$!"
+  PowscriptGuestProcess="$proc"
 
   exec 3<>"$wfifo"
   exec 4<>"$rfifo"
@@ -2625,8 +2627,8 @@ interactive_mode() {
   done
   history -w "$powhistory"
 
-  rm $wfifo
-  rm $rfifo
+  [ -p "$wfifo" ] && rm $wfifo
+  [ -p "$rfifo" ] && rm $rfifo
 }
 
 

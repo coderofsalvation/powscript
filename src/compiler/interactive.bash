@@ -17,6 +17,7 @@ interactive_mode() {
 
   interactive_compile_target "$wfifo" "$rfifo" "$end_token" &
   proc="$!"
+  PowscriptGuestProcess="$proc"
 
   exec 3<>"$wfifo"
   exec 4<>"$rfifo"
@@ -107,8 +108,8 @@ interactive_mode() {
   done
   history -w "$powhistory"
 
-  rm $wfifo
-  rm $rfifo
+  [ -p "$wfifo" ] && rm $wfifo
+  [ -p "$rfifo" ] && rm $rfifo
 }
 
 get_remaining_input() { #<<NOSHADOW>>
