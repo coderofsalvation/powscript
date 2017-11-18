@@ -5,21 +5,21 @@ IndentStack[starting-block]=false
 IndentStack[0]=0
 
 
-ast_new_indentation() {
+ast:new-indentation() {
   local indent
 
-  ast_indentation_required indent
+  ast:indentation-required indent
 
-  ast_push_indentation $((indent+1))
+  ast:push-indentation $((indent+1))
   IndentStack[starting-block]=true
 }
 
 
-ast_test_indentation() { #<<NOSHADOW>>
+ast:test-indentation() { #<<NOSHADOW>>
   local value="$1" class="$2" out="$3"
   local req found result temp_result
-  ast_indentation_required req
-  ast_count_indentation "$value" $class found
+  ast:indentation-required req
+  ast:count-indentation "$value" $class found
 
   if ${IndentStack[starting-block]}; then
     if [ $found -ge $req ]; then
@@ -41,27 +41,27 @@ ast_test_indentation() { #<<NOSHADOW>>
   fi
   setvar "$out" $result
 }
-noshadow ast_test_indentation 2
+noshadow ast:test-indentation 2
 
 
-ast_update_indentation() {
+ast:update-indentation() {
   IndentStack[${IndentStack[index]}]=$1
 }
 
-ast_pop_indentation() {
+ast:pop-indentation() {
   IndentStack[index]=$((${IndentStack[index]}-1))
 }
 
-ast_push_indentation() {
+ast:push-indentation() {
   IndentStack[index]=$((${IndentStack[index]}+1))
-  ast_update_indentation $1
+  ast:update-indentation $1
 }
 
-ast_indentation_required() {
+ast:indentation-required() {
   setvar "$1" ${IndentStack[${IndentStack[index]}]}
 }
 
-ast_count_indentation() {
+ast:count-indentation() {
   case "$2" in
     whitespace) setvar "$3" "$1" ;;
     eof)        setvar "$3" -1   ;;
@@ -69,7 +69,7 @@ ast_count_indentation() {
   esac
 }
 
-ast_indentation_layers() {
+ast:indentation-layers() {
   setvar "$1" ${IndentStack[index]}
 }
 

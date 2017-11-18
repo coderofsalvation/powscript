@@ -119,17 +119,17 @@ $name() {
 
 declare -gA Stream
 
-init_stream() {
+stream:init() {
   Stream[line]=""
   Stream[index]=0
   Stream[linenumber]=0
   Stream[eof]=false
 
-  next_character
+  stream:next-character
 }
 
-get_character() {
-  if end_of_file; then
+stream:get-character() {
+  if stream:end; then
     (>&2 echo 'Tried to get an character after the end of file!')
     exit 1
   elif [ ${Stream[index]} = ${#Stream[line]} ]; then
@@ -139,7 +139,7 @@ get_character() {
   fi
 }
 
-next_character() {
+stream:next-character() {
   local line
   if [ ${Stream[index]} = ${#Stream[line]} ]; then
     if IFS='' read -r line || [ -n "$line" ]; then
@@ -155,41 +155,41 @@ next_character() {
 }
 
 
-__shadowing_get_rest_of_line() {
+__shadowing_stream:get-rest-of-line() {
   local line collumn out="$1"
   line="${Stream[line]}"
-  get_collumn collumn
+  stream:get-collumn collumn
   setvar "$out" "${line:$collumn}"
 }
 
-get_rest_of_line() {
+stream:get-rest-of-line() {
   if [ -z ${__noshadow_0_+x} ]; then
     local __noshadow_0_
     local __noshadow_0_1
   fi
-  __shadowing_get_rest_of_line  __noshadow_0_1
+  __shadowing_stream:get-rest-of-line  __noshadow_0_1
   setvar "$1" "$__noshadow_0_1"
 }
 
 
 
-end_of_file() {
+stream:end() {
   ${Stream[eof]}
 }
 
-line_start() {
+stream:line-start() {
   [ ${Stream[index]} = 0 ]
 }
 
-jump_to_collumn() {
+stream:jump-to-collumn() {
   Stream[index]=$1
 }
 
-get_line_number() {
+stream:get-line-number() {
   setvar "$1" ${Stream[linenumber]}
 }
 
-get_collumn() {
+stream:get-collumn() {
   setvar "$1" ${Stream[index]}
 }
 
@@ -202,7 +202,7 @@ Tokens[length]=0
 TokenMark=0
 
 
-__shadowing_store_token() {
+__shadowing_token:store() {
   local idvar="$8"
   local index="${Tokens[length]}"
 
@@ -219,51 +219,51 @@ __shadowing_store_token() {
   setvar "$idvar" $index
 }
 
-store_token() {
+token:store() {
   if [ -z ${__noshadow_1_+x} ]; then
     local __noshadow_1_
     local __noshadow_1_8
   fi
-  __shadowing_store_token "$1" "$2" "$3" "$4" "$5" "$6" "$7"  __noshadow_1_8
+  __shadowing_token:store "$1" "$2" "$3" "$4" "$5" "$6" "$7"  __noshadow_1_8
   setvar "$8" "$__noshadow_1_8"
 }
 
 
-from_token() {
+token:from() {
   setvar "$3" "${Tokens[${2}-${1}]}"
 }
 
-all_from_token() {
+token:all-from() {
   local __token="${@:$#}"
 
   while [ $# -gt 1 ]; do
     case "$1" in
       '-v'|'--value')
-        from_token $__token value "$2"
+        token:from $__token value "$2"
         shift 2
         ;;
       '-c'|'--class')
-        from_token $__token class "$2"
+        token:from $__token class "$2"
         shift 2
         ;;
       '-ls'|'--line-start')
-        from_token $__token linenumber_start "$2"
+        token:from $__token linenumber_start "$2"
         shift 2
         ;;
       '-le'|'--line-end')
-        from_token $__token linenumber_end "$2"
+        token:from $__token linenumber_end "$2"
         shift 2
         ;;
       '-g'|'--glued')
-        from_token $__token glued "$2"
+        token:from $__token glued "$2"
         shift 2
         ;;
       '-cs'|'--collumn-start')
-        from_token $__token collumn_start "$2"
+        token:from $__token collumn_start "$2"
         shift 2
         ;;
       '-ce'|'--collumn-end')
-        from_token $__token collumn_end "$2"
+        token:from $__token collumn_end "$2"
         shift 2
         ;;
       '-i'|'--id')
@@ -278,48 +278,48 @@ all_from_token() {
 }
 
 
-get_selected_token() {
-  setvar "$1" $((${Tokens[index]}))
+token:get-selected() {
+  setvar "$1" ${Tokens[index]}
 }
 
-clear_tokens() {
+token:clear() {
   Tokens[length]=$((${Tokens[index]}-$1))
   if [ ${Tokens[index]} -gt ${Tokens[length]} ]; then
     Tokens[index]=${Tokens[length]}
   fi
 }
 
-clear_all_tokens() {
+token:clear-all() {
   unset Tokens
   declare -gA Tokens
   Tokens[index]=0
   Tokens[length]=0
 }
 
-move_back_token_index() {
+token:move-back-index() {
   Tokens[index]=$((${Tokens[index]}-1))
 }
 
-forward_token() {
+token:forward() {
   Tokens[index]=$((${Tokens[index]}+1))
 }
 
-in_topmost_token() {
+token:in-topmost() {
   [ ${Tokens[index]} = ${Tokens[length]} ]
 }
 
 
-mark_token_position() {
+token:mark-position() {
   TokenMark=${Tokens[index]}
 }
 
-return_token_to_mark() {
+token:return-to-mark() {
   Tokens[index]=$TokenMark
 }
 
 
 
-__shadowing_find_token_by() {
+__shadowing_token:find-by() {
   local field="$1"
   local value="$2"
   local token="${Tokens[index]}"
@@ -327,7 +327,7 @@ __shadowing_find_token_by() {
   local tvalue
 
   while [ $token -ge 0 ]; do
-    from_token $token $field tvalue
+    token:from $token $field tvalue
     if [[ "$tvalue" =~ ^$value$ ]]; then
       setvar "$tokenvar" $token
       return
@@ -338,12 +338,12 @@ __shadowing_find_token_by() {
   setvar "$tokenvar" '-1'
 }
 
-find_token_by() {
+token:find-by() {
   if [ -z ${__noshadow_2_+x} ]; then
     local __noshadow_2_
     local __noshadow_2_3
   fi
-  __shadowing_find_token_by "$1" "$2"  __noshadow_2_3
+  __shadowing_token:find-by "$1" "$2"  __noshadow_2_3
   setvar "$3" "$__noshadow_2_3"
 }
 
@@ -353,54 +353,52 @@ declare -gA States
 
 States[index]=0
 
-push_state() {
+token:push-state() {
   States[${States[index]}]=$1
   States[index]=$((${States[index]}+1))
 }
 
-pop_state() {
+token:pop-state() {
   local index=$((${States[index]}-1))
   States[index]=$index
   setvar "$1" ${States[$index]}
 }
 
-in_topmost_state() {
+token:in-topmost-state() {
   [ ${States[index]} = 1 ]
 }
 
-clear_states() {
+token:clear-states() {
   unset States
   declare -gA States
   States[index]=0
-  push_state top
+  token:push-state top
 }
 
-push_state top
+token:push-state top
 # FILE: lexer/states.bash
 
 
-# parse_token varname
+# token:parse varname
 # read a token from input and place it's id in the given variable
 #
 # e.g.
 #
 #  $ echo "abc" | {
-#  > init_stream
-#  > get_token token
-#  > from_token $token value
-#  > from_token $token class
+#  >   stream:init
+#  >   token:get -v value -c class
+#  >   echo "v=$value c=$class"
 #  > }
-#  abc
-#  name
+#  v=abc c=name
 
 
-__shadowing_parse_token() {
+__shadowing_token:parse() {
   local token_id_var="$1"   # variables where the token id will be stored
 
   local linenumber_start    # tokens store starting and ending line and collumn
   local linenumber_end      # numbers for debugging purposes.
-  local collumn_start
-  local collumn_end
+  local collumn_start       #
+  local collumn_end         #
 
   local state               # describes the parsing context, e.g. if in double quotes or parentheses
   local class=undefined     # token type
@@ -411,23 +409,23 @@ __shadowing_parse_token() {
   local skip_term=true      # if true, the terminating character will not be part of the next token
 
   local belongs=true        # if false, the current character does not belong to the current token and the latter is finished
-  local next_state=none     # if not none, the current state and next state are pushed to the stack, in that order
+  local next_state=none     # if not none, the values of state and next_state are pushed to the stack, in that order
   local next_class=none     # if not none, after finishing the current token, the next one will be given this class
   local state_end=false     # if true, the current state will be not be pushed in the stack at the end of parsing.
 
   local glued=true          # true if the token is glued to the previous one
 
-  get_line_number linenumber_start
-  get_collumn collumn_start
+  stream:get-line-number linenumber_start
+  stream:get-collumn     collumn_start
 
   # states are stored in a stack, to allow strings like 'a b$(echo c)d e'
   # to be handled by the lexer, where the tokens will be
   # 'a b', $(, echo, c, ), 'd e'.
-  pop_state state
+  token:pop-state state
 
   # the token is done when its class is identified
-  while [ $class = undefined ] && ! end_of_file; do
-    get_character c
+  while [ $class = undefined ] && ! stream:end; do
+    stream:get-character c
 
     case $state in
       quoted-escape)
@@ -446,7 +444,7 @@ __shadowing_parse_token() {
           $'\n') ;;
           *) token="$token$c" ;;
         esac
-        pop_state state
+        token:pop-state state
         ;;
 
       single-quotes)
@@ -556,7 +554,7 @@ __shadowing_parse_token() {
             if { { [ "$state" = parentheses  ] && [ ! "$c" = ')' ]; } ||
                  { [ "$state" = brackets     ] && [ ! "$c" = ']' ]; } ||
                  { [ "$state" = curly-braces ] && [ ! "$c" = '}' ]; } ;}; then
-              parse_error "unexpected $c on line %line. ${state/-/ }"
+              token:error "unexpected $c on line %line. ${state/-/ }"
             else
               belongs=false
               state_end=true
@@ -598,7 +596,7 @@ __shadowing_parse_token() {
             ;;
 
           ' ')
-            if line_start; then
+            if stream:line-start; then
               belongs=false
               skip_term=false
               next_state=whitespace
@@ -624,8 +622,8 @@ __shadowing_parse_token() {
             # if the current token is empty, don't return
             # any token, instead restart the loop.
 
-            get_line_number linenumber_start # update starting position
-            get_collumn collumn_start        #
+            stream:get-line-number linenumber_start # update starting position
+            stream:get-collumn     collumn_start    #
 
             # we skip the terminating character by not
             # adding it to the current empty token
@@ -644,7 +642,7 @@ __shadowing_parse_token() {
             fi
 
             if [ ! $next_state = none ]; then
-              push_state $state
+              token:push-state $state
               state=$next_state
               next_state=none
             fi
@@ -660,19 +658,20 @@ __shadowing_parse_token() {
         fi
         ;;
     esac
-    $move && next_character
+    $move && stream:next-character
   done
 
-  $state_end || push_state $state
-  [ $next_state = none ] || push_state $next_state
+  $state_end || token:push-state $state
+  [ $next_state = none ] || token:push-state $next_state
 
-  if end_of_file; then
-    if in_topmost_state; then
+  if stream:end; then
+    if token:in-topmost-state; then
       if [ -n "$token" ] && [ "$class" = unidentified ]; then
         class=name
       else
         token=eof
         class=eof
+        glued=false
       fi
     else
       if ${POWSCRIPT_ALLOW_INCOMPLETE-false}; then
@@ -684,132 +683,134 @@ __shadowing_parse_token() {
         POWSCRIPT_INCOMPLETE_STATE="$state"
         token=eof
         class=eof
+        glued=false
       else
-        unfinished_input_error "$state" "$linenumber_start" "$collumn_start"
+        token:unfinished-input-error "$state" "$linenumber_start" "$collumn_start"
       fi
     fi
   fi
 
-  get_collumn collumn_end
-  get_line_number linenumber_end
+  stream:get-collumn     collumn_end
+  stream:get-line-number linenumber_end
 
-  store_token\
+  token:store\
     "$token" "$class" "$glued"\
     "$linenumber_start" "$linenumber_end"\
     "$collumn_start" "$collumn_end"\
     "$token_id_var"
 }
 
-parse_token() {
+token:parse() {
   if [ -z ${__noshadow_3_+x} ]; then
     local __noshadow_3_
     local __noshadow_3_1
   fi
-  __shadowing_parse_token  __noshadow_3_1
+  __shadowing_token:parse  __noshadow_3_1
   setvar "$1" "$__noshadow_3_1"
 }
 
 
-get_token_id() {
-  if in_topmost_token; then
-    parse_token "$1"
+token:get-id() {
+  if token:in-topmost; then
+    token:parse "$1"
   else
-    get_selected_token "$1"
-    forward_token
+    token:get-selected "$1"
+    token:forward
   fi
 }
 
-peek_token_id() {
-  if in_topmost_token; then
-    parse_token "$1"
-    backtrack_token
+token:peek-id() {
+  if token:in-topmost; then
+    token:parse "$1"
+    token:backtrack
   else
-    get_selected_token "$1"
+    token:get-selected "$1"
   fi
 }
 
-skip_token() {
+token:skip() {
   local _
-  if in_topmost_token; then
-    parse_token _
+  if token:in-topmost; then
+    token:parse _
   else
-    forward_token
+    token:forward
   fi
 }
 
 
-get_token() {
+token:get() {
   local __get_token__token
-  get_token_id __get_token__token
-  all_from_token "$@" $__get_token__token
+  token:get-id __get_token__token
+  token:all-from "$@" $__get_token__token
 }
 
 
-peek_token() {
+token:peek() {
   local __peek_token__token
-  peek_token_id __peek_token__token
-  all_from_token "$@" $__peek_token__token
+  token:peek-id __peek_token__token
+  token:all-from "$@" $__peek_token__token
 }
 
 
-next_token_is() {
-  local value class
-  peek_token -v value -c class
+token:next-is() {
+  local value class res=false
+  token:peek -v value -c class
   case $# in
     1)
-      [ "$class" = "$1" ]
+      [ "$class" = "$1" ] && res=true
       ;;
     2)
-      [[ "$class" = "$1" ]] && [[ "$value" = "$2" ]]
+      [[ "$class" = "$1" ]] && [[ "$value" = "$2" ]] && res=true
       ;;
   esac
+  $res
 }
 
 
-token_ignore_whitespace() {
-  if next_token_is whitespace; then
-    skip_token
+token:ignore-whitespace() {
+  if token:next-is whitespace; then
+    token:skip
   fi
 }
 
 
-backtrack_token() {
-  move_back_token_index
+token:backtrack() {
+  token:move-back-index
 }
 
 
-__shadowing_get_specific_token() {
+__shadowing_token:get-specific() {
   local value class required="$1" out="$2"
-  get_token -v value -c class
+  token:get -v value -c class
   if [ ! $class = $required ]; then
-    parse_error "Wrong token: found a $class of value $value when a $required was required"
+    token:error "Wrong token: found a $class of value $value when a $required was required"
   else
     setvar "$out" "$value"
   fi
 }
 
-get_specific_token() {
+token:get-specific() {
   if [ -z ${__noshadow_4_+x} ]; then
     local __noshadow_4_
     local __noshadow_4_2
   fi
-  __shadowing_get_specific_token "$1"  __noshadow_4_2
+  __shadowing_token:get-specific "$1"  __noshadow_4_2
   setvar "$2" "$__noshadow_4_2"
 }
 
 
-require_token() {
+token:require() {
   local req_class="$1" req_value="$2"
   local value class
 
-  get_token -v value -c class
+  token:get -v value -c class
   if [ ! "$req_class $req_value" = "$class $value" ]; then
-    parse_error "Wrong token: found a $class of value $value when a $req_class of value $req_value was required"
+    token:error "Wrong token: found a $class of value $value when a $req_class of value $req_value was required"
   fi
 }
 
 
-unfinished_input_error() {
+token:unfinished-input-error() {
   local token
   local opener=
   local state="$1"
@@ -821,27 +822,27 @@ unfinished_input_error() {
     curly-braces)   opener='\$?\{'  ;;
   esac
   if [ -n "$opener" ]; then
-    find_token_by value "$opener" token
+    token:find-by value "$opener" token
     if [ ! $token = -1 ]; then
-      from_token $token linenumber_start line
-      from_token $token collumn_start collumn
-      parse_error "unclosed ${state/-/ }, last open one found in line $line, collumn $collumn"
+      token:from $token linenumber_start line
+      token:from $token collumn_start collumn
+      token:error "unclosed ${state/-/ }, last open one found in line $line, collumn $collumn"
     else
-      parse_error "unclosed ${state/-/ }"
+      token:error "unclosed ${state/-/ }"
     fi
   else
     if [[ "$state" =~ quotes ]]; then
       line="$2"
       collumn="$3"
-      parse_error "unfinished ${state/-/ }, starting in line $line, collumn $collumn"
+      token:error "unfinished ${state/-/ }, starting in line $line, collumn $collumn"
     else
-      parse_error "unexpected eof"
+      token:error "unexpected eof"
     fi
   fi
 }
 
-parse_error() {
-  local message="error: ${1//%line/$(get_line_number)}"
+token:error() {
+  local message="error: ${1//%line/$(stream:get-line-number)}"
   if ${POWSCRIPT_ALLOW_INCOMPLETE-false}; then
     if ${POWSCRIPT_SHOW_INCOMPLETE_MESSAGE-false}; then
       >&2 echo "$message"
@@ -854,17 +855,13 @@ parse_error() {
   fi
 }
 
-tokens_to_json() {
+token:to-json() {
   local token
-  init_stream
+  stream:init
 
   echo '{'
-  while ! end_of_file; do
-    get_token -v value -c class -g glued
-    from_token $token value value
-    from_token $token class class
-    from_token $token glued glued
-    echo "  ${token}: {"
+  while ! stream:end; do
+    token:get -v value -c class -g glued
     echo "    'value': '$value'"
     echo "    'class': '$class'"
     echo "    'glued': $glued"
@@ -886,22 +883,22 @@ IndentStack[starting-block]=false
 IndentStack[0]=0
 
 
-ast_new_indentation() {
+ast:new-indentation() {
   local indent
 
-  ast_indentation_required indent
+  ast:indentation-required indent
 
-  ast_push_indentation $((indent+1))
+  ast:push-indentation $((indent+1))
   IndentStack[starting-block]=true
 }
 
 
 
-__shadowing_ast_test_indentation() {
+__shadowing_ast:test-indentation() {
   local value="$1" class="$2" out="$3"
   local req found result temp_result
-  ast_indentation_required req
-  ast_count_indentation "$value" $class found
+  ast:indentation-required req
+  ast:count-indentation "$value" $class found
 
   if ${IndentStack[starting-block]}; then
     if [ $found -ge $req ]; then
@@ -924,35 +921,35 @@ __shadowing_ast_test_indentation() {
   setvar "$out" $result
 }
 
-ast_test_indentation() {
+ast:test-indentation() {
   if [ -z ${__noshadow_5_+x} ]; then
     local __noshadow_5_
     local __noshadow_5_3
   fi
-  __shadowing_ast_test_indentation "$1" "$2"  __noshadow_5_3
+  __shadowing_ast:test-indentation "$1" "$2"  __noshadow_5_3
   setvar "$3" "$__noshadow_5_3"
 }
 
 
 
-ast_update_indentation() {
+ast:update-indentation() {
   IndentStack[${IndentStack[index]}]=$1
 }
 
-ast_pop_indentation() {
+ast:pop-indentation() {
   IndentStack[index]=$((${IndentStack[index]}-1))
 }
 
-ast_push_indentation() {
+ast:push-indentation() {
   IndentStack[index]=$((${IndentStack[index]}+1))
-  ast_update_indentation $1
+  ast:update-indentation $1
 }
 
-ast_indentation_required() {
+ast:indentation-required() {
   setvar "$1" ${IndentStack[${IndentStack[index]}]}
 }
 
-ast_count_indentation() {
+ast:count-indentation() {
   case "$2" in
     whitespace) setvar "$3" "$1" ;;
     eof)        setvar "$3" -1   ;;
@@ -960,7 +957,7 @@ ast_count_indentation() {
   esac
 }
 
-ast_indentation_layers() {
+ast:indentation-layers() {
   setvar "$1" ${IndentStack[index]}
 }
 
@@ -970,28 +967,28 @@ declare -gA AstStates
 AstStates[index]=0
 AstStates[0]=top
 
-ast_push_state() {
+ast:push-state() {
   local index=$((${AstStates[index]}+1))
 
   AstStates[index]=$index
   AstStates[$index]=$1
 }
 
-ast_pop_state() {
+ast:pop-state() {
   AstStates[index]=$((${AstStates[index]}-1))
 }
 
-ast_last_state() {
+ast:last-state() {
   setvar "$1" "${AstStates[${AstStates[index]}]}"
 }
 
-ast_state_is() {
+ast:state-is() {
   local state
-  ast_last_state state
+  ast:last-state state
   [ "$state" = "$1" ]
 }
 
-ast_clear_states() {
+ast:clear-states() {
   unset AstStates
   declare -gA AstStates
   AstStates[index]=0
@@ -1000,7 +997,7 @@ ast_clear_states() {
 # FILE: ast/ast_states.bash
 
 
-__shadowing_new_ast() {
+__shadowing_ast:new() {
   local index="${Asts[index]}"
   local length="${Asts[length]}"
 
@@ -1018,67 +1015,66 @@ __shadowing_new_ast() {
   Asts[length]=$(($length+1))
 }
 
-new_ast() {
+ast:new() {
   if [ -z ${__noshadow_6_+x} ]; then
     local __noshadow_6_
     local __noshadow_6_1
   fi
-  __shadowing_new_ast  __noshadow_6_1
+  __shadowing_ast:new  __noshadow_6_1
   setvar "$1" "$__noshadow_6_1"
 }
 
 
-make_ast() {
+ast:make() {
   local __newast __newchild
-  new_ast __newast
-  ast_set "$__newast" head  "$2"
-  ast_set "$__newast" value "$3"
+  ast:new __newast
+  ast:set "$__newast" head  "$2"
+  ast:set "$__newast" value "$3"
   for __newchild in ${@:4}; do
-    ast_push_child "$__newast" $__newchild
+    ast:push-child "$__newast" $__newchild
   done
   setvar "$1" "$__newast"
 }
 
-from_ast() {
+ast:from() {
   setvar "$3" "${Asts["$2-$1"]}"
 }
 
-ast_set() {
+ast:set() {
   Asts["$2-$1"]="$3"
 }
 
-ast_set_to_overwrite() {
-  Asts[index]="$1"
-}
-
-ast_is() {
-  local ast_head ast_value
-  from_ast $1 head  ast_head
-  from_ast $1 value ast_value
+ast:is() {
+  local ast_head ast_value res=false
+  ast:from $1 head  ast_head
+  ast:from $1 value ast_value
 
   case $# in
     2)
-      [ $ast_head = "$2" ]
+      [ $ast_head = "$2" ] && res=true
       ;;
     3)
-      [ $ast_head = "$2" ] && [ "$ast_value" = "$3" ]
+      [ $ast_head = "$2" ] && [ "$ast_value" = "$3" ] && res=true
       ;;
   esac
+  $res
 }
 
 
-ast_push_child() {
+ast:push-child() {
   Asts["children-$1"]="${Asts["children-$1"]} $2"
 }
 
-ast_unshift_child() {
+ast:unshift-child() {
   Asts["children-$1"]="$2 ${Asts["children-$1"]}"
 }
 
 
-__shadowing_ast_children() {
-  local ast="$1" ast_children children_array child i
-  from_ast $ast children ast_children
+__shadowing_ast:children() {
+  local ast="$1"
+  local ast_children children_array child i
+
+  ast:from $ast children ast_children
   children_array=( $ast_children )
 
   i=0
@@ -1088,7 +1084,7 @@ __shadowing_ast_children() {
   done
 }
 
-ast_children() {
+ast:children() {
   if [ -z ${__noshadow_7_+x} ]; then
     local __noshadow_7_
     declare -A __noshadow_7_all
@@ -1096,7 +1092,7 @@ ast_children() {
             __noshadow_7_all[$__noshadow_7_n]=__noshadow_7_$__noshadow_7_n
           done
   fi
-  __shadowing_ast_children "$1"  "${__noshadow_7_all[@]}"
+  __shadowing_ast:children "$1"  "${__noshadow_7_all[@]}"
   #
           shift 0
           for __noshadow_7_n in $(seq 2 $#); do
@@ -1107,13 +1103,13 @@ ast_children() {
 
 
 
-ast_clear() {
+ast:clear() {
   unset Asts["value-$1"]
   unset Asts["head-$1"]
   unset Asts["children-$1"]
 }
 
-ast_clear_all() {
+ast:clear-all() {
   unset Asts
   declare -gA Asts
 
@@ -1122,18 +1118,18 @@ ast_clear_all() {
   Asts[required-indent]=0
 }
 
-ast_print() {
+ast:print() {
   printf '`'
-  ast_print_child "$1" "$2"
+  ast:print-child "$1" "$2"
   echo '`'
 }
 
-ast_print_child() {
+ast:print-child() {
   local ast=$1 indent=
   local ast_head ast_value ast_children
-  from_ast $ast head     ast_head
-  from_ast $ast value    ast_value
-  from_ast $ast children ast_children
+  ast:from $ast head     ast_head
+  ast:from $ast value    ast_value
+  ast:from $ast children ast_children
 
   local child_array=( $ast_children )
 
@@ -1144,9 +1140,9 @@ ast_print_child() {
     cat)
       local child
       for child in ${child_array[@]:0:$((${#child_array[@]}-1))}; do
-        ast_print_child $child
+        ast:print-child $child
       done
-      ast_print_child ${child_array[${#child_array[@]}-1]}
+      ast:print-child ${child_array[${#child_array[@]}-1]}
       ;;
     string)
       printf "'%s'" "$ast_value"
@@ -1155,53 +1151,53 @@ ast_print_child() {
       local command=${child_array[0]}
       local argument
 
-      ast_print_child $command
+      ast:print-child $command
       for argument in ${child_array[@]:1}; do
         printf ' '
-        ast_print_child $argument
+        ast:print-child $argument
       done
       ;;
     assign)
       local name=${child_array[0]} value=${child_array[1]}
-      ast_print_child $name
+      ast:print-child $name
       printf '='
-      ast_print_child $value
+      ast:print-child $value
       ;;
     indexing-assign)
       local name=${child_array[0]} index=${child_array[1]} value=${child_array[2]}
-      ast_print_child $name
+      ast:print-child $name
       printf '['
-      ast_print_child $index
+      ast:print-child $index
       printf ']='
-      ast_print_child $value
+      ast:print-child $value
       ;;
     simple-substitution)
       printf '$%s' "$ast_value"
       ;;
     indexing-substitution)
       printf '${%s[' "$ast_value"
-      ast_print_child ${child_array[0]}
+      ast:print-child ${child_array[0]}
       printf ']}'
       ;;
     command-substitution)
       printf '$('
-      ast_print_child ${child_array[0]}
+      ast:print-child ${child_array[0]}
       printf ')'
       ;;
     function-def)
       local name=${child_array[0]} args=${child_array[1]} block=${child_array[2]}
 
-      ast_print_child $name
-      ast_print_child $args
+      ast:print-child $name
+      ast:print-child $args
       echo
-      ast_print_child $block
+      ast:print-child $block
       ;;
     list)
       local element
 
       printf '( '
       for element in "${child_array[@]}"; do
-        ast_print_child $element
+        ast:print-child $element
         printf ' '
       done
       printf ')'
@@ -1212,7 +1208,7 @@ ast_print_child() {
 
       for statement in "${child_array[@]}"; do
         printf "%$((ast_value*2)).s" ''
-        ast_print_child $statement
+        ast:print-child $statement
         echo
       done
       ;;
@@ -1222,13 +1218,13 @@ ast_print_child() {
 # FILE: ast/ast_heap.bash
 
 
-# try_parse_ast
+# ast:parse:try
 #
 # try parsing an ast expression from the input,
 # printing 'top' on success or the last
 # parser state on failure.
 
-try_parse_ast() {
+ast:parse:try() {
   (
     local ast
     POWSCRIPT_INCOMPLETE_STATE=
@@ -1237,25 +1233,25 @@ try_parse_ast() {
       if [ -n "$POWSCRIPT_INCOMPLETE_STATE" ]; then
         echo "$POWSCRIPT_INCOMPLETE_STATE"
       else
-        ast_last_state
+        ast:last-state
       fi
       exit' EXIT
 
-    POWSCRIPT_ALLOW_INCOMPLETE=true parse_ast ast
+    POWSCRIPT_ALLOW_INCOMPLETE=true ast:parse ast
     exit
   )
 }
 
-# parse_ast $out
+# ast:parse $out
 #
 # parse an ast expression form the input,
 # storing it in $out.
 
-parse_ast() {
-  parse_ast_linestart "$1"
+ast:parse() {
+  ast:parse:linestart "$1"
 }
 
-ast_error() {
+ast:error() {
   local message="$1"
 
   if ${POWSCRIPT_ALLOW_INCOMPLETE-false}; then
@@ -1269,64 +1265,64 @@ ast_error() {
   exit
 }
 
-# parse_ast_linestart $out
+# ast:parse:linestart $out
 #
 # test that there is no indentation before proceeding
 # to parse the expression.
 
 
-__shadowing_parse_ast_linestart() {
+__shadowing_ast:parse:linestart() {
   local value class line
 
-  get_token -v value -c class -ls line
+  token:get -v value -c class -ls line
 
   if [ "$class" = whitespace ]; then
-    ast_error "indentation error at line $line, unexpected indentation of $value."
+    ast:error "indentation error at line $line, unexpected indentation of $value."
   else
-    backtrack_token
-    parse_ast_top "$1"
+    token:backtrack
+    ast:parse:top "$1"
   fi
 }
 
-parse_ast_linestart() {
+ast:parse:linestart() {
   if [ -z ${__noshadow_8_+x} ]; then
     local __noshadow_8_
     local __noshadow_8_1
   fi
-  __shadowing_parse_ast_linestart  __noshadow_8_1
+  __shadowing_ast:parse:linestart  __noshadow_8_1
   setvar "$1" "$__noshadow_8_1"
 }
 
 
 
-# parse_ast_top $out
+# ast:parse:top $out
 #
 # analyze first expression and dispatch to the
 # appropriate function based on it.
 
 
-__shadowing_parse_ast_top() {
+__shadowing_ast:parse:top() {
   local out="$1"
   local expr expr_head
 
-  parse_ast_expr expr
-  from_ast $expr head expr_head
+  ast:parse:expr expr
+  ast:from $expr head expr_head
 
   case $expr_head in
     name)
       local expr_value
-      from_ast $expr value expr_value
+      ast:from $expr value expr_value
       case "$expr_value" in
-        'if')      parse_ast_if 'if' "$out" ;;
-        'for')     parse_ast_for     "$out" ;;
-        'while')   parse_ast_while   "$out" ;;
-        'switch')  parse_ast_switch  "$out" ;;
-        'require') parse_ast_require "$out" ;;
+        'if')      ast:parse:if 'if' "$out" ;;
+        'for')     ast:parse:for     "$out" ;;
+        'while')   ast:parse:while   "$out" ;;
+        'switch')  ast:parse:switch  "$out" ;;
+        'require') ast:parse:require "$out" ;;
         *)
-          if next_token_is special '('; then
-            parse_ast_function_definition $expr "$out"
+          if token:next-is special '('; then
+            ast:parse:function-definition $expr "$out"
           else
-            parse_ast_commandcall $expr "$out"
+            ast:parse:commandcall $expr "$out"
           fi
           ;;
       esac
@@ -1338,67 +1334,67 @@ __shadowing_parse_ast_top() {
       setvar "$out" -1
       ;;
     *)
-      parse_ast_commandcall $expr "$out"
+      ast:parse:commandcall $expr "$out"
       ;;
   esac
 }
 
-parse_ast_top() {
+ast:parse:top() {
   if [ -z ${__noshadow_9_+x} ]; then
     local __noshadow_9_
     local __noshadow_9_1
   fi
-  __shadowing_parse_ast_top  __noshadow_9_1
+  __shadowing_ast:parse:top  __noshadow_9_1
   setvar "$1" "$__noshadow_9_1"
 }
 
 
 
-# parse_ast_expr $out
+# ast:parse:expr $out
 #
 # basic expression, which can be a name,
 # string, substitution or concatenation.
 
 
-__shadowing_parse_ast_expr() {
+__shadowing_ast:parse:expr() {
   local out="$1"
   local value class glued
   local root root_head=undefined
   local expression exprnum=0 last_expression
 
-  new_ast root
+  ast:new root
 
   while [ $root_head = undefined ]; do
-    token_ignore_whitespace
-    get_token -v value -c class -g glued
+    token:ignore-whitespace
+    token:get -v value -c class -g glued
 
     if $glued || [ $exprnum = 0 ]; then
       case $class in
         name|string)
-          make_ast expression $class "$value"
+          ast:make expression $class "$value"
           ;;
         special)
           case "$value" in
             '$')
-              parse_ast_substitution expression
+              ast:parse:substitution expression
               ;;
 
             '${')
-              parse_ast_curly_substitution expression
+              ast:parse:curly-substitution expression
               ;;
 
             '$(')
-              parse_ast_command_substitution expression
+              ast:parse:command-substitution expression
               ;;
 
             '(')
               if [ $exprnum -gt 0 ]; then
                 root_head=determinable
               else
-                ast_push_state '('
-                parse_ast_list root
+                ast:push-state '('
+                ast:parse:list root
                 root_head=list
-                ast_pop_state
+                ast:pop-state
               fi
               ;;
 
@@ -1409,55 +1405,55 @@ __shadowing_parse_ast_expr() {
                 ']') opener='['; ;;
                 '}') opener='{'; ;;
               esac
-              if ast_state_is $opener; then
+              if ast:state-is $opener; then
                 root_head=determinable
               else
-                make_ast expression string "$value"
+                ast:make expression string "$value"
               fi
               ;;
 
             '=')
-              if [ $exprnum = 1 ] && ast_is $last_expression name; then
-                parse_ast_expr expression
-                ast_push_child $root $expression
+              if [ $exprnum = 1 ] && ast:is $last_expression name; then
+                ast:parse:expr expression
+                ast:push-child $root $expression
                 root_head=assign
               else
-                make_ast expression string "="
+                ast:make expression string "="
               fi
               ;;
             '[')
-              if [ $exprnum = 1 ] && ast_is $last_expression name; then
+              if [ $exprnum = 1 ] && ast:is $last_expression name; then
                 local index
-                ast_push_state '['
-                parse_ast_expr index
+                ast:push-state '['
+                ast:parse:expr index
 
-                require_token special ']'
-                ast_pop_state
+                token:require special ']'
+                ast:pop-state
 
-                if next_token_is special '=' && ast_is $index name; then
-                  skip_token
-                  parse_ast_expr expression
+                if token:next-is special '=' && ast:is $index name; then
+                  token:skip
+                  ast:parse:expr expression
                   root_head=indexing-assign
-                  ast_push_child $root $index
-                  ast_push_child $root $expression
+                  ast:push-child $root $index
+                  ast:push-child $root $expression
                 else
                   local left_bracket right_bracket
-                  make_ast left_bracket  name '['
-                  make_ast right_bracket name ']'
+                  ast:make left_bracket  name '['
+                  ast:make right_bracket name ']'
 
-                  ast_push_child $root $left_bracket
-                  ast_push_child $root $index
+                  ast:push-child $root $left_bracket
+                  ast:push-child $root $index
 
                   expression=$right_bracket
                   exprnum=3
                 fi
               else
-                make_ast expression string "["
+                ast:make expression string "["
               fi
               ;;
 
             *)
-              make_ast expression name "$value"
+              ast:make expression name "$value"
               ;;
           esac
           ;;
@@ -1465,12 +1461,12 @@ __shadowing_parse_ast_expr() {
           root_head=$class
           ;;
         *)
-          ast_error "token of class $class found when parsing an expression ast"
+          ast:error "token of class $class found when parsing an expression ast"
           ;;
       esac
 
       if [ $root_head = undefined ]; then
-        ast_push_child $root $expression
+        ast:push-child $root $expression
         exprnum=$((exprnum+1))
         last_expression=$expression
       fi
@@ -1480,34 +1476,34 @@ __shadowing_parse_ast_expr() {
 
     if [ $root_head = determinable ]; then
       if [ $exprnum = 1 ]; then
-        ast_clear $root
+        ast:clear $root
         root=$last_expression
-        from_ast $root head root_head
+        ast:from $root head root_head
       else
         root_head=cat
       fi
-      backtrack_token
+      token:backtrack
     fi
   done
-  ast_set $root head $root_head
-  #>&2 echo "$(ast_print $root) :: $(from_ast $root head)"
+  ast:set $root head $root_head
 
   setvar "$out" $root
 }
 
-parse_ast_expr() {
+ast:parse:expr() {
   if [ -z ${__noshadow_10_+x} ]; then
     local __noshadow_10_
     local __noshadow_10_1
   fi
-  __shadowing_parse_ast_expr  __noshadow_10_1
+  __shadowing_ast:parse:expr  __noshadow_10_1
   setvar "$1" "$__noshadow_10_1"
 }
 
 
-parse_ast_expr_and_set() {
+
+ast:parse:expr-and-set() {
   local __paeas_expr
-  parse_ast_expr __paeas_expr
+  ast:parse:expr __paeas_expr
 
   while [ $# -gt 0 ]; do
     case "$1" in
@@ -1516,183 +1512,185 @@ parse_ast_expr_and_set() {
         shift 2
         ;;
       -v|--value)
-        from_ast $__paeas_expr value "$2"
+        ast:from $__paeas_expr value "$2"
         shift 2
         ;;
       -h|--head)
-        from_ast $__paeas_expr head "$2"
+        ast:from $__paeas_expr head "$2"
         shift 2
         ;;
       -c|--children)
-        from_ast $__paeas_expr children "$2"
+        ast:from $__paeas_expr children "$2"
         shift 2
         ;;
       -@|--@children)
-        ast_children $__paeas_expr "${@:2}"
+        ast:children $__paeas_expr "${@:2}"
         shift $#
         ;;
       *)
-        ast_error "Invalid flag $1, expected -[evhc@]"
+        ast:error "Invalid flag $1, expected -[evhc@]"
         ;;
     esac
   done
 }
 
 
-__shadowing_parse_ast_specific_expr() {
+
+__shadowing_ast:parse:specific-expr() {
   local expr expr_head required="$1" out="$2"
-  parse_ast_expr expr
-  from_ast $expr head expr_head
+  ast:parse:expr expr
+  ast:from $expr head expr_head
 
   if [ $expr_head = $required ]; then
     setvar "$out" $expr
   else
-   ast_error "Wrong expression: Found a $expr_head when a $required was required"
+   ast:error "Wrong expression: Found a $expr_head when a $required was required"
  fi
 }
 
-parse_ast_specific_expr() {
+ast:parse:specific-expr() {
   if [ -z ${__noshadow_11_+x} ]; then
     local __noshadow_11_
     local __noshadow_11_2
   fi
-  __shadowing_parse_ast_specific_expr "$1"  __noshadow_11_2
+  __shadowing_ast:parse:specific-expr "$1"  __noshadow_11_2
   setvar "$2" "$__noshadow_11_2"
 }
 
 
 
-__shadowing_parse_ast_substitution() {
+
+__shadowing_ast:parse:substitution() {
   local subst out="$1"
   local expr value head varname index lb rb aft
   local cat_children cat_array
 
-  parse_ast_expr_and_set -e expr -v value -h head -@ varname lb index rb aft
+  ast:parse:expr-and-set -e expr -v value -h head -@ varname lb index rb aft
 
   case "$head" in
     name)
-      make_ast subst simple-substitution "$value"
+      ast:make subst simple-substitution "$value"
       ;;
     cat)
-       if ast_is $lb name '['; then
-         from_ast $varname value value
-         make_ast subst indexing-substitution "$value" $index
+       if ast:is $lb name '['; then
+         ast:from $varname value value
+         ast:make subst indexing-substitution "$value" $index
          if [ -n "$aft" ]; then
-           from_ast $expr children cat_children
+           ast:from $expr children cat_children
            cat_array=( $cat_children )
-           make_ast subst cat $subst "${cat_array[@:4]}"
+           ast:make subst cat $subst "${cat_array[@:4]}"
          fi
        else
          subst=$expr
        fi
       ;;
     *)
-      ast_error "unimplemented"
+      ast:error "unimplemented"
       ;;
   esac
   setvar "$out" $subst
 }
 
-parse_ast_substitution() {
+ast:parse:substitution() {
   if [ -z ${__noshadow_12_+x} ]; then
     local __noshadow_12_
     local __noshadow_12_1
   fi
-  __shadowing_parse_ast_substitution  __noshadow_12_1
+  __shadowing_ast:parse:substitution  __noshadow_12_1
   setvar "$1" "$__noshadow_12_1"
 }
 
 
 
-__shadowing_parse_ast_curly_substitution() {
+__shadowing_ast:parse:curly-substitution() {
   local out="$1"
   local subst head
 
-  ast_push_state '{'
-  parse_ast_expr_and_set -e subst -h head
+  ast:push-state '{'
+  ast:parse:expr-and-set -e subst -h head
 
   case "$head" in
     *substitution)
-      require_token special '}'
-      ast_pop_state
+      token:require special '}'
+      ast:pop-state
       ;;
     *)
-      ast_error "unimplemented"
+      ast:error "unimplemented"
       ;;
   esac
 
   setvar "$out" $subst
 }
 
-parse_ast_curly_substitution() {
+ast:parse:curly-substitution() {
   if [ -z ${__noshadow_13_+x} ]; then
     local __noshadow_13_
     local __noshadow_13_1
   fi
-  __shadowing_parse_ast_curly_substitution  __noshadow_13_1
+  __shadowing_ast:parse:curly-substitution  __noshadow_13_1
   setvar "$1" "$__noshadow_13_1"
 }
 
 
 
-__shadowing_parse_ast_command_substitution() {
+__shadowing_ast:parse:command-substitution() {
   local out="$1"
   local cmd call
 
-  make_ast "$out" command-substitution ''
+  ast:make "$out" command-substitution ''
 
-  ast_push_state '$('
-  parse_ast_expr cmd
-  parse_ast_commandcall $cmd call
-  ast_pop_state
+  ast:push-state '$('
+  ast:parse:expr cmd
+  ast:parse:commandcall $cmd call
+  ast:pop-state
 
-  ast_push_child "${!out}" $call
+  ast:push-child "${!out}" $call
 }
 
-parse_ast_command_substitution() {
+ast:parse:command-substitution() {
   if [ -z ${__noshadow_14_+x} ]; then
     local __noshadow_14_
     local __noshadow_14_1
   fi
-  __shadowing_parse_ast_command_substitution  __noshadow_14_1
+  __shadowing_ast:parse:command-substitution  __noshadow_14_1
   setvar "$1" "$__noshadow_14_1"
 }
 
 
 
-# parse_ast_commandcall $command $out
+# ast:parse:commandcall $command $out
 #
 # parse a command call, consisting of
 # a command and a series of space
 # separated arguments
 
 
-__shadowing_parse_ast_commandcall() {
+__shadowing_ast:parse:commandcall() {
   local command_ast=$1 out="$2"
   local expression child expr_head=none
 
-  make_ast expression call '' $command_ast
+  ast:make expression call '' $command_ast
 
-  parse_ast_arguments $expression
+  ast:parse:arguments $expression
 
   setvar "$out" $expression
 }
 
-parse_ast_commandcall() {
+ast:parse:commandcall() {
   if [ -z ${__noshadow_15_+x} ]; then
     local __noshadow_15_
     local __noshadow_15_2
   fi
-  __shadowing_parse_ast_commandcall "$1"  __noshadow_15_2
+  __shadowing_ast:parse:commandcall "$1"  __noshadow_15_2
   setvar "$2" "$__noshadow_15_2"
 }
 
 
-parse_ast_arguments() {
+ast:parse:arguments() {
   local expr="$1"
   local expr_head=none expr_value child unfinished=true state state_s
 
-  ast_last_state state
+  ast:last-state state
   case $state in
     '$(')
       state_s='c'
@@ -1710,8 +1708,8 @@ parse_ast_arguments() {
 
 
   while $unfinished; do
-    parse_ast_expr child
-    from_ast $child head expr_head
+    ast:parse:expr child
+    ast:from $child head expr_head
 
     case "$state_s/$expr_head" in
       'c/command-substitution-end'|[ti]'/eof'|[oti]'/newline')
@@ -1719,11 +1717,11 @@ parse_ast_arguments() {
         ;;
 
       'i/name')
-        from_ast $child value expr_value
+        ast:from $child value expr_value
 
         case "$expr_value" in
           or|and|'&&'|'||') unfinished=false; ;;
-          *) ast_push_child $expr $child; ;;
+          *) ast:push-child $expr $child; ;;
         esac
         ;;
 
@@ -1732,7 +1730,7 @@ parse_ast_arguments() {
           POWSCRIPT_INCOMPLETE_STATE=$state
           exit
         else
-          ast_error "unexpected end of file while parsing command."
+          ast:error "unexpected end of file while parsing command."
         fi
         ;;
 
@@ -1740,14 +1738,14 @@ parse_ast_arguments() {
         ;;
 
       *)
-        ast_push_child $expr $child
+        ast:push-child $expr $child
         ;;
     esac
   done
 }
 
 
-# parse_ast_if $block_type $out
+# ast:parse:if $block_type $out
 #
 # parses a if statement, which is
 # a conditional expression, followed
@@ -1755,44 +1753,48 @@ parse_ast_arguments() {
 # else or elif statements
 
 
-__shadowing_parse_ast_if() {
+__shadowing_ast:parse:if() {
   local block_type=$1 out="$2"
   local expr conditional block
 
-  new_ast expr
-  ast_set $expr head 'if'
+  ast:new expr
+  case "$block_type" in
+    if) ast:set $expr head if; ;;
+    ef) ast:set $expr head elif; ;;
+    *)  ast:error "invalid block type for if expression";;
+  esac
 
-  parse_ast_conditional conditional
-  parse_ast_require_newline "condition in if statement"
-  parse_ast_block $block_type block
+  ast:parse:conditional conditional
+  ast:parse:require-newline "condition in if statement"
+  ast:parse:block $block_type block
 
-  ast_push_child $expr $conditional
-  ast_push_child $expr $block
+  ast:push-child $expr $conditional
+  ast:push-child $expr $block
 
-  parse_ast_post_if $expr
+  ast:parse:post-if $expr
 
   setvar "$out" $expr
 }
 
-parse_ast_if() {
+ast:parse:if() {
   if [ -z ${__noshadow_16_+x} ]; then
     local __noshadow_16_
     local __noshadow_16_2
   fi
-  __shadowing_parse_ast_if "$1"  __noshadow_16_2
+  __shadowing_ast:parse:if "$1"  __noshadow_16_2
   setvar "$2" "$__noshadow_16_2"
 }
 
 
-parse_ast_post_if() {
+ast:parse:post-if() {
   local if_ast="$1"
   local value class clause_type
 
-  peek_token -v value -c class
+  token:peek -v value -c class
   if [ $class = whitespace ]; then
-    skip_token
-    peek_token -v value -c class
-    backtrack_token
+    token:skip
+    token:peek -v value -c class
+    token:backtrack
   fi
 
   if [ $class = name ]; then
@@ -1804,62 +1806,62 @@ parse_ast_post_if() {
   case "$clause_type" in
     else)
       local else_ast else_block
-      make_ast else_ast else
+      ast:make else_ast else
 
-      token_ignore_whitespace
-      skip_token
-      parse_ast_require_newline "else statement"
-      parse_ast_block el else_block
+      token:ignore-whitespace
+      token:skip
+      ast:parse:require-newline "else statement"
+      ast:parse:block el else_block
 
-      ast_push_child $else_ast $else_block
-      ast_push_child $if_ast $else_ast
+      ast:push-child $else_ast $else_block
+      ast:push-child $if_ast $else_ast
       ;;
     elif)
       local elif_ast
-      token_ast_ignore_whitespace
-      skip_token
-      parse_ast_if elif_ast ef
+      token:ignore-whitespace
+      token:skip
+      ast:parse:if ef elif_ast
 
-      ast_push_child $if_ast $elif_ast
+      ast:push-child $if_ast $elif_ast
       ;;
     *)
       local end_ast
-      new_ast end_ast
-      ast_set $end_ast head end_if
+      ast:new end_ast
+      ast:set $end_ast head end_if
 
-      ast_push_child $if_ast $end_ast
+      ast:push-child $if_ast $end_ast
       ;;
   esac
 }
 
 
-__shadowing_parse_ast_for() {
+__shadowing_ast:parse:for() {
   local out="$1"
   local value class elements_ast block_ast
 
-  get_token -v value -c class
+  token:get -v value -c class
 
   if [ ! "$class" = name ]; then
-    ast_error "Expected a variable name in 'for' expression, found a $class token instead."
+    ast:error "Expected a variable name in 'for' expression, found a $class token instead."
   else
-    require_token name "in"
+    token:require name "in"
 
-    make_ast elements_ast elements
-    parse_ast_arguments $elements_ast
+    ast:make elements_ast elements
+    ast:parse:arguments $elements_ast
 
-    parse_ast_block 'for' block_ast
+    ast:parse:block 'for' block_ast
 
   fi
 
-  make_ast "$out" 'for' "$value" $elements_ast $block_ast
+  ast:make "$out" 'for' "$value" $elements_ast $block_ast
 }
 
-parse_ast_for() {
+ast:parse:for() {
   if [ -z ${__noshadow_17_+x} ]; then
     local __noshadow_17_
     local __noshadow_17_1
   fi
-  __shadowing_parse_ast_for  __noshadow_17_1
+  __shadowing_ast:parse:for  __noshadow_17_1
   setvar "$1" "$__noshadow_17_1"
 }
 
@@ -1867,241 +1869,240 @@ parse_ast_for() {
 
 
 
-__shadowing_parse_ast_conditional() {
+__shadowing_ast:parse:conditional() {
   local out="$1"
   local condition
   local initial initial_head initial_value
 
-  parse_ast_expr initial
+  ast:parse:expr initial
 
-  from_ast $initial head  initial_head
-  from_ast $initial value initial_value
+  ast:from $initial head  initial_head
+  ast:from $initial value initial_value
 
   if [ "$initial_head $initial_value" = "name not" ]; then
-    parse_ast_negated_conditional condition
+    ast:parse:negated-conditional condition
   else
     local value class is_command=true
 
-    peek_token -v value -c class
+    token:peek -v value -c class
 
     if [ $class = name ]; then
       case "$value" in
         is|isnt|'>'|'<'|'<='|'>='|'!='|'='|match)
           is_command=false
-          skip_token
+          token:skip
           ;;
       esac
     fi
 
     if $is_command; then
-      parse_ast_command_conditional $initial condition
+      ast:parse:command-conditional $initial condition
     else
       local left=$initial right
-      parse_ast_expr right
-      make_ast condition condition $value $left $right
+      ast:parse:expr right
+      ast:make condition condition $value $left $right
     fi
   fi
-  parse_ast_composite_conditional $condition condition
+  ast:parse:composite-conditional $condition condition
 
   setvar "$out" $condition
 }
 
-parse_ast_conditional() {
+ast:parse:conditional() {
   if [ -z ${__noshadow_18_+x} ]; then
     local __noshadow_18_
     local __noshadow_18_1
   fi
-  __shadowing_parse_ast_conditional  __noshadow_18_1
+  __shadowing_ast:parse:conditional  __noshadow_18_1
   setvar "$1" "$__noshadow_18_1"
 }
 
 
 
 
-__shadowing_parse_ast_negated_conditional() {
+__shadowing_ast:parse:negated-conditional() {
   local condition out="$1"
 
-  ast_push_state '!'
-  parse_ast_conditional condition
-  ast_pop_state
+  ast:push-state '!'
+  ast:parse:conditional condition
+  ast:pop-state
 
-  make_ast "$out" condition not $condition
+  ast:make "$out" condition not $condition
 }
 
-parse_ast_negated_conditional() {
+ast:parse:negated-conditional() {
   if [ -z ${__noshadow_19_+x} ]; then
     local __noshadow_19_
     local __noshadow_19_1
   fi
-  __shadowing_parse_ast_negated_conditional  __noshadow_19_1
+  __shadowing_ast:parse:negated-conditional  __noshadow_19_1
   setvar "$1" "$__noshadow_19_1"
 }
 
 
 
 
-__shadowing_parse_ast_command_conditional() {
+__shadowing_ast:parse:command-conditional() {
   local cmd="$1" cmd_ast out="$2"
 
-  ast_push_state '=='
-  parse_ast_commandcall $cmd cmd_ast
-  ast_pop_state
+  ast:push-state '=='
+  ast:parse:commandcall $cmd cmd_ast
+  ast:pop-state
 
-  make_ast "$out" condition 'command' $cmd_ast
-  backtrack_token
+  ast:make "$out" condition 'command' $cmd_ast
+  token:backtrack
 }
 
-parse_ast_command_conditional() {
+ast:parse:command-conditional() {
   if [ -z ${__noshadow_20_+x} ]; then
     local __noshadow_20_
     local __noshadow_20_2
   fi
-  __shadowing_parse_ast_command_conditional "$1"  __noshadow_20_2
+  __shadowing_ast:parse:command-conditional "$1"  __noshadow_20_2
   setvar "$2" "$__noshadow_20_2"
 }
 
 
 
 
-__shadowing_parse_ast_composite_conditional() {
+__shadowing_ast:parse:composite-conditional() {
   local value class success=false condition_left="$1" condition_right out="$2"
-  peek_token -v value -c class
+  token:peek -v value -c class
 
   if [ "$class" = name ]; then
     case "$value" in
       "and"|"or"|"&&"|"||")
-        if ! ast_state_is '!'; then
-          skip_token
-          parse_ast_conditional condition_right
+        if ! ast:state-is '!'; then
+          token:skip
+          ast:parse:conditional condition_right
           success=true
         elif [[ "$value" =~ ('&&'|'||') ]]; then
-          skip_token
-          parse_ast_negated_conditional condition_right
+          token:skip
+          ast:parse:negated-conditional condition_right
           success=true
         fi
       ;;
     esac
   fi
   if $success; then
-    make_ast "$out" condition $value $condition_left $condition_right
+    ast:make "$out" condition $value $condition_left $condition_right
   else
     setvar "$out" $condition_left
   fi
 }
 
-parse_ast_composite_conditional() {
+ast:parse:composite-conditional() {
   if [ -z ${__noshadow_21_+x} ]; then
     local __noshadow_21_
     local __noshadow_21_2
   fi
-  __shadowing_parse_ast_composite_conditional "$1"  __noshadow_21_2
+  __shadowing_ast:parse:composite-conditional "$1"  __noshadow_21_2
   setvar "$2" "$__noshadow_21_2"
 }
 
 
 
-__shadowing_parse_ast_function_definition() {
+__shadowing_ast:parse:function-definition() {
   local name=$1 out="$2"
   local expr args block
 
-  make_ast expr function-def
+  ast:make expr function-def
 
-  parse_ast_specific_expr list args
-  parse_ast_require_newline "function definition"
-  parse_ast_block fn block
+  ast:parse:specific-expr list args
+  ast:parse:require-newline "function definition"
+  ast:parse:block fn block
 
-  ast_push_child $expr $name
-  ast_push_child $expr $args
-  ast_push_child $expr $block
+  ast:push-child $expr $name
+  ast:push-child $expr $args
+  ast:push-child $expr $block
 
   setvar "$out" $expr
 }
 
-parse_ast_function_definition() {
+ast:parse:function-definition() {
   if [ -z ${__noshadow_22_+x} ]; then
     local __noshadow_22_
     local __noshadow_22_2
   fi
-  __shadowing_parse_ast_function_definition "$1"  __noshadow_22_2
+  __shadowing_ast:parse:function-definition "$1"  __noshadow_22_2
   setvar "$2" "$__noshadow_22_2"
 }
 
 
-parse_ast_require_newline() {
+ast:parse:require-newline() {
   local nl nl_head
-  parse_ast_expr nl
-  from_ast $nl head nl_head
+  ast:parse:expr nl
+  ast:from $nl head nl_head
   case $nl_head in
     newline)
       ;;
     eof)
       if ! ${POWSCRIPT_ALLOW_INCOMPLETE-false}; then
-        ast_error "unexpected end of file after $1"
+        ast:error "unexpected end of file after $1"
       fi
       ;;
     *)
-      ast_error "trailing expression after ${1}: $(ast_print $nl) :: $(from_ast $nl head)"
+      ast:error "trailing expression after ${1}: $(ast:print $nl) :: $(ast:from $nl head)"
       ;;
   esac
 }
 
 
-__shadowing_parse_ast_block() {
+__shadowing_ast:parse:block() {
   local state=$1 out="$2"
   local expr child indent_state indent_layers
   local value class token_line ln="0"
 
-  new_ast expr
-  ast_set $expr head block
+  ast:make expr block
 
-  ast_push_state $state
-  ast_new_indentation
+  ast:push-state $state
+  ast:new-indentation
 
-  ast_indentation_layers indent_layers
-  ast_set $expr value $indent_layers
+  ast:indentation-layers indent_layers
+  ast:set $expr value $indent_layers
 
   indent_state=ok
 
   while [ ! $indent_state = end ]; do
-    peek_token -v value -c class -ls token_line
+    token:peek -v value -c class -ls token_line
 
-    ast_test_indentation "$value" $class indent_state
+    ast:test-indentation "$value" $class indent_state
 
     case $indent_state in
       ok)
-        parse_ast_top child
+        ast:parse:top child
         if [ ! "$child" = -1 ]; then
-          ast_push_child $expr $child
+          ast:push-child $expr $child
           ln="$token_line"
         fi
         ;;
       error*)
         if [ $class = eof ] && ${POWSCRIPT_ALLOW_INCOMPLETE-false}; then
-          POWSCRIPT_INCOMPLETE_STATE="$(ast_last_state)"
+          POWSCRIPT_INCOMPLETE_STATE="$(ast:last-state)"
           exit
         fi
 
         local req found or_more=""
         [ $indent_state = error-start ] && or_more=" or more"
 
-        ast_indentation_required req
-        ast_count_indentation "$value" $class found
-        ast_error "$indent_state : indentation error at line $token_line, expected $req spaces$or_more, found $found."
+        ast:indentation-required req
+        ast:count-indentation "$value" $class found
+        ast:error "$indent_state : indentation error at line $token_line, expected $req spaces$or_more, found $found."
         ;;
     esac
   done
 
-  ast_pop_state
-  ast_pop_indentation
+  ast:pop-state
+  ast:pop-indentation
   setvar "$out" $expr
 }
 
-parse_ast_block() {
+ast:parse:block() {
   if [ -z ${__noshadow_23_+x} ]; then
     local __noshadow_23_
     local __noshadow_23_2
   fi
-  __shadowing_parse_ast_block "$1"  __noshadow_23_2
+  __shadowing_ast:parse:block "$1"  __noshadow_23_2
   setvar "$2" "$__noshadow_23_2"
 }
 
@@ -2109,47 +2110,46 @@ parse_ast_block() {
 
 
 
-__shadowing_parse_ast_list() {
+__shadowing_ast:parse:list() {
   local out="$1"
   local expr child open=true
   local class value
 
-  new_ast expr
-  ast_set $expr head list
+  ast:make expr list
 
   while $open; do
-    peek_token -v value -c class
+    token:peek -v value -c class
     case "$class $value" in
       'special )')
         open=false
-        skip_token
+        token:skip
         ;;
       'newline '*)
-        skip_token
+        token:skip
         ;;
       'eof '*)
         if ${POWSCRIPT_ALLOW_INCOMPLETE-false}; then
-          POWSCRIPT_INCOMPLETE_STATE="$(ast_last_state)"
+          POWSCRIPT_INCOMPLETE_STATE="$(ast:last-state)"
           exit
         else
-          ast_error "end of file while parsing list"
+          ast:error "end of file while parsing list"
         fi
         ;;
       *)
-        parse_ast_expr child
-        ast_push_child $expr $child
+        ast:parse:expr child
+        ast:push-child $expr $child
         ;;
     esac
   done
   setvar "$out" $expr
 }
 
-parse_ast_list() {
+ast:parse:list() {
   if [ -z ${__noshadow_24_+x} ]; then
     local __noshadow_24_
     local __noshadow_24_1
   fi
-  __shadowing_parse_ast_list  __noshadow_24_1
+  __shadowing_ast:parse:list  __noshadow_24_1
   setvar "$1" "$__noshadow_24_1"
 }
 
@@ -2157,7 +2157,9 @@ parse_ast_list() {
 # FILE: ast/ast.bash
 declare -gA PowscriptBackends
 
-bash_interactive() {
+bash:interactive() {
+  set -E
+
   local wfifo="$1"
   local rfifo="$2"
   local end="$3"
@@ -2165,11 +2167,11 @@ bash_interactive() {
   local line="__PowscriptCodeLine__"
   local result="__PowscriptResultLine__"
   bash -c "
-    trap 'echo \"#<<END.$end>>\" >>\"$rfifo\"' EXIT
+    trap '{ echo \"#<<END.$end>>\" >>\"$rfifo\"; exit; }' EXIT ERR
     $code=
     $line=
     $result=
-    while true; do
+    while [ -p '$wfifo' ]; do
       IFS= read -r $line <'$wfifo'
       if [ \"\$$line\" = '#<<END>>' ] ; then
         2>&1 eval \"\$$code\" >>'$rfifo'
@@ -2185,27 +2187,27 @@ bash_interactive() {
 # FILE: lang/bash/interactive.bash
 
 
-__shadowing_bash_compile() {
+__shadowing_bash:compile() {
   local expr=$1 out="$2"
   local expr_head expr_value expr_children
 
-  from_ast $expr head expr_head
+  ast:from $expr head expr_head
 
   case "$expr_head" in
     name)
-      from_ast $expr value "$out"
+      ast:from $expr value "$out"
       ;;
 
     string)
-      from_ast $expr value expr_value
+      ast:from $expr value expr_value
       setvar "$out" "'$expr_value'"
       ;;
 
     cat)
       local child compiled result=""
-      from_ast $expr children expr_children
+      ast:from $expr children expr_children
       for child in $expr_children; do
-        bash_compile $child compiled
+        bash:compile $child compiled
         result="$result$compiled"
       done
       setvar "$out" "$result"
@@ -2215,12 +2217,12 @@ __shadowing_bash_compile() {
       local expr_children
       local condition block post_if
 
-      from_ast $expr children expr_children
+      ast:from $expr children expr_children
       expr_children=( $expr_children )
 
-      bash_compile ${expr_children[0]} condition
-      bash_compile ${expr_children[1]} block
-      bash_compile ${expr_children[2]} post_if
+      bash:compile ${expr_children[0]} condition
+      bash:compile ${expr_children[1]} block
+      bash:compile ${expr_children[2]} post_if
 
       setvar "$out" "$expr_head $condition; then"$'\n'"${block:2:-2}"$'\n'"$post_if"
       ;;
@@ -2228,10 +2230,10 @@ __shadowing_bash_compile() {
       local expr_children
       local block
 
-      from_ast $expr children expr_children
+      ast:from $expr children expr_children
       expr_children=( $expr_children )
 
-      bash_compile ${expr_children[0]} block
+      bash:compile ${expr_children[0]} block
 
       setvar "$out" "else"$'\n'"${block:2:-2}"$'\n'"fi"
       ;;
@@ -2244,11 +2246,11 @@ __shadowing_bash_compile() {
       local varname elements_ast block_ast
       local elements block
 
-      from_ast $expr value varname
-      ast_children $expr elements_ast block_ast
+      ast:from $expr value varname
+      ast:children $expr elements_ast block_ast
 
-      bash_compile $elements_ast elements
-      bash_compile $block_ast block
+      bash:compile $elements_ast elements
+      bash:compile $block_ast block
 
       setvar "$out" "for $varname in $elements; do"$'\n'"${block:2:-2}"$'\ndone'
       ;;
@@ -2256,10 +2258,10 @@ __shadowing_bash_compile() {
     elements)
       local e elements r result
 
-      from_ast $expr children elements
+      ast:from $expr children elements
 
       for e in $elements; do
-        bash_compile $e r
+        bash:compile $e r
         result="$result$r "
       done
 
@@ -2268,40 +2270,40 @@ __shadowing_bash_compile() {
 
     simple-substitution)
       local name
-      from_ast $expr value name
+      ast:from $expr value name
       setvar "$out" "\"\${$name}\""
       ;;
 
     indexing-substitution)
       local name index expr_children
 
-      from_ast $expr children expr_children
+      ast:from $expr children expr_children
       expr_children=( $expr_children )
 
-      from_ast $expr value name
-      bash_compile ${expr_children[0]} index
+      ast:from $expr value name
+      bash:compile ${expr_children[0]} index
 
       setvar "$out" "\"\${$name[$index]}\""
       ;;
     command-substitution)
       local call_ast call
 
-      from_ast $expr children call_ast
+      ast:from $expr children call_ast
 
-      bash_compile $call_ast call
+      bash:compile $call_ast call
 
       setvar "$out" '$('"$call"')'
       ;;
 
     call)
       local command argument compiled result
-      from_ast $expr children expr_children
+      ast:from $expr children expr_children
       expr_children=( $expr_children )
 
-      bash_compile ${expr_children[0]} result
+      bash:compile ${expr_children[0]} result
 
       for argument in ${expr_children[@]:1}; do
-        bash_compile $argument compiled
+        bash:compile $argument compiled
         result="$result $compiled"
       done
       setvar "$out" "$result"
@@ -2309,34 +2311,34 @@ __shadowing_bash_compile() {
 
     assign)
       local name value
-      from_ast $expr children expr_children
+      ast:from $expr children expr_children
       expr_children=( $expr_children )
 
-      bash_compile ${expr_children[0]} name
-      bash_compile ${expr_children[1]} value
+      bash:compile ${expr_children[0]} name
+      bash:compile ${expr_children[1]} value
 
       setvar "$out" "$name=$value"
       ;;
 
     indexing-assign)
       local name index value
-      from_ast $expr children expr_children
+      ast:from $expr children expr_children
       expr_children=( $expr_children )
 
-      bash_compile ${expr_children[0]} name
-      bash_compile ${expr_children[1]} index
-      bash_compile ${expr_children[2]} value
+      bash:compile ${expr_children[0]} name
+      bash:compile ${expr_children[1]} index
+      bash:compile ${expr_children[2]} value
 
       setvar "$out" "$name[$index]=$value"
       ;;
     list)
       local expr_children child_ast child result
 
-      from_ast $expr children expr_children
+      ast:from $expr children expr_children
 
       result="( "
       for child_ast in $expr_children; do
-        bash_compile $child_ast child
+        bash:compile $child_ast child
         result="$result$child "
       done
 
@@ -2347,41 +2349,38 @@ __shadowing_bash_compile() {
       local name args_ast arg_assign_ast argval_ast block_ast block
       local args arg argval argnum locals_ast argname_ast
 
-      from_ast $expr children expr_children
+      ast:from $expr children expr_children
       expr_children=( $expr_children )
 
-      bash_compile ${expr_children[0]} name
+      bash:compile ${expr_children[0]} name
 
       args_ast=${expr_children[1]}
       block_ast=${expr_children[2]}
 
+      ast:make locals_ast local
 
-      new_ast locals_ast
-      ast_set $locals_ast head local
-
-      from_ast $args_ast children args
-
+      ast:from $args_ast children args
 
       argnum=1
       for arg in $args; do
-        make_ast argval_ast simple-substitution $argnum
-        make_ast arg_assign_ast assign '' $arg $argval_ast
-        ast_push_child $locals_ast $arg_assign_ast
+        ast:make argval_ast simple-substitution $argnum
+        ast:make arg_assign_ast assign '' $arg $argval_ast
+        ast:push-child $locals_ast $arg_assign_ast
         argnum=$((argnum+1))
       done
-      ast_unshift_child $block_ast $locals_ast
+      ast:unshift-child $block_ast $locals_ast
 
-      bash_compile $block_ast block
+      bash:compile $block_ast block
 
       setvar "$out" "$name() $block"
       ;;
 
     local)
       local result="local" child_ast child
-      from_ast $expr children expr_children
+      ast:from $expr children expr_children
 
       for child_ast in $expr_children; do
-        bash_compile $child_ast child
+        bash:compile $child_ast child
         result="$result $child"
       done
 
@@ -2389,11 +2388,11 @@ __shadowing_bash_compile() {
       ;;
     block)
       local child_ast child result
-      from_ast $expr children expr_children
+      ast:from $expr children expr_children
 
       result='{'
       for child_ast in $expr_children; do
-        bash_compile $child_ast child
+        bash:compile $child_ast child
         result="$result"$'\n'"$child"
       done
       result="$result"$'\n}'
@@ -2403,22 +2402,22 @@ __shadowing_bash_compile() {
 
     condition)
       local op left right quoted=no
-      from_ast $expr value op
-      from_ast $expr children expr_children
+      ast:from $expr value op
+      ast:from $expr children expr_children
       expr_children=( $expr_children )
 
       case "$op" in
         command)
-          bash_compile ${expr_children[0]} left
+          bash:compile ${expr_children[0]} left
           setvar "$out" "$left"
           ;;
         not)
-          bash_compile ${expr_children[0]} right
+          bash:compile ${expr_children[0]} right
           setvar "$out" "! $right"
           ;;
         *)
-          bash_compile ${expr_children[0]} left
-          bash_compile ${expr_children[1]} right
+          bash:compile ${expr_children[0]} left
+          bash:compile ${expr_children[1]} right
 
           case "$op" in
             'is'|'=')     op='='    quoted=single ;;
@@ -2443,22 +2442,60 @@ __shadowing_bash_compile() {
   esac
 }
 
-bash_compile() {
+bash:compile() {
   if [ -z ${__noshadow_25_+x} ]; then
     local __noshadow_25_
     local __noshadow_25_2
   fi
-  __shadowing_bash_compile "$1"  __noshadow_25_2
+  __shadowing_bash:compile "$1"  __noshadow_25_2
   setvar "$2" "$__noshadow_25_2"
 }
 
 # FILE: lang/bash/compile.bash
+sh:compile() {
+  local expr="$1" out="$2"
+  local expr_head
+
+  ast:from $expr head expr_head
+
+  case "$expr_head" in
+    name)
+      ast:from $expr "$out" name
+      ;;
+    string)
+      local string
+      ast:from $expr value string
+
+      setvar "$out" "'$string'"
+      ;;
+    call)
+      local children arg_ast
+      local result cmd arg
+
+      ast:from $expr children children
+      children=( $children )
+
+      sh:compile ${children[0]} cmd
+
+      result="$cmd"
+      for arg_ast in "${children[@:1]}"; do
+        sh:compile $arg_ast arg
+        result="$result $arg"
+      done
+      setvar "$out" "$result"
+      ;;
+    *)
+      >&2 echo "unimplemented"
+      exit 1
+      ;;
+  esac
+}
 # FILE: lang/sh/compile.bash
 
-select_backend() {
+backend:select() {
   eval "
-    compile_to_backend () { ${1}_compile \"\$@\"; }
-    interactive_compile_target () { ${1}_interactive \"\$@\"; }
+    backend:compile () { ${1}:compile \"\$@\"; }
+    backend:interactive () { ${1}:interactive \"\$@\"; }
   "
 }
 
@@ -2466,28 +2503,28 @@ select_backend() {
 
 PowscriptTempDirectory="$(mktemp -d --suffix=".powscript")"
 
-powscript_temp_name() {
+powscript:temp-name() {
   local suffix=".powscript$1"
   setvar "$2" "$(mktemp -u --suffix="$suffix" -p "$PowscriptTempDirectory")"
 }
 
-powscript_make_temp() {
-  powscript_temp_name "$1" "$2"
+powscript:make-temp() {
+  powscript:temp-name "$1" "$2"
   touch "${!2}"
 }
 
-powscript_make_fifo() {
-  powscript_temp_name "$1" "$2"
+powscript:make-fifo() {
+  powscript:temp-name "$1" "$2"
   mkfifo "${!2}"
 }
 
-powscript_clean_up() {
+powscript:clean-up() {
   [ -d "$PowscriptTempDirectory" ] && rm -r "$PowscriptTempDirectory"
-  [ -n "$PowscriptGuestProcess"  ] && ps -p "$PowscriptGuestProcess" >/dev/null && kill STOP "$PowscriptGuestProcess"
+  [ -n "$PowscriptGuestProcess"  ] && ps -p "$PowscriptGuestProcess" >/dev/null && kill -QUIT "$PowscriptGuestProcess"
   exit 0
 }
 
-trap 'powscript_clean_up' ERR EXIT
+trap '{ POWSCRIPT_CDEBUG_STOP=false; powscript:clean-up; }' TERM INT QUIT ABRT EXIT
 
 # FILE: compiler/temp.bash
 PowscriptBackend=bash
@@ -2498,7 +2535,7 @@ PowscriptOutput='/dev/stdout'
 declare -gA PowscriptFiles
 PowscriptFileNumber=0
 
-powscript_parse_options() {
+powscript:parse-options() {
   while [ "$#" -gt 0 ]; do
     case "$1" in
       '-o'|'--output')
@@ -2561,26 +2598,26 @@ powscript_parse_options() {
   esac
 }
 
-powscript_is_interactive() {
+powscript:is-interactive() {
   $PowscriptInteractiveMode
 }
 # FILE: compiler/options.bash
-powscript_compile_file() {
-  local output=${1-/dev/stdout}
+files:compile() {
+  local output="${1-/dev/stdout}"
   local ast
 
-  init_stream
-  clear_compilation
-  while ! end_of_file; do
-    parse_ast ast
-    compile_to_backend $ast >$output
+  stream:init
+  interactive:clear-compilation
+  while ! stream:end; do
+    ast:parse ast
+    backend:compile $ast >"$output"
   done
 }
 
 # FILE: compiler/files.bash
 InteractiveFileLineNumber=0
 
-interactive_mode() {
+interactive:start() {
   local ast code compiled_code line="" state=none
   local proc rfifo wfifo end_token result
   local powhistory="${POWSCRIPT_HISTORY_FILE-$HOME/.powscript_history}"
@@ -2591,11 +2628,11 @@ interactive_mode() {
   history -c
   history -r "$powhistory"
 
-  powscript_make_fifo ".interactive.wfifo" wfifo
-  powscript_make_fifo ".interactive.rfifo" rfifo
-  powscript_temp_name ".end" end_token
+  powscript:make-fifo ".interactive.wfifo" wfifo
+  powscript:make-fifo ".interactive.rfifo" rfifo
+  powscript:temp-name ".end" end_token
 
-  interactive_compile_target "$wfifo" "$rfifo" "$end_token" &
+  backend:interactive "$wfifo" "$rfifo" "$end_token" &
   proc="$!"
   PowscriptGuestProcess="$proc"
 
@@ -2609,22 +2646,22 @@ interactive_mode() {
       line="$extra_line"
       extra_line=""
     else
-      read_powscript top line
+      interactive:read-powscript top line
     fi
     code="$line"
 
     case "$code" in
       '.compile')
-        toggle_flag compile_flag
+        interactive:toggle-flag compile_flag
         ;;
       '.ast')
-        toggle_flag ast_flag
+        interactive:toggle-flag ast_flag
         ;;
       '.echo')
-        toggle_flag echo_flag
+        interactive:toggle-flag echo_flag
         ;;
       '.incomplete')
-        toggle_flag incomplete_flag
+        interactive:toggle-flag incomplete_flag
         ;;
       '.show '*)
         show_ast "${code//.show /}"
@@ -2633,12 +2670,12 @@ interactive_mode() {
       *)
         state=none
         while [ ! "$state" = top ]; do
-          clear_compilation
-          state="$( { init_stream; POWSCRIPT_SHOW_INCOMPLETE_MESSAGE=$incomplete_flag try_parse_ast; } <<< "$code" )"
+          interactive:clear-compilation
+          state="$( { stream:init; POWSCRIPT_SHOW_INCOMPLETE_MESSAGE=$incomplete_flag ast:parse:try; } <<< "$code" )"
           case "$state" in
             top)
-              clear_compilation
-              { init_stream; parse_ast ast; } <<< "$code"$'\n'
+              interactive:clear-compilation
+              { stream:init; ast:parse ast; } <<< "$code"$'\n'
               ;;
             error*)
               >&2 echo "$state"
@@ -2647,13 +2684,13 @@ interactive_mode() {
               line=
               ;;
             *)
-              read_powscript "$state" line
+              interactive:read-powscript "$state" line
               code="$code"$'\n'"$line"
               ;;
           esac
         done
-        if ! end_of_file; then
-          get_remaining_input extra_line
+        if ! stream:end; then
+          interactive:get-remaining-input extra_line
           code="${code:0:$(($# - ${#extra_line}))}"
         fi
 
@@ -2667,10 +2704,10 @@ interactive_mode() {
 
         if $ast_flag; then
           echo "---- SYNTAX TREE ----"
-          show_ast $ast
+          interactive:show-ast $ast
           echo "---------------------"
         fi
-        compile_to_backend $ast compiled_code
+        backend:compile $ast compiled_code
         if $compile_flag; then
           echo "--- COMPILED CODE ---"
           echo "$compiled_code"
@@ -2693,39 +2730,39 @@ interactive_mode() {
 }
 
 
-__shadowing_get_remaining_input() {
+__shadowing_interactive:get-remaining-input() {
   local collumn out="$1"
-  peek_token -cs collumn <<< ""
-  jump_to_collumn $collumn
-  get_rest_of_line "$out"
+  token:peek -cs collumn <<< ""
+  stream:jump-to-collumn $collumn
+  stream:get-rest-of-line "$out"
 }
 
-get_remaining_input() {
+interactive:get-remaining-input() {
   if [ -z ${__noshadow_26_+x} ]; then
     local __noshadow_26_
     local __noshadow_26_1
   fi
-  __shadowing_get_remaining_input  __noshadow_26_1
+  __shadowing_interactive:get-remaining-input  __noshadow_26_1
   setvar "$1" "$__noshadow_26_1"
 }
 
 
-clear_compilation() {
-  clear_all_tokens
-  clear_states
-  ast_clear_all
-  ast_clear_states
+interactive:clear-compilation() {
+  token:clear-all
+  token:clear-states
+  ast:clear-all
+  ast:clear-states
 }
 
-show_ast() {
+interactive:show-ast() {
   echo "id:       $1"
-  echo "head:     $(from_ast $1 head)"
-  echo "value:    $(from_ast $1 value)"
-  echo "children: $(from_ast $1 children)"
-  ast_print $1
+  echo "head:     $(ast:from $1 head)"
+  echo "value:    $(ast:from $1 value)"
+  echo "children: $(ast:from $1 children)"
+  ast:print $1
 }
 
-toggle_flag() {
+interactive:toggle-flag() {
   if ${!1}; then
     setvar "$1" false
   else
@@ -2733,12 +2770,12 @@ toggle_flag() {
   fi
 }
 
-read_powscript() {
-  IFS="" read -r -e -p "$(format_powscript_prompt "$1")" "$2"
+interactive:read-powscript() {
+  IFS="" read -r -e -p "$(interactive:format-powscript-prompt "$1")" "$2"
   InteractiveFileLineNumber=$((InteractiveFileLineNumber+1))
 }
 
-format_powscript_prompt() {
+interactive:format-powscript-prompt() {
   local state_name=$1 state
 
   case $state_name in
@@ -2762,15 +2799,15 @@ format_powscript_prompt() {
 # FILE: compiler/interactive.bash
 # FILE: compiler/compiler.bash
 
-powscript_parse_options "$@"
-select_backend $PowscriptBackend
+powscript:parse-options "$@"
+backend:select $PowscriptBackend
 
-if powscript_is_interactive; then
-  interactive_mode
+if powscript:is-interactive; then
+  interactive:start
 else
   for file in "${PowscriptFiles[@]}"; do
-    powscript_compile_file "$PowscriptOutput" <"$file"
+    files:compile "$PowscriptOutput" <"$file"
   done
 fi
 
-${POWSCRIPT_DEBUG-false} || powscript_clean_up
+${POWSCRIPT_DEBUG-false} || powscript:clean-up

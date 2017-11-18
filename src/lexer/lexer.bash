@@ -5,27 +5,25 @@ powscript_source lexer/tokens.bash #<<EXPAND>>
 powscript_source lexer/states.bash #<<EXPAND>>
 
 
-# parse_token varname
+# token:parse varname
 # read a token from input and place it's id in the given variable
 #
 # e.g.
 #
 #  $ echo "abc" | {
-#  > init_stream
-#  > get_token token
-#  > from_token $token value
-#  > from_token $token class
+#  >   stream:init
+#  >   token:get -v value -c class
+#  >   echo "v=$value c=$class"
 #  > }
-#  abc
-#  name
+#  v=abc c=name
 
-parse_token() { #<<NOSHADOW>>
+token:parse() { #<<NOSHADOW>>
   local token_id_var="$1"   # variables where the token id will be stored
 
   local linenumber_start    # tokens store starting and ending line and collumn
   local linenumber_end      # numbers for debugging purposes.
-  local collumn_start
-  local collumn_end
+  local collumn_start       #
+  local collumn_end         #
 
   local state               # describes the parsing context, e.g. if in double quotes or parentheses
   local class=undefined     # token type
@@ -36,23 +34,23 @@ parse_token() { #<<NOSHADOW>>
   local skip_term=true      # if true, the terminating character will not be part of the next token
 
   local belongs=true        # if false, the current character does not belong to the current token and the latter is finished
-  local next_state=none     # if not none, the current state and next state are pushed to the stack, in that order
+  local next_state=none     # if not none, the values of state and next_state are pushed to the stack, in that order
   local next_class=none     # if not none, after finishing the current token, the next one will be given this class
   local state_end=false     # if true, the current state will be not be pushed in the stack at the end of parsing.
 
   local glued=true          # true if the token is glued to the previous one
 
-  get_line_number linenumber_start
-  get_collumn collumn_start
+  stream:get-line-number linenumber_start
+  stream:get-collumn     collumn_start
 
   # states are stored in a stack, to allow strings like 'a b$(echo c)d e'
   # to be handled by the lexer, where the tokens will be
   # 'a b', $(, echo, c, ), 'd e'.
-  pop_state state
+  token:pop-state state
 
   # the token is done when its class is identified
-  while [ $class = undefined ] && ! end_of_file; do
-    get_character c
+  while [ $class = undefined ] && ! stream:end; do
+    stream:get-character c
 
     case $state in
       quoted-escape)
@@ -71,7 +69,7 @@ parse_token() { #<<NOSHADOW>>
           $'\n') ;;
           *) token="$token$c" ;;
         esac
-        pop_state state
+        token:pop-state state
         ;;
 
       single-quotes)
@@ -181,7 +179,7 @@ parse_token() { #<<NOSHADOW>>
             if { { [ "$state" = parentheses  ] && [ ! "$c" = ')' ]; } ||
                  { [ "$state" = brackets     ] && [ ! "$c" = ']' ]; } ||
                  { [ "$state" = curly-braces ] && [ ! "$c" = '}' ]; } ;}; then
-              parse_error "unexpected $c on line %line. ${state/-/ }"
+              token:error "unexpected $c on line %line. ${state/-/ }"
             else
               belongs=false
               state_end=true
@@ -223,7 +221,7 @@ parse_token() { #<<NOSHADOW>>
             ;;
 
           ' ')
-            if line_start; then
+            if stream:line-start; then
               belongs=false
               skip_term=false
               next_state=whitespace
@@ -249,8 +247,8 @@ parse_token() { #<<NOSHADOW>>
             # if the current token is empty, don't return
             # any token, instead restart the loop.
 
-            get_line_number linenumber_start # update starting position
-            get_collumn collumn_start        #
+            stream:get-line-number linenumber_start # update starting position
+            stream:get-collumn     collumn_start    #
 
             # we skip the terminating character by not
             # adding it to the current empty token
@@ -269,7 +267,7 @@ parse_token() { #<<NOSHADOW>>
             fi
 
             if [ ! $next_state = none ]; then
-              push_state $state
+              token:push-state $state
               state=$next_state
               next_state=none
             fi
@@ -285,19 +283,20 @@ parse_token() { #<<NOSHADOW>>
         fi
         ;;
     esac
-    $move && next_character
+    $move && stream:next-character
   done
 
-  $state_end || push_state $state
-  [ $next_state = none ] || push_state $next_state
+  $state_end || token:push-state $state
+  [ $next_state = none ] || token:push-state $next_state
 
-  if end_of_file; then
-    if in_topmost_state; then
+  if stream:end; then
+    if token:in-topmost-state; then
       if [ -n "$token" ] && [ "$class" = unidentified ]; then
         class=name
       else
         token=eof
         class=eof
+        glued=false
       fi
     else
       if ${POWSCRIPT_ALLOW_INCOMPLETE-false}; then
@@ -309,113 +308,115 @@ parse_token() { #<<NOSHADOW>>
         POWSCRIPT_INCOMPLETE_STATE="$state"
         token=eof
         class=eof
+        glued=false
       else
-        unfinished_input_error "$state" "$linenumber_start" "$collumn_start"
+        token:unfinished-input-error "$state" "$linenumber_start" "$collumn_start"
       fi
     fi
   fi
 
-  get_collumn collumn_end
-  get_line_number linenumber_end
+  stream:get-collumn     collumn_end
+  stream:get-line-number linenumber_end
 
-  store_token\
+  token:store\
     "$token" "$class" "$glued"\
     "$linenumber_start" "$linenumber_end"\
     "$collumn_start" "$collumn_end"\
     "$token_id_var"
 }
-noshadow parse_token
+noshadow token:parse
 
-get_token_id() {
-  if in_topmost_token; then
-    parse_token "$1"
+token:get-id() {
+  if token:in-topmost; then
+    token:parse "$1"
   else
-    get_selected_token "$1"
-    forward_token
+    token:get-selected "$1"
+    token:forward
   fi
 }
 
-peek_token_id() {
-  if in_topmost_token; then
-    parse_token "$1"
-    backtrack_token
+token:peek-id() {
+  if token:in-topmost; then
+    token:parse "$1"
+    token:backtrack
   else
-    get_selected_token "$1"
+    token:get-selected "$1"
   fi
 }
 
-skip_token() {
+token:skip() {
   local _
-  if in_topmost_token; then
-    parse_token _
+  if token:in-topmost; then
+    token:parse _
   else
-    forward_token
+    token:forward
   fi
 }
 
 
-get_token() {
+token:get() {
   local __get_token__token
-  get_token_id __get_token__token
-  all_from_token "$@" $__get_token__token
+  token:get-id __get_token__token
+  token:all-from "$@" $__get_token__token
 }
 
 
-peek_token() {
+token:peek() {
   local __peek_token__token
-  peek_token_id __peek_token__token
-  all_from_token "$@" $__peek_token__token
+  token:peek-id __peek_token__token
+  token:all-from "$@" $__peek_token__token
 }
 
 
-next_token_is() {
-  local value class
-  peek_token -v value -c class
+token:next-is() {
+  local value class res=false
+  token:peek -v value -c class
   case $# in
     1)
-      [ "$class" = "$1" ]
+      [ "$class" = "$1" ] && res=true
       ;;
     2)
-      [[ "$class" = "$1" ]] && [[ "$value" = "$2" ]]
+      [[ "$class" = "$1" ]] && [[ "$value" = "$2" ]] && res=true
       ;;
   esac
+  $res
 }
 
 
-token_ignore_whitespace() {
-  if next_token_is whitespace; then
-    skip_token
+token:ignore-whitespace() {
+  if token:next-is whitespace; then
+    token:skip
   fi
 }
 
 
-backtrack_token() {
-  move_back_token_index
+token:backtrack() {
+  token:move-back-index
 }
 
-get_specific_token() { #<<NOSHADOW>>
+token:get-specific() { #<<NOSHADOW>>
   local value class required="$1" out="$2"
-  get_token -v value -c class
+  token:get -v value -c class
   if [ ! $class = $required ]; then
-    parse_error "Wrong token: found a $class of value $value when a $required was required"
+    token:error "Wrong token: found a $class of value $value when a $required was required"
   else
     setvar "$out" "$value"
   fi
 }
-noshadow get_specific_token 1
+noshadow token:get-specific 1
 
-require_token() {
+token:require() {
   local req_class="$1" req_value="$2"
   local value class
 
-  get_token -v value -c class
+  token:get -v value -c class
   if [ ! "$req_class $req_value" = "$class $value" ]; then
-    parse_error "Wrong token: found a $class of value $value when a $req_class of value $req_value was required"
+    token:error "Wrong token: found a $class of value $value when a $req_class of value $req_value was required"
   fi
 }
 
 
-unfinished_input_error() {
+token:unfinished-input-error() {
   local token
   local opener=
   local state="$1"
@@ -427,27 +428,27 @@ unfinished_input_error() {
     curly-braces)   opener='\$?\{'  ;;
   esac
   if [ -n "$opener" ]; then
-    find_token_by value "$opener" token
+    token:find-by value "$opener" token
     if [ ! $token = -1 ]; then
-      from_token $token linenumber_start line
-      from_token $token collumn_start collumn
-      parse_error "unclosed ${state/-/ }, last open one found in line $line, collumn $collumn"
+      token:from $token linenumber_start line
+      token:from $token collumn_start collumn
+      token:error "unclosed ${state/-/ }, last open one found in line $line, collumn $collumn"
     else
-      parse_error "unclosed ${state/-/ }"
+      token:error "unclosed ${state/-/ }"
     fi
   else
     if [[ "$state" =~ quotes ]]; then
       line="$2"
       collumn="$3"
-      parse_error "unfinished ${state/-/ }, starting in line $line, collumn $collumn"
+      token:error "unfinished ${state/-/ }, starting in line $line, collumn $collumn"
     else
-      parse_error "unexpected eof"
+      token:error "unexpected eof"
     fi
   fi
 }
 
-parse_error() {
-  local message="error: ${1//%line/$(get_line_number)}"
+token:error() {
+  local message="error: ${1//%line/$(stream:get-line-number)}"
   if ${POWSCRIPT_ALLOW_INCOMPLETE-false}; then
     if ${POWSCRIPT_SHOW_INCOMPLETE_MESSAGE-false}; then
       >&2 echo "$message"
@@ -460,17 +461,13 @@ parse_error() {
   fi
 }
 
-tokens_to_json() {
+token:to-json() {
   local token
-  init_stream
+  stream:init
 
   echo '{'
-  while ! end_of_file; do
-    get_token -v value -c class -g glued
-    from_token $token value value
-    from_token $token class class
-    from_token $token glued glued
-    echo "  ${token}: {"
+  while ! stream:end; do
+    token:get -v value -c class -g glued
     echo "    'value': '$value'"
     echo "    'class': '$class'"
     echo "    'glued': $glued"

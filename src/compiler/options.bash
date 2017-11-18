@@ -6,7 +6,7 @@ PowscriptOutput='/dev/stdout'
 declare -gA PowscriptFiles
 PowscriptFileNumber=0
 
-powscript_parse_options() {
+powscript:parse-options() {
   while [ "$#" -gt 0 ]; do
     case "$1" in
       '-o'|'--output')
@@ -69,6 +69,6 @@ powscript_parse_options() {
   esac
 }
 
-powscript_is_interactive() {
+powscript:is-interactive() {
   $PowscriptInteractiveMode
 }

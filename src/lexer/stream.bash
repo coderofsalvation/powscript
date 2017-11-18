@@ -1,16 +1,16 @@
 declare -gA Stream
 
-init_stream() {
+stream:init() {
   Stream[line]=""
   Stream[index]=0
   Stream[linenumber]=0
   Stream[eof]=false
 
-  next_character
+  stream:next-character
 }
 
-get_character() {
-  if end_of_file; then
+stream:get-character() {
+  if stream:end; then
     (>&2 echo 'Tried to get an character after the end of file!')
     exit 1
   elif [ ${Stream[index]} = ${#Stream[line]} ]; then
@@ -20,7 +20,7 @@ get_character() {
   fi
 }
 
-next_character() {
+stream:next-character() {
   local line
   if [ ${Stream[index]} = ${#Stream[line]} ]; then
     if IFS='' read -r line || [ -n "$line" ]; then
@@ -35,32 +35,32 @@ next_character() {
   fi
 }
 
-get_rest_of_line() { #<<NOSHADOW>>
+stream:get-rest-of-line() { #<<NOSHADOW>>
   local line collumn out="$1"
   line="${Stream[line]}"
-  get_collumn collumn
+  stream:get-collumn collumn
   setvar "$out" "${line:$collumn}"
 }
-noshadow get_rest_of_line
+noshadow stream:get-rest-of-line
 
 
-end_of_file() {
+stream:end() {
   ${Stream[eof]}
 }
 
-line_start() {
+stream:line-start() {
   [ ${Stream[index]} = 0 ]
 }
 
-jump_to_collumn() {
+stream:jump-to-collumn() {
   Stream[index]=$1
 }
 
-get_line_number() {
+stream:get-line-number() {
   setvar "$1" ${Stream[linenumber]}
 }
 
-get_collumn() {
+stream:get-collumn() {
   setvar "$1" ${Stream[index]}
 }
 

@@ -1,4 +1,6 @@
-bash_interactive() {
+bash:interactive() {
+  set -E
+
   local wfifo="$1"
   local rfifo="$2"
   local end="$3"
@@ -6,11 +8,11 @@ bash_interactive() {
   local line="__PowscriptCodeLine__"
   local result="__PowscriptResultLine__"
   bash -c "
-    trap 'echo \"#<<END.$end>>\" >>\"$rfifo\"' EXIT
+    trap '{ echo \"#<<END.$end>>\" >>\"$rfifo\"; exit; }' EXIT ERR
     $code=
     $line=
     $result=
-    while true; do
+    while [ -p '$wfifo' ]; do
       IFS= read -r $line <'$wfifo'
       if [ \"\$$line\" = '#<<END>>' ] ; then
         2>&1 eval \"\$$code\" >>'$rfifo'

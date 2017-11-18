@@ -45,7 +45,7 @@ test_tokens() {
     '-"eof"           eof          false'
   )
 
-  init_stream
+  stream:init
 
   echo 'testing lexer...'
   for t in "${tests[@]}"; do
@@ -65,14 +65,14 @@ test_tokens() {
     tclass="${tclass// /}"
 
     unmatched=true
-    while $unmatched && ! end_of_file; do
-      get_token_and_set value class glued
+    while $unmatched && ! stream:end; do
+      token:get -v value -c class -g glued
 
       if [ "$value" = "$tvalue" ] &&
          [ "$class" = "$tclass" ] &&
          [ "$glued" = "$tglued" ]; then
         unmatched=false
-      elif ! $ignore_til_match || end_of_file; then
+      elif ! $ignore_til_match || stream:end; then
         >&2 echo "failed test while testing lexer!"
         >&2 echo "  tried to match {value: '$tvalue', class: '$tclass', glued: $tglued }"
         >&2 echo "  instead found  {value: '$value', class: '$class', glued: $glued }"

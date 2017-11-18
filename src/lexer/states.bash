@@ -2,26 +2,26 @@ declare -gA States
 
 States[index]=0
 
-push_state() {
+token:push-state() {
   States[${States[index]}]=$1
   States[index]=$((${States[index]}+1))
 }
 
-pop_state() {
+token:pop-state() {
   local index=$((${States[index]}-1))
   States[index]=$index
   setvar "$1" ${States[$index]}
 }
 
-in_topmost_state() {
+token:in-topmost-state() {
   [ ${States[index]} = 1 ]
 }
 
-clear_states() {
+token:clear-states() {
   unset States
   declare -gA States
   States[index]=0
-  push_state top
+  token:push-state top
 }
 
-push_state top
+token:push-state top

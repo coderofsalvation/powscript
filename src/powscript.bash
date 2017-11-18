@@ -11,15 +11,15 @@ powscript_source ast/ast.bash            #<<EXPAND>>
 powscript_source lang/backends.bash      #<<EXPAND>>
 powscript_source compiler/compiler.bash  #<<EXPAND>>
 
-powscript_parse_options "$@"
-select_backend $PowscriptBackend
+powscript:parse-options "$@"
+backend:select $PowscriptBackend
 
-if powscript_is_interactive; then
-  interactive_mode
+if powscript:is-interactive; then
+  interactive:start
 else
   for file in "${PowscriptFiles[@]}"; do
-    powscript_compile_file "$PowscriptOutput" <"$file"
+    files:compile "$PowscriptOutput" <"$file"
   done
 fi
 
-${POWSCRIPT_DEBUG-false} || powscript_clean_up
+${POWSCRIPT_DEBUG-false} || powscript:clean-up

@@ -1,6 +1,6 @@
 InteractiveFileLineNumber=0
 
-interactive_mode() {
+interactive:start() {
   local ast code compiled_code line="" state=none
   local proc rfifo wfifo end_token result
   local powhistory="${POWSCRIPT_HISTORY_FILE-$HOME/.powscript_history}"
@@ -11,11 +11,11 @@ interactive_mode() {
   history -c
   history -r "$powhistory"
 
-  powscript_make_fifo ".interactive.wfifo" wfifo
-  powscript_make_fifo ".interactive.rfifo" rfifo
-  powscript_temp_name ".end" end_token
+  powscript:make-fifo ".interactive.wfifo" wfifo
+  powscript:make-fifo ".interactive.rfifo" rfifo
+  powscript:temp-name ".end" end_token
 
-  interactive_compile_target "$wfifo" "$rfifo" "$end_token" &
+  backend:interactive "$wfifo" "$rfifo" "$end_token" &
   proc="$!"
   PowscriptGuestProcess="$proc"
 
@@ -29,22 +29,22 @@ interactive_mode() {
       line="$extra_line"
       extra_line=""
     else
-      read_powscript top line
+      interactive:read-powscript top line
     fi
     code="$line"
 
     case "$code" in
       '.compile')
-        toggle_flag compile_flag
+        interactive:toggle-flag compile_flag
         ;;
       '.ast')
-        toggle_flag ast_flag
+        interactive:toggle-flag ast_flag
         ;;
       '.echo')
-        toggle_flag echo_flag
+        interactive:toggle-flag echo_flag
         ;;
       '.incomplete')
-        toggle_flag incomplete_flag
+        interactive:toggle-flag incomplete_flag
         ;;
       '.show '*)
         show_ast "${code//.show /}"
@@ -53,12 +53,12 @@ interactive_mode() {
       *)
         state=none
         while [ ! "$state" = top ]; do
-          clear_compilation
-          state="$( { init_stream; POWSCRIPT_SHOW_INCOMPLETE_MESSAGE=$incomplete_flag try_parse_ast; } <<< "$code" )"
+          interactive:clear-compilation
+          state="$( { stream:init; POWSCRIPT_SHOW_INCOMPLETE_MESSAGE=$incomplete_flag ast:parse:try; } <<< "$code" )"
           case "$state" in
             top)
-              clear_compilation
-              { init_stream; parse_ast ast; } <<< "$code"$'\n'
+              interactive:clear-compilation
+              { stream:init; ast:parse ast; } <<< "$code"$'\n'
               ;;
             error*)
               >&2 echo "$state"
@@ -67,13 +67,13 @@ interactive_mode() {
               line=
               ;;
             *)
-              read_powscript "$state" line
+              interactive:read-powscript "$state" line
               code="$code"$'\n'"$line"
               ;;
           esac
         done
-        if ! end_of_file; then
-          get_remaining_input extra_line
+        if ! stream:end; then
+          interactive:get-remaining-input extra_line
           code="${code:0:$(($# - ${#extra_line}))}"
         fi
 
@@ -87,10 +87,10 @@ interactive_mode() {
 
         if $ast_flag; then
           echo "---- SYNTAX TREE ----"
-          show_ast $ast
+          interactive:show-ast $ast
           echo "---------------------"
         fi
-        compile_to_backend $ast compiled_code
+        backend:compile $ast compiled_code
         if $compile_flag; then
           echo "--- COMPILED CODE ---"
           echo "$compiled_code"
@@ -112,30 +112,30 @@ interactive_mode() {
   [ -p "$rfifo" ] && rm $rfifo
 }
 
-get_remaining_input() { #<<NOSHADOW>>
+interactive:get-remaining-input() { #<<NOSHADOW>>
   local collumn out="$1"
-  peek_token -cs collumn <<< ""
-  jump_to_collumn $collumn
-  get_rest_of_line "$out"
+  token:peek -cs collumn <<< ""
+  stream:jump-to-collumn $collumn
+  stream:get-rest-of-line "$out"
 }
-noshadow get_remaining_input
+noshadow interactive:get-remaining-input
 
-clear_compilation() {
-  clear_all_tokens
-  clear_states
-  ast_clear_all
-  ast_clear_states
+interactive:clear-compilation() {
+  token:clear-all
+  token:clear-states
+  ast:clear-all
+  ast:clear-states
 }
 
-show_ast() {
+interactive:show-ast() {
   echo "id:       $1"
-  echo "head:     $(from_ast $1 head)"
-  echo "value:    $(from_ast $1 value)"
-  echo "children: $(from_ast $1 children)"
-  ast_print $1
+  echo "head:     $(ast:from $1 head)"
+  echo "value:    $(ast:from $1 value)"
+  echo "children: $(ast:from $1 children)"
+  ast:print $1
 }
 
-toggle_flag() {
+interactive:toggle-flag() {
   if ${!1}; then
     setvar "$1" false
   else
@@ -143,12 +143,12 @@ toggle_flag() {
   fi
 }
 
-read_powscript() {
-  IFS="" read -r -e -p "$(format_powscript_prompt "$1")" "$2"
+interactive:read-powscript() {
+  IFS="" read -r -e -p "$(interactive:format-powscript-prompt "$1")" "$2"
   InteractiveFileLineNumber=$((InteractiveFileLineNumber+1))
 }
 
-format_powscript_prompt() {
+interactive:format-powscript-prompt() {
   local state_name=$1 state
 
   case $state_name in

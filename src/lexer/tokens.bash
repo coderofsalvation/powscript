@@ -5,7 +5,7 @@ Tokens[length]=0
 
 TokenMark=0
 
-store_token() { #<<NOSHADOW>>
+token:store() { #<<NOSHADOW>>
   local idvar="$8"
   local index="${Tokens[length]}"
 
@@ -21,43 +21,43 @@ store_token() { #<<NOSHADOW>>
 
   setvar "$idvar" $index
 }
-noshadow store_token 7
+noshadow token:store 7
 
-from_token() {
+token:from() {
   setvar "$3" "${Tokens[${2}-${1}]}"
 }
 
-all_from_token() {
+token:all-from() {
   local __token="${@:$#}"
 
   while [ $# -gt 1 ]; do
     case "$1" in
       '-v'|'--value')
-        from_token $__token value "$2"
+        token:from $__token value "$2"
         shift 2
         ;;
       '-c'|'--class')
-        from_token $__token class "$2"
+        token:from $__token class "$2"
         shift 2
         ;;
       '-ls'|'--line-start')
-        from_token $__token linenumber_start "$2"
+        token:from $__token linenumber_start "$2"
         shift 2
         ;;
       '-le'|'--line-end')
-        from_token $__token linenumber_end "$2"
+        token:from $__token linenumber_end "$2"
         shift 2
         ;;
       '-g'|'--glued')
-        from_token $__token glued "$2"
+        token:from $__token glued "$2"
         shift 2
         ;;
       '-cs'|'--collumn-start')
-        from_token $__token collumn_start "$2"
+        token:from $__token collumn_start "$2"
         shift 2
         ;;
       '-ce'|'--collumn-end')
-        from_token $__token collumn_end "$2"
+        token:from $__token collumn_end "$2"
         shift 2
         ;;
       '-i'|'--id')
@@ -72,47 +72,47 @@ all_from_token() {
 }
 
 
-get_selected_token() {
-  setvar "$1" $((${Tokens[index]}))
+token:get-selected() {
+  setvar "$1" ${Tokens[index]}
 }
 
-clear_tokens() {
+token:clear() {
   Tokens[length]=$((${Tokens[index]}-$1))
   if [ ${Tokens[index]} -gt ${Tokens[length]} ]; then
     Tokens[index]=${Tokens[length]}
   fi
 }
 
-clear_all_tokens() {
+token:clear-all() {
   unset Tokens
   declare -gA Tokens
   Tokens[index]=0
   Tokens[length]=0
 }
 
-move_back_token_index() {
+token:move-back-index() {
   Tokens[index]=$((${Tokens[index]}-1))
 }
 
-forward_token() {
+token:forward() {
   Tokens[index]=$((${Tokens[index]}+1))
 }
 
-in_topmost_token() {
+token:in-topmost() {
   [ ${Tokens[index]} = ${Tokens[length]} ]
 }
 
 
-mark_token_position() {
+token:mark-position() {
   TokenMark=${Tokens[index]}
 }
 
-return_token_to_mark() {
+token:return-to-mark() {
   Tokens[index]=$TokenMark
 }
 
 
-find_token_by() { #<<NOSHADOW>>
+token:find-by() { #<<NOSHADOW>>
   local field="$1"
   local value="$2"
   local token="${Tokens[index]}"
@@ -120,7 +120,7 @@ find_token_by() { #<<NOSHADOW>>
   local tvalue
 
   while [ $token -ge 0 ]; do
-    from_token $token $field tvalue
+    token:from $token $field tvalue
     if [[ "$tvalue" =~ ^$value$ ]]; then
       setvar "$tokenvar" $token
       return
@@ -130,5 +130,5 @@ find_token_by() { #<<NOSHADOW>>
   done
   setvar "$tokenvar" '-1'
 }
-noshadow find_token_by 2
+noshadow token:find-by 2
 

@@ -10,7 +10,94 @@ if [ -f ./powscript ]; then
   trap '{ mv "$Dir/.powscript.backup" "$Dir/powscript"; exit; }' ERR
 fi
 
+
 printf '' >"$Dir/powscript"
+
+add() {
+  echo "$1" >>"$Dir/powscript"
+}
+
+if ${POWSCRIPT_CDEBUG-false}; then
+  LineNum=0
+  InsideSingleQuotes=false
+  InsideDoubleQuotes=false
+  MultiLine=false
+  NextMultiLine=false
+  Escape=false
+
+  add "$(cat "$Dir/.tools/debugger/preamble.bash")"
+
+  debuggable_line() {
+    ! $InsideSingleQuotes && ! $InsideDoubleQuotes && ! $MultiLine
+  }
+  non_empty_line() {
+    [ -n "$line" ] && [[ ! "$line" =~ ^[\ ]*'#'.*$ ]]
+  }
+  not_before_case() {
+    [[ ! "$line" =~ ^("'""$"?"("|[^'('])*')' ]] && [[ ! "$line" =~ esac$ ]]
+  }
+  at_function_start() {
+    [[ "$line" =~ ^.*'() {'$ ]]
+  }
+  at_function_exit() {
+    [ "$line" = '}' ] || [[ "$line" =~ ^[\ ]*exit([\ ]+[0-9]+)?$ ]]
+  }
+
+  flip() {
+    if ${!1}; then
+      printf -v "$1" false
+    else
+      printf -v "$1" true
+    fi
+  }
+
+  update_quote_count() {
+    local i
+    MultiLine=false
+    for i in $( seq 0 $((${#line}-1)) ); do
+      case ${line:$i:1} in
+        '\')
+          if ! $InsideSingleQuotes; then flip Escape; fi; ;;
+        '"')
+          if ! $Escape && ! $InsideSingleQuotes; then flip InsideDoubleQuotes; fi
+          Escape=false;;
+        "'")
+          if ! $Escape && ! $InsideDoubleQuotes; then flip InsideSingleQuotes; fi
+          Escape=false;;
+        *)
+          Escape=false;;
+      esac
+    done
+    if $Escape && ! $InsideSingleQuotes && ! $InsideDoubleQuotes; then MultiLine=true; Escape=false; fi
+  }
+
+  check_before_line() {
+    LineNum=$((LineNum+1))
+    if debuggable_line && at_function_exit; then
+      local ec="cdebug_err_code_$LineNum"
+      if [ "$line" = '}' ];  then add "$ec=\$?"; fi
+
+      add "powscript-cdebug:line '${line//\'/,}'"
+      add 'powscript-cdebug:function-end'
+
+      if [ "$line" = '}' ];  then add "return \$$ec"; fi
+
+    elif debuggable_line && non_empty_line && not_before_case; then
+      add "powscript-cdebug:line '${line//\'/\`}'"
+    fi
+    if at_function_start; then
+      add "POWSCRIPT_CDEBUG_FUNCTIONS[${line:0:-4}]=true"
+    fi
+    if non_empty_line; then update_quote_count; fi
+  }
+
+  check_after_line() {
+    if debuggable_line && non_empty_line && at_function_start; then
+      add "powscript-cdebug:function-start '${line:0:-4}' \"\$@\""
+    fi
+  }
+fi
+
 read_file() {
   local line file noshadow_mode=false noshadow_func=""
   export ShadowingOp=trimming_echo
@@ -19,7 +106,9 @@ read_file() {
     local line
     while IFS='' read -r line || [ -n "$line" ]; do
       line="${line% }"
-      echo "$line"
+      if ${POWSCRIPT_CDEBUG-false}; then check_before_line; fi
+      add "$line"
+      if ${POWSCRIPT_CDEBUG-false}; then check_after_line; fi
     done <<< "$1"
   }
   get_noshadow_func() {
@@ -27,12 +116,14 @@ read_file() {
   }
 
   while IFS='' read -r line || [ -n "$line" ]; do
+    if ${POWSCRIPT_CDEBUG-false} && ! $noshadow_mode; then check_before_line; fi
+
     if [[ "$line" =~ .*'#<<EXPAND>>' ]]; then
       file=${line//*source/}
       file=${file//#*/}
       file=${file// /}
       read_file "$Dir/src/$file"
-      echo "# FILE: $file">>"$Dir/powscript"
+      add "# FILE: $file"
 
     elif [[ "$line" =~ .*'#<<INCLUDE>>' ]]; then
       file=${line//*source/}
@@ -40,7 +131,7 @@ read_file() {
       file=${file// /}
       read_file "$(eval echo "$file")"
       source "$(eval echo "$file")"
-      echo "# FILE: $file">>"$Dir/powscript"
+      add "# FILE: $file"
 
     elif [[ "$line" =~ .*'#<<NOSHADOW>>' ]]; then
       noshadow_func="dummy()"$'\n'"{"
@@ -48,19 +139,22 @@ read_file() {
 
     elif $noshadow_mode; then
       if [[ "$line" =~ noshadow.* ]]; then
-        eval "$line" >>"$Dir/powscript"
+        eval "$line"
         noshadow_mode=false
       else
         noshadow_func="$noshadow_func"$'\n'"$line"
       fi
     else
-      echo "$line" >>"$Dir/powscript"
+      add "$line"
     fi
+
+    if ${POWSCRIPT_CDEBUG-false}; then check_after_line; fi
   done <"$1"
 }
 
 read_file "$Dir/src/powscript.bash"
 chmod +x "$Dir/powscript"
+
 
 if [ -f "$Dir/.powscript.backup" ]; then
   rm "$Dir/.powscript.backup"

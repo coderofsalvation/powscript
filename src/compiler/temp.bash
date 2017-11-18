@@ -1,26 +1,26 @@
 
 PowscriptTempDirectory="$(mktemp -d --suffix=".powscript")"
 
-powscript_temp_name() {
+powscript:temp-name() {
   local suffix=".powscript$1"
   setvar "$2" "$(mktemp -u --suffix="$suffix" -p "$PowscriptTempDirectory")"
 }
 
-powscript_make_temp() {
-  powscript_temp_name "$1" "$2"
+powscript:make-temp() {
+  powscript:temp-name "$1" "$2"
   touch "${!2}"
 }
 
-powscript_make_fifo() {
-  powscript_temp_name "$1" "$2"
+powscript:make-fifo() {
+  powscript:temp-name "$1" "$2"
   mkfifo "${!2}"
 }
 
-powscript_clean_up() {
+powscript:clean-up() {
   [ -d "$PowscriptTempDirectory" ] && rm -r "$PowscriptTempDirectory"
-  [ -n "$PowscriptGuestProcess"  ] && ps -p "$PowscriptGuestProcess" >/dev/null && kill STOP "$PowscriptGuestProcess"
+  [ -n "$PowscriptGuestProcess"  ] && ps -p "$PowscriptGuestProcess" >/dev/null && kill -QUIT "$PowscriptGuestProcess"
   exit 0
 }
 
-trap 'powscript_clean_up' ERR EXIT
+trap '{ POWSCRIPT_CDEBUG_STOP=false; powscript:clean-up; }' TERM INT QUIT ABRT EXIT
 
