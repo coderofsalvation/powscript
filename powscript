@@ -1,7 +1,5 @@
 #!/bin/bash
 
-set -E
-
 PowscriptSourceDirectory="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
 # powscript_source
@@ -535,6 +533,19 @@ __shadowing_token:parse() {
         fi
         ;;
 
+      equals)
+        case "$c" in
+          [~=])
+            token="=$c"
+            ;;
+          *)
+            move=false
+            ;;
+        esac
+        state_end=true
+        class=special
+        ;;
+
       *)
         # all other contexts follow similar parsing rules,
         # the only difference being what token ends it
@@ -570,10 +581,17 @@ __shadowing_token:parse() {
             ;;
 
           '=')
-            if [[ "$token" =~ [a-zA-Z_][a-zA-Z_0-9]* ]]; then
+            if [[ "$token" =~ ^[a-zA-Z_][a-zA-Z_0-9]*$ ]]; then
               belongs=false
               skip_term=false
               next_class=special
+            elif [[ "$token" =~ ^[=+*-\<\>\!/]$ ]]; then
+              token="$token$c"
+              class=special
+            elif [ -z "$token" ]; then
+              belongs=false
+              skip_term=false
+              next_state='equals'
             else
               token="$token$c"
             fi
@@ -2158,8 +2176,6 @@ ast:parse:list() {
 declare -gA PowscriptBackends
 
 bash:interactive() {
-  set -E
-
   local wfifo="$1"
   local rfifo="$2"
   local end="$3"
@@ -2174,7 +2190,7 @@ bash:interactive() {
     while [ -p '$wfifo' ]; do
       IFS= read -r $line <'$wfifo'
       if [ \"\$$line\" = '#<<END>>' ] ; then
-        2>&1 eval \"\$$code\" >>'$rfifo'
+        2>&1 eval \"\$$code\" >>'$rfifo' || true
         echo '#<<END.$end>>' >>'$rfifo'
         $code=
       else
@@ -2664,7 +2680,7 @@ interactive:start() {
         interactive:toggle-flag incomplete_flag
         ;;
       '.show '*)
-        show_ast "${code//.show /}"
+        interactive:show-ast "${code//.show /}"
         echo
         ;;
       *)

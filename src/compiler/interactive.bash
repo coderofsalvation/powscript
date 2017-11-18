@@ -47,7 +47,7 @@ interactive:start() {
         interactive:toggle-flag incomplete_flag
         ;;
       '.show '*)
-        show_ast "${code//.show /}"
+        interactive:show-ast "${code//.show /}"
         echo
         ;;
       *)

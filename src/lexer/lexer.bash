@@ -160,6 +160,19 @@ token:parse() { #<<NOSHADOW>>
         fi
         ;;
 
+      equals)
+        case "$c" in
+          [~=])
+            token="=$c"
+            ;;
+          *)
+            move=false
+            ;;
+        esac
+        state_end=true
+        class=special
+        ;;
+
       *)
         # all other contexts follow similar parsing rules,
         # the only difference being what token ends it
@@ -195,10 +208,17 @@ token:parse() { #<<NOSHADOW>>
             ;;
 
           '=')
-            if [[ "$token" =~ [a-zA-Z_][a-zA-Z_0-9]* ]]; then
+            if [[ "$token" =~ ^[a-zA-Z_][a-zA-Z_0-9]*$ ]]; then
               belongs=false
               skip_term=false
               next_class=special
+            elif [[ "$token" =~ ^[=+*-\<\>\!/]$ ]]; then
+              token="$token$c"
+              class=special
+            elif [ -z "$token" ]; then
+              belongs=false
+              skip_term=false
+              next_state='equals'
             else
               token="$token$c"
             fi

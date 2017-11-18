@@ -1,7 +1,5 @@
 #!/bin/bash
 
-set -E
-
 PowscriptSourceDirectory="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
 source "$PowscriptSourceDirectory/helper.bash" #<<INCLUDE>>
