@@ -133,8 +133,16 @@ token:parse() { #<<NOSHADOW>>
             next_state=curly-braces
             ;;
 
-          [0-9a-zA-Z_]) next_state=variable ;;
-          *)            class=name ;;
+          [0-9a-zA-Z_])
+            next_state=variable
+            ;;
+
+          @)
+            ;;
+
+          *)
+            class=name
+            ;;
         esac
         ;;
 
@@ -201,7 +209,7 @@ token:parse() { #<<NOSHADOW>>
             fi
             ;;
 
-          ':'|';'|',')
+          ':'|';'|','|'@')
             belongs=false
             skip_term=false
             next_class=special

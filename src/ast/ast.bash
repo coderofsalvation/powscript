@@ -149,12 +149,17 @@ ast:parse:expr() { #<<NOSHADOW>>
               ast:parse:command-substitution expression
               ;;
 
-            '(')
+            '('|'{')
+              local closer
+              case $value in
+                '(') closer=')'; ;;
+                '{') closer='}'; ;;
+              esac
               if [ $exprnum -gt 0 ]; then
                 root_head=determinable
               else
-                ast:push-state '('
-                ast:parse:list root
+                ast:push-state $value
+                ast:parse:list $closer root
                 root_head=list
                 ast:pop-state
               fi
@@ -176,9 +181,9 @@ ast:parse:expr() { #<<NOSHADOW>>
 
             '=')
               if [ $exprnum = 1 ] && ast:is $last_expression name; then
-                ast:parse:expr expression
-                ast:push-child $root $expression
-                root_head=assign
+                ast:parse:assign $root
+                exprnum=2
+                ast:from $root head root_head
               else
                 ast:make expression string "="
               fi
@@ -209,8 +214,13 @@ ast:parse:expr() { #<<NOSHADOW>>
                   expression=$right_bracket
                   exprnum=3
                 fi
+              elif [ $exprnum -gt 0 ]; then
+                root=determinable
               else
-                ast:make expression string "["
+                ast:push-state '['
+                ast:parse:list ']' root
+                root_head=list
+                ast:pop-state
               fi
               ;;
 
@@ -302,10 +312,31 @@ ast:parse:specific-expr() { #<<NOSHADOW>>
 noshadow ast:parse:specific-expr 1
 
 
+ast:parse:assign() {
+  local expr="$1"
+  local assigned_value head
+  local value class
+
+  token:peek -v value -c class
+  if [ "$class" = special ]; then
+    case "$value" in
+      '('|'[') head=list-assign ;;
+      '{')     head=associative-assign ;;
+      *)       head=assign ;;
+    esac
+  else
+    head=assign
+  fi
+  ast:set $expr head $head
+  ast:parse:expr assigned_value
+  ast:push-child $expr $assigned_value
+}
+
+
 ast:parse:substitution() { #<<NOSHADOW>>
   local subst out="$1"
   local expr value head varname index lb rb aft
-  local cat_children cat_array
+  local cat_children cat_array dollar
 
   ast:parse:expr-and-set -e expr -v value -h head -@ varname lb index rb aft
 
@@ -314,20 +345,27 @@ ast:parse:substitution() { #<<NOSHADOW>>
       ast:make subst simple-substitution "$value"
       ;;
     cat)
-       if ast:is $lb name '['; then
-         ast:from $varname value value
-         ast:make subst indexing-substitution "$value" $index
-         if [ -n "$aft" ]; then
-           ast:from $expr children cat_children
-           cat_array=( $cat_children )
-           ast:make subst cat $subst "${cat_array[@:4]}"
-         fi
-       else
-         subst=$expr
-       fi
+      if ast:is $varname name; then
+        if ast:is $lb name '['; then
+          ast:from $varname value value
+          ast:make subst indexing-substitution "$value" $index
+          if [ -n "$aft" ]; then
+            ast:from $expr children cat_children
+            cat_array=( $cat_children )
+            ast:make subst cat $subst "${cat_array[@:4]}"
+          fi
+        else
+          ast:set $varname head simple-substitution
+          subst=$expr
+        fi
+      else
+        ast:make dollar name '$'
+        ast:unshift-child $expr $dollar
+        subst=$expr
+      fi
       ;;
     *)
-      ast:error "unimplemented"
+      ast:error "unimplemented variable substitution"
       ;;
   esac
   setvar "$out" $subst
@@ -336,20 +374,12 @@ noshadow ast:parse:substitution
 
 ast:parse:curly-substitution() { #<<NOSHADOW>>
   local out="$1"
-  local subst head
+  local subst
 
   ast:push-state '{'
-  ast:parse:expr-and-set -e subst -h head
-
-  case "$head" in
-    *substitution)
-      token:require special '}'
-      ast:pop-state
-      ;;
-    *)
-      ast:error "unimplemented"
-      ;;
-  esac
+  ast:parse:substitution subst
+  token:require special '}'
+  ast:pop-state
 
   setvar "$out" $subst
 }
@@ -733,7 +763,7 @@ noshadow ast:parse:block 1
 
 
 ast:parse:list() { #<<NOSHADOW>>
-  local out="$1"
+  local closer="$1" out="$2"
   local expr child open=true
   local class value
 
@@ -742,7 +772,7 @@ ast:parse:list() { #<<NOSHADOW>>
   while $open; do
     token:peek -v value -c class
     case "$class $value" in
-      'special )')
+      "special $closer")
         open=false
         token:skip
         ;;
@@ -765,5 +795,5 @@ ast:parse:list() { #<<NOSHADOW>>
   done
   setvar "$out" $expr
 }
-noshadow ast:parse:list
+noshadow ast:parse:list 1
 

@@ -39,6 +39,31 @@ bash:compile() { #<<NOSHADOW>>
       setvar "$out" "$name[$index]=$value"
       ;;
 
+    list-assign)
+      local name_ast list_ast name list
+
+      ast:children $expr name_ast list_ast
+
+      sh:compile   $name_ast name
+      bash:compile $list_ast list
+
+      setvar "$out" "$name=$list"
+      ;;
+
+    associative-assign)
+      local name_ast name value_ast value_children
+
+      ast:children $expr name_ast value_ast
+      ast:from $value_ast children value_children
+
+      sh:compile $name_ast name
+
+      if [ -n "$value_children" ]; then
+        >&2 echo "warning: Associative arrays with elements aren't implemented yet. Ignoring elements."
+      fi
+      setvar "$out" "declare -A $name"
+      ;;
+
     list)
       local expr_children child_ast child result
 

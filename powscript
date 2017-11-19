@@ -506,8 +506,16 @@ __shadowing_token:parse() {
             next_state=curly-braces
             ;;
 
-          [0-9a-zA-Z_]) next_state=variable ;;
-          *)            class=name ;;
+          [0-9a-zA-Z_])
+            next_state=variable
+            ;;
+
+          @)
+            ;;
+
+          *)
+            class=name
+            ;;
         esac
         ;;
 
@@ -574,7 +582,7 @@ __shadowing_token:parse() {
             fi
             ;;
 
-          ':'|';'|',')
+          ':'|';'|','|'@')
             belongs=false
             skip_term=false
             next_class=special
@@ -1405,12 +1413,17 @@ __shadowing_ast:parse:expr() {
               ast:parse:command-substitution expression
               ;;
 
-            '(')
+            '('|'{')
+              local closer
+              case $value in
+                '(') closer=')'; ;;
+                '{') closer='}'; ;;
+              esac
               if [ $exprnum -gt 0 ]; then
                 root_head=determinable
               else
-                ast:push-state '('
-                ast:parse:list root
+                ast:push-state $value
+                ast:parse:list $closer root
                 root_head=list
                 ast:pop-state
               fi
@@ -1432,9 +1445,9 @@ __shadowing_ast:parse:expr() {
 
             '=')
               if [ $exprnum = 1 ] && ast:is $last_expression name; then
-                ast:parse:expr expression
-                ast:push-child $root $expression
-                root_head=assign
+                ast:parse:assign $root
+                exprnum=2
+                ast:from $root head root_head
               else
                 ast:make expression string "="
               fi
@@ -1465,8 +1478,13 @@ __shadowing_ast:parse:expr() {
                   expression=$right_bracket
                   exprnum=3
                 fi
+              elif [ $exprnum -gt 0 ]; then
+                root=determinable
               else
-                ast:make expression string "["
+                ast:push-state '['
+                ast:parse:list ']' root
+                root_head=list
+                ast:pop-state
               fi
               ;;
 
@@ -1577,11 +1595,32 @@ ast:parse:specific-expr() {
 
 
 
+ast:parse:assign() {
+  local expr="$1"
+  local assigned_value head
+  local value class
+
+  token:peek -v value -c class
+  if [ "$class" = special ]; then
+    case "$value" in
+      '('|'[') head=list-assign ;;
+      '{')     head=associative-assign ;;
+      *)       head=assign ;;
+    esac
+  else
+    head=assign
+  fi
+  ast:set $expr head $head
+  ast:parse:expr assigned_value
+  ast:push-child $expr $assigned_value
+}
+
+
 
 __shadowing_ast:parse:substitution() {
   local subst out="$1"
   local expr value head varname index lb rb aft
-  local cat_children cat_array
+  local cat_children cat_array dollar
 
   ast:parse:expr-and-set -e expr -v value -h head -@ varname lb index rb aft
 
@@ -1590,20 +1629,27 @@ __shadowing_ast:parse:substitution() {
       ast:make subst simple-substitution "$value"
       ;;
     cat)
-       if ast:is $lb name '['; then
-         ast:from $varname value value
-         ast:make subst indexing-substitution "$value" $index
-         if [ -n "$aft" ]; then
-           ast:from $expr children cat_children
-           cat_array=( $cat_children )
-           ast:make subst cat $subst "${cat_array[@:4]}"
-         fi
-       else
-         subst=$expr
-       fi
+      if ast:is $varname name; then
+        if ast:is $lb name '['; then
+          ast:from $varname value value
+          ast:make subst indexing-substitution "$value" $index
+          if [ -n "$aft" ]; then
+            ast:from $expr children cat_children
+            cat_array=( $cat_children )
+            ast:make subst cat $subst "${cat_array[@:4]}"
+          fi
+        else
+          ast:set $varname head simple-substitution
+          subst=$expr
+        fi
+      else
+        ast:make dollar name '$'
+        ast:unshift-child $expr $dollar
+        subst=$expr
+      fi
       ;;
     *)
-      ast:error "unimplemented"
+      ast:error "unimplemented variable substitution"
       ;;
   esac
   setvar "$out" $subst
@@ -1622,20 +1668,12 @@ ast:parse:substitution() {
 
 __shadowing_ast:parse:curly-substitution() {
   local out="$1"
-  local subst head
+  local subst
 
   ast:push-state '{'
-  ast:parse:expr-and-set -e subst -h head
-
-  case "$head" in
-    *substitution)
-      token:require special '}'
-      ast:pop-state
-      ;;
-    *)
-      ast:error "unimplemented"
-      ;;
-  esac
+  ast:parse:substitution subst
+  token:require special '}'
+  ast:pop-state
 
   setvar "$out" $subst
 }
@@ -2129,7 +2167,7 @@ ast:parse:block() {
 
 
 __shadowing_ast:parse:list() {
-  local out="$1"
+  local closer="$1" out="$2"
   local expr child open=true
   local class value
 
@@ -2138,7 +2176,7 @@ __shadowing_ast:parse:list() {
   while $open; do
     token:peek -v value -c class
     case "$class $value" in
-      'special )')
+      "special $closer")
         open=false
         token:skip
         ;;
@@ -2165,10 +2203,10 @@ __shadowing_ast:parse:list() {
 ast:parse:list() {
   if [ -z ${__noshadow_24_+x} ]; then
     local __noshadow_24_
-    local __noshadow_24_1
+    local __noshadow_24_2
   fi
-  __shadowing_ast:parse:list  __noshadow_24_1
-  setvar "$1" "$__noshadow_24_1"
+  __shadowing_ast:parse:list "$1"  __noshadow_24_2
+  setvar "$2" "$__noshadow_24_2"
 }
 
 
@@ -2240,6 +2278,31 @@ __shadowing_bash:compile() {
       bash:compile ${expr_children[2]} value
 
       setvar "$out" "$name[$index]=$value"
+      ;;
+
+    list-assign)
+      local name_ast list_ast name list
+
+      ast:children $expr name_ast list_ast
+
+      sh:compile   $name_ast name
+      bash:compile $list_ast list
+
+      setvar "$out" "$name=$list"
+      ;;
+
+    associative-assign)
+      local name_ast name value_ast value_children
+
+      ast:children $expr name_ast value_ast
+      ast:from $value_ast children value_children
+
+      sh:compile $name_ast name
+
+      if [ -n "$value_children" ]; then
+        >&2 echo "warning: Associative arrays with elements aren't implemented yet. Ignoring elements."
+      fi
+      setvar "$out" "declare -A $name"
       ;;
 
     list)
@@ -2748,6 +2811,9 @@ interactive:start() {
         interactive:show-ast "${code//.show /}"
         echo
         ;;
+      '.tokens '*)
+        interactive:show-tokens "${code//.tokens /}"
+        ;;
       *)
         state=none
         while [ ! "$state" = top ]; do
@@ -2841,6 +2907,20 @@ interactive:show-ast() {
   echo "value:    $(ast:from $1 value)"
   echo "children: $(ast:from $1 children)"
   ast:print $1
+}
+
+interactive:show-tokens() {
+  local value class
+  {
+    interactive:clear-compilation
+    stream:init
+    while ! stream:end; do
+      token:get -v value -c class
+      echo "-----------------"
+      echo "$value :: $class"
+    done
+  } <<< "$1"
+  echo
 }
 
 interactive:toggle-flag() {

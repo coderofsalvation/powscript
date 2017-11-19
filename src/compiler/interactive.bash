@@ -50,6 +50,9 @@ interactive:start() {
         interactive:show-ast "${code//.show /}"
         echo
         ;;
+      '.tokens '*)
+        interactive:show-tokens "${code//.tokens /}"
+        ;;
       *)
         state=none
         while [ ! "$state" = top ]; do
@@ -133,6 +136,20 @@ interactive:show-ast() {
   echo "value:    $(ast:from $1 value)"
   echo "children: $(ast:from $1 children)"
   ast:print $1
+}
+
+interactive:show-tokens() {
+  local value class
+  {
+    interactive:clear-compilation
+    stream:init
+    while ! stream:end; do
+      token:get -v value -c class
+      echo "-----------------"
+      echo "$value :: $class"
+    done
+  } <<< "$1"
+  echo
 }
 
 interactive:toggle-flag() {
