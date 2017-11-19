@@ -27,6 +27,7 @@ powscript:parse-options() {
         case "$1" in
           bash|sh)
             PowscriptBackend="$1"
+            shift
             ;;
           *)
             >&2 echo "Invalid powscript backend $1"
