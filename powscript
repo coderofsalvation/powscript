@@ -2556,8 +2556,10 @@ __shadowing_bash:compile() {
           ;;
       esac
       ;;
+    newline|eof|'')
+      ;;
     *)
-      >&2 echo "unimplemented: $expr_head"
+      >&2 echo "unimplemented: '$expr_head'"
       ;;
   esac
 }
@@ -2879,8 +2881,10 @@ __shadowing_sh:compile() {
           ;;
       esac
       ;;
+    newline|eof|'')
+      ;;
     *)
-      >&2 echo "unimplemented: $expr_head"
+      >&2 echo "unimplemented: '$expr_head'"
       ;;
   esac
 }

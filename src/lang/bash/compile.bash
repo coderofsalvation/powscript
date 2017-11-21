@@ -123,8 +123,10 @@ bash:compile() { #<<NOSHADOW>>
           ;;
       esac
       ;;
+    newline|eof|'')
+      ;;
     *)
-      >&2 echo "unimplemented: $expr_head"
+      >&2 echo "unimplemented: '$expr_head'"
       ;;
   esac
 }
