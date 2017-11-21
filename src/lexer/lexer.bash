@@ -182,7 +182,7 @@ token:parse() { #<<NOSHADOW>>
             ;;
         esac
         state_end=true
-        class=name
+        class=special
         ;;
 
       *)

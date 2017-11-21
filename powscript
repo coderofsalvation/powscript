@@ -555,7 +555,7 @@ __shadowing_token:parse() {
             ;;
         esac
         state_end=true
-        class=name
+        class=special
         ;;
 
       *)
@@ -991,7 +991,7 @@ ast:indentation-layers() {
   setvar "$1" ${IndentStack[index]}
 }
 
-# FILE: ast/ast_indent.bash
+# FILE: ast/indent.bash
 declare -gA AstStates
 
 AstStates[index]=0
@@ -1024,7 +1024,7 @@ ast:clear-states() {
   AstStates[index]=0
   AstStates[0]=top
 }
-# FILE: ast/ast_states.bash
+# FILE: ast/states.bash
 
 
 __shadowing_ast:new() {
@@ -1333,47 +1333,17 @@ ast:print-child() {
   esac
 }
 
-# FILE: ast/ast_heap.bash
-
-
-# ast:parse:try
+# FILE: ast/heap.bash
+# ast:error $message
 #
-# try parsing an ast expression from the input,
-# printing 'top' on success or the last
-# parser state on failure.
-
-ast:parse:try() {
-  (
-    local ast
-    POWSCRIPT_INCOMPLETE_STATE=
-
-    trap '
-      if [ -n "$POWSCRIPT_INCOMPLETE_STATE" ]; then
-        echo "$POWSCRIPT_INCOMPLETE_STATE"
-      else
-        ast:last-state
-      fi
-      exit' EXIT
-
-    POWSCRIPT_ALLOW_INCOMPLETE=true ast:parse ast
-    exit
-  )
-}
-
-# ast:parse $out
+# Informs an AST parsing error and exits.
 #
-# parse an ast expression form the input,
-# storing it in $out.
-
-ast:parse() {
-  ast:parse:linestart "$1"
-}
 
 ast:error() {
   local message="$1"
 
   if ${POWSCRIPT_ALLOW_INCOMPLETE-false}; then
-    POWSCRIPT_INCOMPLETE_STATE="error: $message"
+    POWSCRIPT_INCOMPLETE_STATE="AST parse error: $message"
     if ${POWSCRIPT_SHOW_INCOMPLETE_MESSAGE-false}; then
       >&2 echo "$message"
     fi
@@ -1383,96 +1353,265 @@ ast:error() {
   exit
 }
 
-# ast:parse:linestart $out
+
+# ast:parse:require-newline
 #
-# test that there is no indentation before proceeding
-# to parse the expression.
+# Parses next ast expression, errors if it's not
+# a newline, otherwise consume it. If it's the
+# end-of-file and we are in interactive mode,
+# ignore the error.
+#
 
-
-__shadowing_ast:parse:linestart() {
-  local value class line
-
-  token:get -v value -c class -ls line
-
-  if [ "$class" = whitespace ]; then
-    ast:error "indentation error at line $line, unexpected indentation of $value."
-  else
-    token:backtrack
-    ast:parse:top "$1"
-  fi
+ast:parse:require-newline() {
+  local nl nl_head
+  ast:parse:expr nl
+  ast:from $nl head nl_head
+  case $nl_head in
+    newline)
+      ;;
+    eof)
+      if ! ${POWSCRIPT_ALLOW_INCOMPLETE-false}; then
+        ast:error "unexpected end of file after $1"
+      fi
+      ;;
+    *)
+      ast:error "trailing expression after ${1}: $(ast:print $nl) :: $(ast:from $nl head)"
+      ;;
+  esac
 }
 
-ast:parse:linestart() {
+
+# ast:is-flag $expr
+#
+# Check if the given AST $expr is of the form -name
+#
+
+ast:is-flag() {
+  local expr="$1" minus name extra
+
+  if ast:is $expr cat; then
+    ast:children $expr minus name extra
+    if ast:is $minus name '-' && ast:is $name name && [ -z "$extra" ]; then
+      return 0
+    else
+      return 1
+    fi
+  else
+    return 1
+  fi
+}
+# FILE: ast/helper.bash
+# ast:parse:assign $expr
+#
+# Parse an AST representing the attribution
+# of a value to a name.
+# Can be of the type:
+#  - var=single-value
+#  - var=(...)
+#  - var=[...]
+#  - var={}
+# The given $expr is an undefined AST
+# with the var name as a child, which
+# will be transformed into the assign.
+#
+
+ast:parse:assign() {
+  local expr="$1"
+  local assigned_value head
+  local value class
+
+  token:peek -v value -c class
+  if [ "$class" = special ]; then
+    case "$value" in
+      '('|'[') head=list-assign ;;
+      '{')     head=associative-assign ;;
+      *)       head=assign ;;
+    esac
+  else
+    head=assign
+  fi
+  ast:set $expr head $head
+  ast:parse:expr assigned_value
+  ast:push-child $expr $assigned_value
+}
+
+
+# ast:parse:math-assign $expr $name $op
+#
+# Parse an math AST to be attributed to a
+# variable.
+#
+
+ast:parse:math-assign() {
+  local expr="$1" name="$2" op="$3"
+  local name_value right_operand math_expr assigned name_subst
+
+  ast:from $name value name_value
+
+  ast:push-state math
+  ast:parse:expr right_operand
+  ast:pop-state
+
+  ast:make name_subst simple-substitution "$name_value"
+  ast:make math_expr math "$op" $name_subst $right_operand
+  ast:make assigned  math-assigned "" $math_expr
+
+  ast:set $expr head assign
+  ast:set $expr children "$name $assigned"
+}
+
+
+# ast:parse:push-assign $expr $name
+#
+# Parse an AST to be pushed at the
+# end of an array.
+#
+
+ast:parse:push-assign() {
+  local expr="$1" name="$2"
+  local name_value index value
+
+  ast:from $name value name_value
+
+  ast:make index array-length "$name_value"
+
+  ast:parse:expr value
+  ast:set $expr children "$name $index $value"
+  ast:set $expr head indexing-assign
+}
+
+# FILE: ast/assign.bash
+# ast:parse:substitution $out
+#
+# Parse expressions of the form $variable or $array[index]
+#
+
+
+__shadowing_ast:parse:substitution() {
+  local subst out="$1"
+  local expr value head varname index lb rb aft
+  local cat_children cat_array dollar
+
+  ast:parse:expr expr
+  ast:all-from "$expr" -v value -h head -@ varname lb index rb aft
+
+  case "$head" in
+    name)
+      ast:make subst simple-substitution "$value"
+      ;;
+    cat)
+      if ast:is $varname name; then
+        if ast:is $lb name '['; then
+          ast:from $varname value value
+          ast:make subst indexing-substitution "$value" $index
+          if [ -n "$aft" ]; then
+            if ast:state-is math; then
+              ast:error "invalid math expression: $(ast:print $expr)"
+            fi
+            ast:from $expr children cat_children
+            cat_array=( $cat_children )
+            ast:make subst cat $subst "${cat_array[@:4]}"
+          fi
+        else
+          ast:set $varname head simple-substitution
+          subst=$expr
+        fi
+      else
+        ast:make dollar name '$'
+        ast:unshift-child $expr $dollar
+        subst=$expr
+      fi
+      ;;
+    *)
+      ast:error "unimplemented variable substitution"
+      ;;
+  esac
+  setvar "$out" $subst
+}
+
+ast:parse:substitution() {
   if [ -z ${__noshadow_8_+x} ]; then
     local __noshadow_8_
     local __noshadow_8_1
   fi
-  __shadowing_ast:parse:linestart  __noshadow_8_1
+  __shadowing_ast:parse:substitution  __noshadow_8_1
   setvar "$1" "$__noshadow_8_1"
 }
 
 
 
-# ast:parse:top $out
+# ast:parse:curly-substitution
 #
-# analyze first expression and dispatch to the
-# appropriate function based on it.
+# Parse expressions of the form ${variable} or ${array[index]}
+#
 
 
-__shadowing_ast:parse:top() {
+__shadowing_ast:parse:curly-substitution() {
   local out="$1"
-  local expr expr_head
+  local subst
 
-  ast:parse:expr expr
-  ast:from $expr head expr_head
+  ast:push-state '{'
+  ast:parse:substitution subst
+  token:require special '}'
+  ast:pop-state
 
-  case $expr_head in
-    name)
-      local expr_value
-      ast:from $expr value expr_value
-      case "$expr_value" in
-        'if')      ast:parse:if 'if' "$out" ;;
-        'for')     ast:parse:for     "$out" ;;
-        'math')    ast:parse:math    "$out" ;;
-        'while')   ast:parse:while   "$out" ;;
-        'switch')  ast:parse:switch  "$out" ;;
-        'require') ast:parse:require "$out" ;;
-        *)
-          if token:next-is special '('; then
-            ast:parse:function-definition $expr "$out"
-          else
-            ast:parse:commandcall $expr "$out"
-          fi
-          ;;
-      esac
-      ;;
-    assign|indexing-assign)
-      setvar "$out" $expr
-      ;;
-    newline)
-      setvar "$out" -1
-      ;;
-    *)
-      ast:parse:commandcall $expr "$out"
-      ;;
-  esac
+  setvar "$out" $subst
 }
 
-ast:parse:top() {
+ast:parse:curly-substitution() {
   if [ -z ${__noshadow_9_+x} ]; then
     local __noshadow_9_
     local __noshadow_9_1
   fi
-  __shadowing_ast:parse:top  __noshadow_9_1
+  __shadowing_ast:parse:curly-substitution  __noshadow_9_1
   setvar "$1" "$__noshadow_9_1"
 }
 
 
 
+# ast:parse:command-substitution
+#
+# Parse expressions of the form $(command ...) or $(math <math expression>)
+#
+
+
+__shadowing_ast:parse:command-substitution() {
+  local out="$1"
+  local cmd call
+
+  ast:make "$out" command-substitution ''
+
+  ast:push-state '('
+
+  ast:parse:expr cmd
+  if ast:is $cmd name math; then
+    ast:parse:math call
+    token:require special ')'
+  else
+    ast:parse:commandcall $cmd call
+  fi
+  ast:pop-state
+
+  ast:push-child "${!out}" $call
+}
+
+ast:parse:command-substitution() {
+  if [ -z ${__noshadow_10_+x} ]; then
+    local __noshadow_10_
+    local __noshadow_10_1
+  fi
+  __shadowing_ast:parse:command-substitution  __noshadow_10_1
+  setvar "$1" "$__noshadow_10_1"
+}
+
+
+# FILE: ast/substitutions.bash
+
 # ast:parse:expr $out
 #
-# basic expression, which can be a name,
-# string, substitution or concatenation.
+# Basic expression, which can be a name, string,
+# list, assign, substitution or concatenation.
+#
 
 
 __shadowing_ast:parse:expr() {
@@ -1558,6 +1697,7 @@ __shadowing_ast:parse:expr() {
                 exprnum=2
                 ast:parse:assign $root
                 ast:from $root head root_head
+
               elif [ $exprnum = 2 ] && ast:is $last_expression name; then
                 local name op
                 ast:children $root name op
@@ -1679,15 +1819,22 @@ __shadowing_ast:parse:expr() {
 }
 
 ast:parse:expr() {
-  if [ -z ${__noshadow_10_+x} ]; then
-    local __noshadow_10_
-    local __noshadow_10_1
+  if [ -z ${__noshadow_11_+x} ]; then
+    local __noshadow_11_
+    local __noshadow_11_1
   fi
-  __shadowing_ast:parse:expr  __noshadow_10_1
-  setvar "$1" "$__noshadow_10_1"
+  __shadowing_ast:parse:expr  __noshadow_11_1
+  setvar "$1" "$__noshadow_11_1"
 }
 
 
+
+# ast:parse:specific-expr $required $out
+#
+# Parse an expression, errors out if it's
+# not the required one, otherwise put it
+# in $out.
+#
 
 
 __shadowing_ast:parse:specific-expr() {
@@ -1703,182 +1850,183 @@ __shadowing_ast:parse:specific-expr() {
 }
 
 ast:parse:specific-expr() {
-  if [ -z ${__noshadow_11_+x} ]; then
-    local __noshadow_11_
-    local __noshadow_11_2
-  fi
-  __shadowing_ast:parse:specific-expr "$1"  __noshadow_11_2
-  setvar "$2" "$__noshadow_11_2"
-}
-
-
-
-ast:parse:assign() {
-  local expr="$1"
-  local assigned_value head
-  local value class
-
-  token:peek -v value -c class
-  if [ "$class" = special ]; then
-    case "$value" in
-      '('|'[') head=list-assign ;;
-      '{')     head=associative-assign ;;
-      *)       head=assign ;;
-    esac
-  else
-    head=assign
-  fi
-  ast:set $expr head $head
-  ast:parse:expr assigned_value
-  ast:push-child $expr $assigned_value
-}
-
-ast:parse:math-assign() {
-  local expr="$1" name="$2" op="$3"
-  local name_value right_operand math_expr assigned name_subst
-
-  ast:from $name value name_value
-
-  ast:push-state math
-  ast:parse:expr right_operand
-  ast:pop-state
-
-  ast:make name_subst simple-substitution "$name_value"
-  ast:make math_expr math "$op" $name_subst $right_operand
-  ast:make assigned  math-assigned "" $math_expr
-
-  ast:set $expr head assign
-  ast:set $expr children "$name $assigned"
-}
-
-ast:parse:push-assign() {
-  local expr="$1" name="$2"
-  local name_value index value
-
-  ast:from $name value name_value
-
-  ast:make index array-length "$name_value"
-
-  ast:parse:expr value
-  ast:set $expr children "$name $index $value"
-  ast:set $expr head indexing-assign
-}
-
-
-__shadowing_ast:parse:substitution() {
-  local subst out="$1"
-  local expr value head varname index lb rb aft
-  local cat_children cat_array dollar
-
-  ast:parse:expr expr
-  ast:all-from "$expr" -v value -h head -@ varname lb index rb aft
-
-  case "$head" in
-    name)
-      ast:make subst simple-substitution "$value"
-      ;;
-    cat)
-      if ast:is $varname name; then
-        if ast:is $lb name '['; then
-          ast:from $varname value value
-          ast:make subst indexing-substitution "$value" $index
-          if [ -n "$aft" ]; then
-            if ast:state-is math; then
-              ast:error "invalid math expression: $(ast:print $expr)"
-            fi
-            ast:from $expr children cat_children
-            cat_array=( $cat_children )
-            ast:make subst cat $subst "${cat_array[@:4]}"
-          fi
-        else
-          ast:set $varname head simple-substitution
-          subst=$expr
-        fi
-      else
-        ast:make dollar name '$'
-        ast:unshift-child $expr $dollar
-        subst=$expr
-      fi
-      ;;
-    *)
-      ast:error "unimplemented variable substitution"
-      ;;
-  esac
-  setvar "$out" $subst
-}
-
-ast:parse:substitution() {
   if [ -z ${__noshadow_12_+x} ]; then
     local __noshadow_12_
-    local __noshadow_12_1
+    local __noshadow_12_2
   fi
-  __shadowing_ast:parse:substitution  __noshadow_12_1
-  setvar "$1" "$__noshadow_12_1"
+  __shadowing_ast:parse:specific-expr "$1"  __noshadow_12_2
+  setvar "$2" "$__noshadow_12_2"
 }
 
 
 
+# ast:parse:list $closer $out
+#
+# Parses an AST of the form (...), [...] or {...}
+#
 
-__shadowing_ast:parse:curly-substitution() {
-  local out="$1"
-  local subst
 
-  ast:push-state '{'
-  ast:parse:substitution subst
-  token:require special '}'
-  ast:pop-state
+__shadowing_ast:parse:list() {
+  local closer="$1" out="$2"
+  local expr child open=true
+  local class value
 
-  setvar "$out" $subst
+  ast:make expr list
+
+  while $open; do
+    token:peek -v value -c class
+    case "$class $value" in
+      "special $closer")
+        open=false
+        token:skip
+        ;;
+      'newline '*)
+        token:skip
+        ;;
+      'eof '*)
+        if ${POWSCRIPT_ALLOW_INCOMPLETE-false}; then
+          POWSCRIPT_INCOMPLETE_STATE="$(ast:last-state)"
+          exit
+        else
+          ast:error "end of file while parsing list"
+        fi
+        ;;
+      *)
+        ast:parse:expr child
+        ast:push-child $expr $child
+        ;;
+    esac
+  done
+  setvar "$out" $expr
 }
 
-ast:parse:curly-substitution() {
+ast:parse:list() {
   if [ -z ${__noshadow_13_+x} ]; then
     local __noshadow_13_
-    local __noshadow_13_1
+    local __noshadow_13_2
   fi
-  __shadowing_ast:parse:curly-substitution  __noshadow_13_1
-  setvar "$1" "$__noshadow_13_1"
+  __shadowing_ast:parse:list "$1"  __noshadow_13_2
+  setvar "$2" "$__noshadow_13_2"
 }
 
 
+# FILE: ast/expressions.bash
+# ast:parse:math $out
+#
+# Entry point for parsing a math expression.
+#
 
 
-__shadowing_ast:parse:command-substitution() {
+__shadowing_ast:parse:math() {
   local out="$1"
-  local cmd call
+  local expr math_expr
 
-  ast:make "$out" command-substitution ''
 
-  ast:push-state '('
-
-  ast:parse:expr cmd
-  if ast:is $cmd name math; then
-    ast:parse:math call
-    token:require special ')'
-  else
-    ast:parse:commandcall $cmd call
-  fi
+  ast:push-state math
+  ast:parse:expr expr
   ast:pop-state
 
-  ast:push-child "${!out}" $call
+  ast:parse:validate-math-operand $expr
+
+  ast:make math_expr math-top '' $expr
+  setvar "$out" $math_expr
 }
 
-ast:parse:command-substitution() {
+ast:parse:math() {
   if [ -z ${__noshadow_14_+x} ]; then
     local __noshadow_14_
     local __noshadow_14_1
   fi
-  __shadowing_ast:parse:command-substitution  __noshadow_14_1
+  __shadowing_ast:parse:math  __noshadow_14_1
   setvar "$1" "$__noshadow_14_1"
 }
 
 
 
-# ast:parse:commandcall $command $out
+# ast:parse:math-unary $expr $op
 #
-# parse a command call, consisting of
-# a command and a series of space
-# separated arguments
+# Parse math expressions of the forms -expr or +expr.
+#
+
+ast:parse:math-unary() {
+  local expr="$1" op="$2"
+  local operand value head
+
+  ast:parse:expr operand
+  ast:parse:validate-math-operand $operand
+  ast:push-child $expr $operand
+
+  ast:set $expr value "$op"
+  ast:set $expr head  math
+}
+
+# ast:parse:math-binary $expr $left $op
+#
+# Parse math expressions of the form expr op expr.
+#
+
+ast:parse:math-binary() {
+  local expr="$1" left="$2" op="$3"
+  local right
+
+  ast:parse:expr right
+  ast:parse:validate-math-operand $left
+  ast:parse:validate-math-operand $right
+  ast:push-child $expr $right
+
+  ast:set $expr value "$op"
+  ast:set $expr head  math
+}
+
+
+# ast:parse:validate-math-operand $operand
+#
+# Checks that the operand is a valid math expression, which can be
+#  - var, becoming $var
+#  - $var, $(command ...), $(math expr), expr
+#  - (expr), [expr], {expr}
+# Anything else is an error.
+#
+
+ast:parse:validate-math-operand() {
+  local operand="$1"
+
+  ast:all-from "$operand" -v value -h head
+
+  case "$head" in
+    name)
+      if [[ "$value" =~ ([a-zA-Z_][a-zA-Z_0-9]*|@) ]]; then
+        ast:set $operand head simple-substitution
+      elif [[ "$value" =~ [0-9]+ ]]; then
+        true
+      else
+        ast:error "invalid variable name '$value' in math expression"
+      fi
+      ;;
+    *substitution|math)
+      ;;
+    list)
+      local element elements count=0
+      ast:from $operand children elements
+      for element in $elements; do
+        ast:parse:validate-math-operand $element
+        count=$((count+1))
+      done
+      if [ ! $count = 1 ]; then
+        ast:error "invalid math expression $(ast:print operand): trailling expressions in parentheses"
+      fi
+      ;;
+    *)
+      ast:error "not a valid math expression: $(ast:print operand) :: $head"
+      ;;
+  esac
+}
+
+# FILE: ast/math.bash
+# ast:parse:commandcall $command_ast $out
+#
+# parse an AST of the form: command expr1 expr2...
+#
 
 
 __shadowing_ast:parse:commandcall() {
@@ -1901,6 +2049,12 @@ ast:parse:commandcall() {
   setvar "$2" "$__noshadow_15_2"
 }
 
+
+
+# ast:parse:arguments $expr
+#
+# Loop that parses the arguments of a commandcall.
+#
 
 ast:parse:arguments() {
   local expr="$1"
@@ -1961,436 +2115,15 @@ ast:parse:arguments() {
   done
 }
 
-ast:parse:math-unary() {
-  local expr="$1" op="$2"
-  local operand value head
-
-  ast:parse:expr operand
-  ast:parse:validate-math-operand $operand
-  ast:push-child $expr $operand
-
-  ast:set $expr value "$op"
-  ast:set $expr head  math
-}
-
-ast:parse:math-binary() {
-  local expr="$1" left="$2" op="$3"
-  local right
-
-  ast:parse:expr right
-  ast:parse:validate-math-operand $left
-  ast:parse:validate-math-operand $right
-  ast:push-child $expr $right
-
-  ast:set $expr value "$op"
-  ast:set $expr head  math
-}
-
-
-ast:parse:validate-math-operand() {
-  local operand="$1"
-
-  ast:all-from "$operand" -v value -h head
-
-  case "$head" in
-    name)
-      if [[ "$value" =~ ([a-zA-Z_][a-zA-Z_0-9]*|@) ]]; then
-        ast:set $operand head simple-substitution
-      elif [[ "$value" =~ [0-9]+ ]]; then
-        true
-      else
-        ast:error "invalid variable name '$value' in math expression"
-      fi
-      ;;
-    *substitution|math)
-      ;;
-    list)
-      local element elements count=0
-      ast:from $operand children elements
-      for element in $elements; do
-        ast:parse:validate-math-operand $element
-        count=$((count+1))
-      done
-      if [ ! $count = 1 ]; then
-        ast:error "invalid math expression $(ast:print operand): trailling expressions in parentheses"
-      fi
-      ;;
-    *)
-      ast:error "not a valid math expression: $(ast:print operand) :: $head"
-      ;;
-  esac
-}
-
-
-__shadowing_ast:parse:math() {
-  local out="$1"
-  local expr math_expr
-
-
-  ast:push-state math
-  ast:parse:expr expr
-  ast:pop-state
-
-  ast:parse:validate-math-operand $expr
-
-  ast:make math_expr math-top '' $expr
-  setvar "$out" $math_expr
-}
-
-ast:parse:math() {
-  if [ -z ${__noshadow_16_+x} ]; then
-    local __noshadow_16_
-    local __noshadow_16_1
-  fi
-  __shadowing_ast:parse:math  __noshadow_16_1
-  setvar "$1" "$__noshadow_16_1"
-}
-
-
-
-
-# ast:parse:if $block_type $out
+# FILE: ast/commands.bash
+# ast:parse:block
 #
-# parses a if statement, which is
-# a conditional expression, followed
-# by a newline, block, and possibly an
-# else or elif statements
-
-
-__shadowing_ast:parse:if() {
-  local block_type=$1 out="$2"
-  local expr conditional block
-
-  ast:new expr
-  case "$block_type" in
-    if) ast:set $expr head if; ;;
-    ef) ast:set $expr head elif; ;;
-    *)  ast:error "invalid block type for if expression";;
-  esac
-
-  ast:parse:conditional conditional
-  ast:parse:require-newline "condition in if statement"
-  ast:parse:block $block_type block
-
-  ast:push-child $expr $conditional
-  ast:push-child $expr $block
-
-  ast:parse:post-if $expr
-
-  setvar "$out" $expr
-}
-
-ast:parse:if() {
-  if [ -z ${__noshadow_17_+x} ]; then
-    local __noshadow_17_
-    local __noshadow_17_2
-  fi
-  __shadowing_ast:parse:if "$1"  __noshadow_17_2
-  setvar "$2" "$__noshadow_17_2"
-}
-
-
-ast:parse:post-if() {
-  local if_ast="$1"
-  local value class clause_type
-
-  token:peek -v value -c class
-  if [ $class = whitespace ]; then
-    token:skip
-    token:peek -v value -c class
-    token:backtrack
-  fi
-
-  if [ $class = name ]; then
-    clause_type="$value"
-  else
-    clause_type=none
-  fi
-
-  case "$clause_type" in
-    else)
-      local else_ast else_block
-      ast:make else_ast else
-
-      token:ignore-whitespace
-      token:skip
-      ast:parse:require-newline "else statement"
-      ast:parse:block el else_block
-
-      ast:push-child $else_ast $else_block
-      ast:push-child $if_ast $else_ast
-      ;;
-    elif)
-      local elif_ast
-      token:ignore-whitespace
-      token:skip
-      ast:parse:if ef elif_ast
-
-      ast:push-child $if_ast $elif_ast
-      ;;
-    *)
-      local end_ast
-      ast:new end_ast
-      ast:set $end_ast head end_if
-
-      ast:push-child $if_ast $end_ast
-      ;;
-  esac
-}
-
-
-__shadowing_ast:parse:for() {
-  local out="$1"
-  local value class elements_ast block_ast
-
-  token:get -v value -c class
-
-  if [ ! "$class" = name ]; then
-    ast:error "Expected a variable name in 'for' expression, found a $class token instead."
-  else
-    token:require name "in"
-
-    ast:make elements_ast elements
-    ast:parse:arguments $elements_ast
-
-    ast:parse:block 'for' block_ast
-
-  fi
-
-  ast:make "$out" 'for' "$value" $elements_ast $block_ast
-}
-
-ast:parse:for() {
-  if [ -z ${__noshadow_18_+x} ]; then
-    local __noshadow_18_
-    local __noshadow_18_1
-  fi
-  __shadowing_ast:parse:for  __noshadow_18_1
-  setvar "$1" "$__noshadow_18_1"
-}
-
-
-ast:is-flag() {
-  local expr="$1" minus name extra
-
-  if ast:is $expr cat; then
-    ast:children $expr minus name extra
-    if ast:is $minus name '-' && ast:is $name name && [ -z "$extra" ]; then
-      return 0
-    else
-      return 1
-    fi
-  else
-    return 1
-  fi
-}
-
-
-__shadowing_ast:parse:conditional() {
-  local out="$1"
-  local condition
-  local initial initial_head initial_value
-
-  ast:parse:expr initial
-
-  ast:from $initial head  initial_head
-  ast:from $initial value initial_value
-
-  if [ "$initial_head $initial_value" = "name not" ]; then
-    ast:parse:negated-conditional condition
-
-  elif ast:is-flag $initial; then
-    ast:parse:flag-conditional $initial condition
-
-  else
-    local value class is_command=true
-
-    token:peek -v value -c class
-
-    if [ $class = name ]; then
-      case "$value" in
-        is|isnt|'>'|'<'|'<='|'>='|'!='|'='|'=='|match)
-          is_command=false
-          token:skip
-          ;;
-      esac
-    fi
-
-    if $is_command; then
-      ast:parse:command-conditional $initial condition
-    else
-      local left=$initial right
-      ast:parse:expr right
-      ast:make condition condition $value $left $right
-    fi
-  fi
-  ast:parse:composite-conditional $condition condition
-
-  setvar "$out" $condition
-}
-
-ast:parse:conditional() {
-  if [ -z ${__noshadow_19_+x} ]; then
-    local __noshadow_19_
-    local __noshadow_19_1
-  fi
-  __shadowing_ast:parse:conditional  __noshadow_19_1
-  setvar "$1" "$__noshadow_19_1"
-}
-
-
-
-
-__shadowing_ast:parse:negated-conditional() {
-  local condition out="$1"
-
-  ast:push-state '!'
-  ast:parse:conditional condition
-  ast:pop-state
-
-  ast:make "$out" condition not $condition
-}
-
-ast:parse:negated-conditional() {
-  if [ -z ${__noshadow_20_+x} ]; then
-    local __noshadow_20_
-    local __noshadow_20_1
-  fi
-  __shadowing_ast:parse:negated-conditional  __noshadow_20_1
-  setvar "$1" "$__noshadow_20_1"
-}
-
-
-
-
-__shadowing_ast:parse:flag-conditional() {
-  local initial="$1" out="$2"
-  local minus name flag expr
-
-  ast:children $initial minus name
-  ast:from $name value flag
-  flag="-$flag"
-
-  ast:parse:expr expr
-  ast:make "$out" condition "$flag" $expr
-}
-
-ast:parse:flag-conditional() {
-  if [ -z ${__noshadow_21_+x} ]; then
-    local __noshadow_21_
-    local __noshadow_21_2
-  fi
-  __shadowing_ast:parse:flag-conditional "$1"  __noshadow_21_2
-  setvar "$2" "$__noshadow_21_2"
-}
-
-
-
-
-__shadowing_ast:parse:command-conditional() {
-  local cmd="$1" cmd_ast out="$2"
-
-  ast:push-state '=='
-  ast:parse:commandcall $cmd cmd_ast
-  ast:pop-state
-
-  ast:make "$out" condition 'command' $cmd_ast
-  token:backtrack
-}
-
-ast:parse:command-conditional() {
-  if [ -z ${__noshadow_22_+x} ]; then
-    local __noshadow_22_
-    local __noshadow_22_2
-  fi
-  __shadowing_ast:parse:command-conditional "$1"  __noshadow_22_2
-  setvar "$2" "$__noshadow_22_2"
-}
-
-
-
-
-__shadowing_ast:parse:composite-conditional() {
-  local value class success=false condition_left="$1" condition_right out="$2"
-  token:peek -v value -c class
-
-  if [ "$class" = name ]; then
-    case "$value" in
-      "and"|"or"|"&&"|"||")
-        if ! ast:state-is '!'; then
-          token:skip
-          ast:parse:conditional condition_right
-          success=true
-        elif [[ "$value" =~ ('&&'|'||') ]]; then
-          token:skip
-          ast:parse:negated-conditional condition_right
-          success=true
-        fi
-      ;;
-    esac
-  fi
-  if $success; then
-    ast:make "$out" condition $value $condition_left $condition_right
-  else
-    setvar "$out" $condition_left
-  fi
-}
-
-ast:parse:composite-conditional() {
-  if [ -z ${__noshadow_23_+x} ]; then
-    local __noshadow_23_
-    local __noshadow_23_2
-  fi
-  __shadowing_ast:parse:composite-conditional "$1"  __noshadow_23_2
-  setvar "$2" "$__noshadow_23_2"
-}
-
-
-
-__shadowing_ast:parse:function-definition() {
-  local name=$1 out="$2"
-  local expr args block
-
-  ast:make expr function-def
-
-  ast:parse:specific-expr list args
-  ast:parse:require-newline "function definition"
-  ast:parse:block fn block
-
-  ast:push-child $expr $name
-  ast:push-child $expr $args
-  ast:push-child $expr $block
-
-  setvar "$out" $expr
-}
-
-ast:parse:function-definition() {
-  if [ -z ${__noshadow_24_+x} ]; then
-    local __noshadow_24_
-    local __noshadow_24_2
-  fi
-  __shadowing_ast:parse:function-definition "$1"  __noshadow_24_2
-  setvar "$2" "$__noshadow_24_2"
-}
-
-
-ast:parse:require-newline() {
-  local nl nl_head
-  ast:parse:expr nl
-  ast:from $nl head nl_head
-  case $nl_head in
-    newline)
-      ;;
-    eof)
-      if ! ${POWSCRIPT_ALLOW_INCOMPLETE-false}; then
-        ast:error "unexpected end of file after $1"
-      fi
-      ;;
-    *)
-      ast:error "trailing expression after ${1}: $(ast:print $nl) :: $(ast:from $nl head)"
-      ;;
-  esac
-}
+# Parses an indent-based sequence of expressions divided by newlines.
+# e.g.
+#   block-starting-expr
+#     x=1
+#     echo $(math x + 1)
+#
 
 
 __shadowing_ast:parse:block() {
@@ -2443,61 +2176,508 @@ __shadowing_ast:parse:block() {
 }
 
 ast:parse:block() {
-  if [ -z ${__noshadow_25_+x} ]; then
-    local __noshadow_25_
-    local __noshadow_25_2
+  if [ -z ${__noshadow_16_+x} ]; then
+    local __noshadow_16_
+    local __noshadow_16_2
   fi
-  __shadowing_ast:parse:block "$1"  __noshadow_25_2
-  setvar "$2" "$__noshadow_25_2"
+  __shadowing_ast:parse:block "$1"  __noshadow_16_2
+  setvar "$2" "$__noshadow_16_2"
 }
 
 
 
+# FILE: ast/blocks.bash
+# ast:parse:if $block_type $out
+#
+# Parses an expression of the form:
+#   if <conditional>
+#     <block>
+#   elif <conditional> # optional, as many as we want
+#     <block>
+#   else # optional, only one allowed
+#     <block>
+#
 
 
-__shadowing_ast:parse:list() {
-  local closer="$1" out="$2"
-  local expr child open=true
-  local class value
+__shadowing_ast:parse:if() {
+  local block_type=$1 out="$2"
+  local expr conditional block
 
-  ast:make expr list
+  ast:new expr
+  case "$block_type" in
+    if) ast:set $expr head if; ;;
+    ef) ast:set $expr head elif; ;;
+    *)  ast:error "invalid block type for if expression";;
+  esac
 
-  while $open; do
-    token:peek -v value -c class
-    case "$class $value" in
-      "special $closer")
-        open=false
-        token:skip
-        ;;
-      'newline '*)
-        token:skip
-        ;;
-      'eof '*)
-        if ${POWSCRIPT_ALLOW_INCOMPLETE-false}; then
-          POWSCRIPT_INCOMPLETE_STATE="$(ast:last-state)"
-          exit
-        else
-          ast:error "end of file while parsing list"
-        fi
-        ;;
-      *)
-        ast:parse:expr child
-        ast:push-child $expr $child
-        ;;
-    esac
-  done
+  ast:parse:conditional conditional
+  ast:parse:require-newline "condition in if statement"
+  ast:parse:block $block_type block
+
+  ast:push-child $expr $conditional
+  ast:push-child $expr $block
+
+  ast:parse:post-if $expr
+
   setvar "$out" $expr
 }
 
-ast:parse:list() {
-  if [ -z ${__noshadow_26_+x} ]; then
-    local __noshadow_26_
-    local __noshadow_26_2
+ast:parse:if() {
+  if [ -z ${__noshadow_17_+x} ]; then
+    local __noshadow_17_
+    local __noshadow_17_2
   fi
-  __shadowing_ast:parse:list "$1"  __noshadow_26_2
-  setvar "$2" "$__noshadow_26_2"
+  __shadowing_ast:parse:if "$1"  __noshadow_17_2
+  setvar "$2" "$__noshadow_17_2"
 }
 
+
+
+# ast:parse:post-if $if_ast
+#
+# Checks if the if expressions is continued in
+# an elif or else and parses accordingly.
+#
+
+ast:parse:post-if() {
+  local if_ast="$1"
+  local value class clause_type
+
+  token:peek -v value -c class
+  if [ $class = whitespace ]; then
+    token:skip
+    token:peek -v value -c class
+    token:backtrack
+  fi
+
+  if [ $class = name ]; then
+    clause_type="$value"
+  else
+    clause_type=none
+  fi
+
+  case "$clause_type" in
+    else)
+      local else_ast else_block
+      ast:make else_ast else
+
+      token:ignore-whitespace
+      token:skip
+      ast:parse:require-newline "else statement"
+      ast:parse:block el else_block
+
+      ast:push-child $else_ast $else_block
+      ast:push-child $if_ast $else_ast
+      ;;
+    elif)
+      local elif_ast
+      token:ignore-whitespace
+      token:skip
+      ast:parse:if ef elif_ast
+
+      ast:push-child $if_ast $elif_ast
+      ;;
+    *)
+      local end_ast
+      ast:new end_ast
+      ast:set $end_ast head end_if
+
+      ast:push-child $if_ast $end_ast
+      ;;
+  esac
+}
+
+# ast:parse:for $out
+#
+# Parses an expression of the form:
+#   for <var> in <expr>
+#     <block>
+#
+
+
+__shadowing_ast:parse:for() {
+  local out="$1"
+  local value class elements_ast block_ast
+
+  token:get -v value -c class
+
+  if [ ! "$class" = name ]; then
+    ast:error "Expected a variable name in 'for' expression, found a $class token instead."
+  else
+    token:require name "in"
+
+    ast:make elements_ast elements
+    ast:parse:arguments $elements_ast
+
+    ast:parse:block 'for' block_ast
+
+  fi
+
+  ast:make "$out" 'for' "$value" $elements_ast $block_ast
+}
+
+ast:parse:for() {
+  if [ -z ${__noshadow_18_+x} ]; then
+    local __noshadow_18_
+    local __noshadow_18_1
+  fi
+  __shadowing_ast:parse:for  __noshadow_18_1
+  setvar "$1" "$__noshadow_18_1"
+}
+
+
+
+# ast:parse:conditional $out
+#
+# Parses an expression of the form:
+#   * -flag <expr>
+#   * <expr> <comparison> <expr>
+#   * not <conditional>
+#   * <conditional> and/or <conditional>
+#
+
+
+__shadowing_ast:parse:conditional() {
+  local out="$1"
+  local condition
+  local initial initial_head initial_value
+
+  ast:parse:expr initial
+
+  ast:from $initial head  initial_head
+  ast:from $initial value initial_value
+
+  if [ "$initial_head $initial_value" = "name not" ]; then
+    ast:parse:negated-conditional condition
+
+  elif ast:is-flag $initial; then
+    ast:parse:flag-conditional $initial condition
+
+  else
+    local value class is_command=true
+
+    token:peek -v value -c class
+
+    if [ $class = name ] || [ $class = special ]; then
+      case "$value" in
+        is|isnt|'>'|'<'|'<='|'>='|'!='|'='|'=='|match)
+          is_command=false
+          token:skip
+          ;;
+      esac
+    fi
+
+    if $is_command; then
+      ast:parse:command-conditional $initial condition
+    else
+      local left=$initial right
+      ast:parse:expr right
+      ast:make condition condition $value $left $right
+    fi
+  fi
+  ast:parse:composite-conditional $condition condition
+
+  setvar "$out" $condition
+}
+
+ast:parse:conditional() {
+  if [ -z ${__noshadow_19_+x} ]; then
+    local __noshadow_19_
+    local __noshadow_19_1
+  fi
+  __shadowing_ast:parse:conditional  __noshadow_19_1
+  setvar "$1" "$__noshadow_19_1"
+}
+
+
+
+# ast:parse:negated-conditional $out
+#
+# Parses a conditional and returns a negation of it.
+#
+
+
+__shadowing_ast:parse:negated-conditional() {
+  local condition out="$1"
+
+  ast:push-state '!'
+  ast:parse:conditional condition
+  ast:pop-state
+
+  ast:make "$out" condition not $condition
+}
+
+ast:parse:negated-conditional() {
+  if [ -z ${__noshadow_20_+x} ]; then
+    local __noshadow_20_
+    local __noshadow_20_1
+  fi
+  __shadowing_ast:parse:negated-conditional  __noshadow_20_1
+  setvar "$1" "$__noshadow_20_1"
+}
+
+
+
+# ast:parse:flag-conditional
+#
+# Parses a conditional of the form -flag <expr>
+#
+
+
+__shadowing_ast:parse:flag-conditional() {
+  local initial="$1" out="$2"
+  local minus name flag expr
+
+  ast:children $initial minus name
+  ast:from $name value flag
+  flag="-$flag"
+
+  ast:parse:expr expr
+  ast:make "$out" condition "$flag" $expr
+}
+
+ast:parse:flag-conditional() {
+  if [ -z ${__noshadow_21_+x} ]; then
+    local __noshadow_21_
+    local __noshadow_21_2
+  fi
+  __shadowing_ast:parse:flag-conditional "$1"  __noshadow_21_2
+  setvar "$2" "$__noshadow_21_2"
+}
+
+
+
+# ast:parse:command-conditional
+#
+# Parses a command call as a conditional
+#
+
+
+__shadowing_ast:parse:command-conditional() {
+  local cmd="$1" cmd_ast out="$2"
+
+  ast:push-state '=='
+  ast:parse:commandcall $cmd cmd_ast
+  ast:pop-state
+
+  ast:make "$out" condition 'command' $cmd_ast
+  token:backtrack
+}
+
+ast:parse:command-conditional() {
+  if [ -z ${__noshadow_22_+x} ]; then
+    local __noshadow_22_
+    local __noshadow_22_2
+  fi
+  __shadowing_ast:parse:command-conditional "$1"  __noshadow_22_2
+  setvar "$2" "$__noshadow_22_2"
+}
+
+
+
+# ast:parse:composite-conditional $condition_left $out
+#
+# Parses a conditional of the form <conditional> and/or <conditional>
+#
+
+
+__shadowing_ast:parse:composite-conditional() {
+  local condition_left="$1" condition_right out="$2"
+  local value class success=false
+
+  token:peek -v value -c class
+
+  if [ "$class" = name ]; then
+    case "$value" in
+      "and"|"or"|"&&"|"||")
+        if ! ast:state-is '!'; then
+          token:skip
+          ast:parse:conditional condition_right
+          success=true
+        elif [[ "$value" =~ ('&&'|'||') ]]; then
+          token:skip
+          ast:parse:negated-conditional condition_right
+          success=true
+        fi
+      ;;
+    esac
+  fi
+  if $success; then
+    ast:make "$out" condition $value $condition_left $condition_right
+  else
+    setvar "$out" $condition_left
+  fi
+}
+
+ast:parse:composite-conditional() {
+  if [ -z ${__noshadow_23_+x} ]; then
+    local __noshadow_23_
+    local __noshadow_23_2
+  fi
+  __shadowing_ast:parse:composite-conditional "$1"  __noshadow_23_2
+  setvar "$2" "$__noshadow_23_2"
+}
+
+
+# FILE: ast/conditionals.bash
+# ast:parse:function-definition $name $out
+#
+# Parses an expression of the form:
+#   name(...vars...)
+#     <block>
+#
+
+
+__shadowing_ast:parse:function-definition() {
+  local name=$1 out="$2"
+  local expr args block
+
+  ast:make expr function-def
+
+  ast:parse:specific-expr list args
+  ast:parse:require-newline "function definition"
+  ast:parse:block fn block
+
+  ast:push-child $expr $name
+  ast:push-child $expr $args
+  ast:push-child $expr $block
+
+  setvar "$out" $expr
+}
+
+ast:parse:function-definition() {
+  if [ -z ${__noshadow_24_+x} ]; then
+    local __noshadow_24_
+    local __noshadow_24_2
+  fi
+  __shadowing_ast:parse:function-definition "$1"  __noshadow_24_2
+  setvar "$2" "$__noshadow_24_2"
+}
+
+
+# FILE: ast/functions.bash
+
+# ast:parse:try
+#
+# Try parsing an ast expression from the input,
+# printing 'top' on success or the last
+# parser state on failure.
+
+ast:parse:try() {
+  (
+    local ast
+    POWSCRIPT_INCOMPLETE_STATE=
+
+    trap '
+      if [ -n "$POWSCRIPT_INCOMPLETE_STATE" ]; then
+        echo "$POWSCRIPT_INCOMPLETE_STATE"
+      else
+        ast:last-state
+      fi
+      exit' EXIT
+
+    POWSCRIPT_ALLOW_INCOMPLETE=true ast:parse ast
+    exit
+  )
+}
+
+
+# ast:parse $out
+#
+# Parse an ast expression from the input,
+# storing it in $out.
+
+ast:parse() {
+  ast:parse:linestart "$1"
+}
+
+
+# ast:parse:linestart $out
+#
+# Test that there is no indentation before proceeding
+# to parse the expression.
+
+
+__shadowing_ast:parse:linestart() {
+  local value class line
+
+  token:get -v value -c class -ls line
+
+  if [ "$class" = whitespace ]; then
+    ast:error "indentation error at line $line, unexpected indentation of $value."
+  else
+    token:backtrack
+    ast:parse:top "$1"
+  fi
+}
+
+ast:parse:linestart() {
+  if [ -z ${__noshadow_25_+x} ]; then
+    local __noshadow_25_
+    local __noshadow_25_1
+  fi
+  __shadowing_ast:parse:linestart  __noshadow_25_1
+  setvar "$1" "$__noshadow_25_1"
+}
+
+
+
+# ast:parse:top $out
+#
+# Analyze first expression and dispatch to the
+# appropriate function appropriate for it.
+
+
+__shadowing_ast:parse:top() {
+  local out="$1"
+  local expr expr_head
+
+  ast:parse:expr expr
+  ast:from $expr head expr_head
+
+  case $expr_head in
+    name)
+      local expr_value
+      ast:from $expr value expr_value
+      case "$expr_value" in
+        'if')      ast:parse:if 'if' "$out" ;;
+        'for')     ast:parse:for     "$out" ;;
+        'math')    ast:parse:math    "$out" ;;
+        'while')   ast:parse:while   "$out" ;;
+        'switch')  ast:parse:switch  "$out" ;;
+        'require') ast:parse:require "$out" ;;
+        *)
+          if token:next-is special '('; then
+            ast:parse:function-definition $expr "$out"
+          else
+            ast:parse:commandcall $expr "$out"
+          fi
+          ;;
+      esac
+      ;;
+    assign|indexing-assign)
+      setvar "$out" $expr
+      ;;
+    newline)
+      setvar "$out" -1
+      ;;
+    *)
+      ast:parse:commandcall $expr "$out"
+      ;;
+  esac
+}
+
+ast:parse:top() {
+  if [ -z ${__noshadow_26_+x} ]; then
+    local __noshadow_26_
+    local __noshadow_26_1
+  fi
+  __shadowing_ast:parse:top  __noshadow_26_1
+  setvar "$1" "$__noshadow_26_1"
+}
+
+
+# FILE: ast/parse.bash
 
 # FILE: ast/ast.bash
 declare -gA PowscriptBackends

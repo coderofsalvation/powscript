@@ -4,8 +4,8 @@ Asts[index]=0
 Asts[length]=0
 Asts[required-indent]=0
 
-powscript_source ast/ast_indent.bash #<<EXPAND>>
-powscript_source ast/ast_states.bash #<<EXPAND>>
+powscript_source ast/indent.bash #<<EXPAND>>
+powscript_source ast/states.bash #<<EXPAND>>
 
 ast:new() { #<<NOSHADOW>>
   local index="${Asts[index]}"
