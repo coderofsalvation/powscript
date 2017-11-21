@@ -91,6 +91,12 @@ case "$POWSCRIPT_PREPUSH_NOWHITESPACE" in
   ;;
 esac
 
+## Error if in CDEBUG mode
+
+if [ -f .cdebug ]; then
+  echo "The compiler is in debug mode! Switch it off before committing your changes."
+  exit 1
+fi
 
 ## Error if user forgot to compile
 

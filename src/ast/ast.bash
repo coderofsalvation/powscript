@@ -190,7 +190,7 @@ ast:parse:expr() { #<<NOSHADOW>>
                 ']') opener='['; ;;
                 '}') opener='{'; ;;
               esac
-              if ast:state-is $opener || ast:state-is math; then
+              if [ $exprnum -gt 0 ] && { ast:state-is $opener || ast:state-is math; }; then
                 root_head=determinable
               else
                 ast:make expression string "$value"
@@ -453,7 +453,7 @@ ast:parse:command-substitution() { #<<NOSHADOW>>
 
   ast:make "$out" command-substitution ''
 
-  ast:push-state '$('
+  ast:push-state '('
 
   ast:parse:expr cmd
   if ast:is $cmd name math; then
@@ -493,7 +493,7 @@ ast:parse:arguments() {
 
   ast:last-state state
   case $state in
-    '$(')
+    '(')
       state_s='c'
       ;;
     top)
@@ -510,14 +510,15 @@ ast:parse:arguments() {
 
   while $unfinished; do
     ast:parse:expr child
-    ast:from $child head expr_head
+    ast:from $child head  expr_head
+    ast:from $child value expr_value
 
-    case "$state_s/$expr_head" in
-      'c/command-substitution-end'|[ti]'/eof'|[oti]'/newline')
+    case "$state_s/$expr_head/$expr_value" in
+      'c/string/)'|[ti]'/eof/'*|[oti]'/newline/'*)
         unfinished=false
         ;;
 
-      'i/name')
+      'i/name/'*)
         ast:from $child value expr_value
 
         case "$expr_value" in
@@ -526,7 +527,7 @@ ast:parse:arguments() {
         esac
         ;;
 
-      *eof)
+      */eof/*)
         if ${POWSCRIPT_ALLOW_INCOMPLETE-false}; then
           POWSCRIPT_INCOMPLETE_STATE=$state
           exit
@@ -535,7 +536,7 @@ ast:parse:arguments() {
         fi
         ;;
 
-      *newline)
+      */newline/*)
         ;;
 
       *)

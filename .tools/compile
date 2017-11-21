@@ -25,6 +25,8 @@ if ${POWSCRIPT_CDEBUG-false}; then
   NextMultiLine=false
   Escape=false
 
+  echo >"$Dir/.cdebug"
+
   add "$(cat "$Dir/.tools/debugger/preamble.bash")"
 
   debuggable_line() {
@@ -96,6 +98,8 @@ if ${POWSCRIPT_CDEBUG-false}; then
       add "powscript-cdebug:function-start '${line:0:-4}' \"\$@\""
     fi
   }
+else
+  if [ -f "$Dir/.cdebug" ]; then rm "$Dir/.cdebug"; fi
 fi
 
 read_file() {
