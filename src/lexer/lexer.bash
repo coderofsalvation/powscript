@@ -132,6 +132,10 @@ token:parse() { #<<NOSHADOW>>
             move=true
             next_state=curly-braces
             ;;
+          '#')
+            token='$#'
+            move=true
+            ;;
 
           [0-9a-zA-Z_])
             next_state=variable
@@ -209,7 +213,7 @@ token:parse() { #<<NOSHADOW>>
             fi
             ;;
 
-          ':'|';'|','|'@')
+          ':'|';'|','|'@'|'+'|'-'|'*'|'/'|'^'|'%')
             belongs=false
             skip_term=false
             next_class=special

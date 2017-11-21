@@ -41,6 +41,39 @@ ast:from() {
   setvar "$3" "${Asts["$2-$1"]}"
 }
 
+ast:all-from() {
+  local __af_expr="$1"
+  shift
+
+  while [ $# -gt 0 ]; do
+    case "$1" in
+      -e|--expr)
+        setvar "$2" $__af_expr
+        shift 2
+        ;;
+      -v|--value)
+        ast:from $__af_expr value "$2"
+        shift 2
+        ;;
+      -h|--head)
+        ast:from $__af_expr head "$2"
+        shift 2
+        ;;
+      -c|--children)
+        ast:from $__af_expr children "$2"
+        shift 2
+        ;;
+      -@|--@children)
+        ast:children $__af_expr "${@:2}"
+        shift $#
+        ;;
+      *)
+        ast:error "Invalid flag $1, expected -[evhc@]"
+        ;;
+    esac
+  done
+}
+
 ast:set() {
   Asts["$2-$1"]="$3"
 }

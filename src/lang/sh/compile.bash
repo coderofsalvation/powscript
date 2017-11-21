@@ -39,6 +39,16 @@ sh:compile() { #<<NOSHADOW>>
       setvar "$out" "$var=$value"
       ;;
 
+    math-assigned)
+      local value_ast value
+
+      ast:from $expr children value_ast
+
+      NO_QUOTING=true backend:compile $value_ast value
+
+      setvar "$out" "\$(( $value ))"
+      ;;
+
     call)
       local children arg_ast
       local result cmd arg
@@ -61,9 +71,17 @@ sh:compile() { #<<NOSHADOW>>
 
       ast:from $expr children call_ast
 
-      sh:compile $call_ast call
+      backend:compile $call_ast call
 
-      setvar "$out" '$('"$call"')'
+      if ast:is $call_ast math-top; then
+        setvar "$out" "${call:5}"
+      else
+        if ${NO_QUOTING-false}; then
+          setvar "$out" "\$( $call )"
+        else
+          setvar "$out" "\"\$( $call )\""
+        fi
+      fi
       ;;
 
     if|elif)
@@ -122,7 +140,49 @@ sh:compile() { #<<NOSHADOW>>
     simple-substitution)
       local name
       ast:from $expr value name
-      setvar "$out" "\"\${$name}\""
+
+      if ${NO_QUOTING-false}; then
+        setvar "$out" "\${$name}"
+      else
+        setvar "$out" "\"\${$name}\""
+      fi
+      ;;
+
+    math-top)
+      local child_ast child
+
+      ast:from $expr children child_ast
+      NO_QUOTING=true backend:compile $child_ast child
+
+      setvar "$out" "echo \$(( $child ))"
+      ;;
+
+    math)
+      local left_ast right_ast op
+      local left right
+
+      ast:all-from $expr -v op -@ left_ast right_ast
+
+      if [ "$op" = "^" ]; then
+        case $PowscriptBackend in
+          sh)
+            >&2 echo "unimplemented: ^ operator in math"
+            return
+            ;;
+          bash)
+            op="**"
+            ;;
+        esac
+      fi
+
+      backend:compile $left_ast left
+
+      if [ -n "$right_ast" ]; then
+        backend:compile $right_ast right
+        setvar "$out" "$left$op$right"
+      else
+        setvar "$out" "$op$left"
+      fi
       ;;
 
     function-def)

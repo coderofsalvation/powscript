@@ -87,6 +87,7 @@ ast:parse:top() { #<<NOSHADOW>>
       case "$expr_value" in
         'if')      ast:parse:if 'if' "$out" ;;
         'for')     ast:parse:for     "$out" ;;
+        'math')    ast:parse:math    "$out" ;;
         'while')   ast:parse:while   "$out" ;;
         'switch')  ast:parse:switch  "$out" ;;
         'require') ast:parse:require "$out" ;;
@@ -130,6 +131,10 @@ ast:parse:expr() { #<<NOSHADOW>>
     token:ignore-whitespace
     token:get -v value -c class -g glued
 
+    if ast:state-is math && [ ! $class = eof ] && [ ! $class = newline ]; then
+      glued=true
+    fi
+
     if $glued || [ $exprnum = 0 ]; then
       case $class in
         name|string)
@@ -147,6 +152,19 @@ ast:parse:expr() { #<<NOSHADOW>>
 
             '$(')
               ast:parse:command-substitution expression
+              ;;
+            '$#')
+              local next_value next_class
+              token:peek -v next_value -c next_class
+
+              if [ $next_class = "name" ] && [[ "$next_value" =~ [a-zA-Z_][a-zA-Z_0-9]* ]]; then
+                ast:set $root value $next_value
+                root_head=array-length
+                token:skip
+              else
+                make:ast root name '$#'
+                root_head=name
+              fi
               ;;
 
             '('|'{')
@@ -172,7 +190,7 @@ ast:parse:expr() { #<<NOSHADOW>>
                 ']') opener='['; ;;
                 '}') opener='{'; ;;
               esac
-              if ast:state-is $opener; then
+              if ast:state-is $opener || ast:state-is math; then
                 root_head=determinable
               else
                 ast:make expression string "$value"
@@ -181,9 +199,29 @@ ast:parse:expr() { #<<NOSHADOW>>
 
             '=')
               if [ $exprnum = 1 ] && ast:is $last_expression name; then
-                ast:parse:assign $root
                 exprnum=2
+                ast:parse:assign $root
                 ast:from $root head root_head
+              elif [ $exprnum = 2 ] && ast:is $last_expression name; then
+                local name op
+                ast:children $root name op
+                ast:from $op value op
+
+                case "$op" in
+                  '+'|'-'|'*'|'/'|'^'|'%')
+                    ast:parse:math-assign $root $name "$op"
+                    root_head=assign
+                    ;;
+                  '@')
+                    ast:parse:push-assign $root $name
+                    root_head=indexing-assign
+                    ;;
+                  *)
+                    ast:make expression string "="
+                    ;;
+                esac
+
+
               else
                 ast:make expression string "="
               fi
@@ -193,11 +231,10 @@ ast:parse:expr() { #<<NOSHADOW>>
                 local index
                 ast:push-state '['
                 ast:parse:expr index
-
                 token:require special ']'
                 ast:pop-state
 
-                if token:next-is special '=' && ast:is $index name; then
+                if token:next-is special '='; then
                   token:skip
                   ast:parse:expr expression
                   root_head=indexing-assign
@@ -221,6 +258,29 @@ ast:parse:expr() { #<<NOSHADOW>>
                 ast:parse:list ']' root
                 root_head=list
                 ast:pop-state
+              fi
+              ;;
+
+            '+'|'-'|'*'|'/'|'^'|'%')
+              if ast:state-is 'math'; then
+
+                if [ $exprnum = 0 ]; then
+                  if [ $value = '+' ] || [ $value = '-' ]; then
+                    ast:parse:math-unary $root $value
+                  else
+                    ast:error "$value is not an unary operator"
+                  fi
+
+                elif [ $exprnum = 1 ]; then
+                  ast:parse:math-binary $root $last_expression "$value"
+
+                else
+                  ast:error "trailling $value in math expression"
+                fi
+                ast:from $root head root_head
+
+              else
+                ast:make expression name "$value"
               fi
               ;;
 
@@ -264,40 +324,6 @@ ast:parse:expr() { #<<NOSHADOW>>
 noshadow ast:parse:expr
 
 
-ast:parse:expr-and-set() {
-  local __paeas_expr
-  ast:parse:expr __paeas_expr
-
-  while [ $# -gt 0 ]; do
-    case "$1" in
-      -e|--expr)
-        setvar "$2" $__paeas_expr
-        shift 2
-        ;;
-      -v|--value)
-        ast:from $__paeas_expr value "$2"
-        shift 2
-        ;;
-      -h|--head)
-        ast:from $__paeas_expr head "$2"
-        shift 2
-        ;;
-      -c|--children)
-        ast:from $__paeas_expr children "$2"
-        shift 2
-        ;;
-      -@|--@children)
-        ast:children $__paeas_expr "${@:2}"
-        shift $#
-        ;;
-      *)
-        ast:error "Invalid flag $1, expected -[evhc@]"
-        ;;
-    esac
-  done
-}
-
-
 ast:parse:specific-expr() { #<<NOSHADOW>>
   local expr expr_head required="$1" out="$2"
   ast:parse:expr expr
@@ -332,13 +358,44 @@ ast:parse:assign() {
   ast:push-child $expr $assigned_value
 }
 
+ast:parse:math-assign() {
+  local expr="$1" name="$2" op="$3"
+  local name_value right_operand math_expr assigned name_subst
+
+  ast:from $name value name_value
+
+  ast:push-state math
+  ast:parse:expr right_operand
+  ast:pop-state
+
+  ast:make name_subst simple-substitution "$name_value"
+  ast:make math_expr math "$op" $name_subst $right_operand
+  ast:make assigned  math-assigned "" $math_expr
+
+  ast:set $expr head assign
+  ast:set $expr children "$name $assigned"
+}
+
+ast:parse:push-assign() {
+  local expr="$1" name="$2"
+  local name_value index value
+
+  ast:from $name value name_value
+
+  ast:make index array-length "$name_value"
+
+  ast:parse:expr value
+  ast:set $expr children "$name $index $value"
+  ast:set $expr head indexing-assign
+}
 
 ast:parse:substitution() { #<<NOSHADOW>>
   local subst out="$1"
   local expr value head varname index lb rb aft
   local cat_children cat_array dollar
 
-  ast:parse:expr-and-set -e expr -v value -h head -@ varname lb index rb aft
+  ast:parse:expr expr
+  ast:all-from "$expr" -v value -h head -@ varname lb index rb aft
 
   case "$head" in
     name)
@@ -350,6 +407,9 @@ ast:parse:substitution() { #<<NOSHADOW>>
           ast:from $varname value value
           ast:make subst indexing-substitution "$value" $index
           if [ -n "$aft" ]; then
+            if ast:state-is math; then
+              ast:error "invalid math expression: $(ast:print $expr)"
+            fi
             ast:from $expr children cat_children
             cat_array=( $cat_children )
             ast:make subst cat $subst "${cat_array[@:4]}"
@@ -372,6 +432,7 @@ ast:parse:substitution() { #<<NOSHADOW>>
 }
 noshadow ast:parse:substitution
 
+
 ast:parse:curly-substitution() { #<<NOSHADOW>>
   local out="$1"
   local subst
@@ -385,6 +446,7 @@ ast:parse:curly-substitution() { #<<NOSHADOW>>
 }
 noshadow ast:parse:curly-substitution
 
+
 ast:parse:command-substitution() { #<<NOSHADOW>>
   local out="$1"
   local cmd call
@@ -392,8 +454,14 @@ ast:parse:command-substitution() { #<<NOSHADOW>>
   ast:make "$out" command-substitution ''
 
   ast:push-state '$('
+
   ast:parse:expr cmd
-  ast:parse:commandcall $cmd call
+  if ast:is $cmd name math; then
+    ast:parse:math call
+    token:require special ')'
+  else
+    ast:parse:commandcall $cmd call
+  fi
   ast:pop-state
 
   ast:push-child "${!out}" $call
@@ -476,6 +544,83 @@ ast:parse:arguments() {
     esac
   done
 }
+
+ast:parse:math-unary() {
+  local expr="$1" op="$2"
+  local operand value head
+
+  ast:parse:expr operand
+  ast:parse:validate-math-operand $operand
+  ast:push-child $expr $operand
+
+  ast:set $expr value "$op"
+  ast:set $expr head  math
+}
+
+ast:parse:math-binary() {
+  local expr="$1" left="$2" op="$3"
+  local right
+
+  ast:parse:expr right
+  ast:parse:validate-math-operand $left
+  ast:parse:validate-math-operand $right
+  ast:push-child $expr $right
+
+  ast:set $expr value "$op"
+  ast:set $expr head  math
+}
+
+
+ast:parse:validate-math-operand() {
+  local operand="$1"
+
+  ast:all-from "$operand" -v value -h head
+
+  case "$head" in
+    name)
+      if [[ "$value" =~ ([a-zA-Z_][a-zA-Z_0-9]*|@) ]]; then
+        ast:set $operand head simple-substitution
+      elif [[ "$value" =~ [0-9]+ ]]; then
+        true
+      else
+        ast:error "invalid variable name '$value' in math expression"
+      fi
+      ;;
+    *substitution|math)
+      ;;
+    list)
+      local element elements count=0
+      ast:from $operand children elements
+      for element in $elements; do
+        ast:parse:validate-math-operand $element
+        count=$((count+1))
+      done
+      if [ ! $count = 1 ]; then
+        ast:error "invalid math expression $(ast:print operand): trailling expressions in parentheses"
+      fi
+      ;;
+    *)
+      ast:error "not a valid math expression: $(ast:print operand) :: $head"
+      ;;
+  esac
+}
+
+ast:parse:math() { #<<NOSHADOW>>
+  local out="$1"
+  local expr math_expr
+
+
+  ast:push-state math
+  ast:parse:expr expr
+  ast:pop-state
+
+  ast:parse:validate-math-operand $expr
+
+  ast:make math_expr math-top '' $expr
+  setvar "$out" $math_expr
+}
+noshadow ast:parse:math
+
 
 
 # ast:parse:if $block_type $out

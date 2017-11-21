@@ -11,7 +11,7 @@ bash:compile() { #<<NOSHADOW>>
       sh:compile $expr "$out"
       ;;
 
-    elements|simple-substitution|function-def|local|block|elements)
+    elements|simple-substitution|function-def|local|block|math|math-top|math-assigned)
       sh:compile $expr "$out"
       ;;
 
@@ -64,6 +64,12 @@ bash:compile() { #<<NOSHADOW>>
       setvar "$out" "declare -A $name"
       ;;
 
+    array-length)
+      local name
+      ast:from $expr value name
+
+      setvar "$out" "\${#$name[@]}"
+      ;;
     list)
       local expr_children child_ast child result
 
@@ -116,6 +122,9 @@ bash:compile() { #<<NOSHADOW>>
           esac
           ;;
       esac
+      ;;
+    *)
+      >&2 echo "unimplemented: $expr_head"
       ;;
   esac
 }

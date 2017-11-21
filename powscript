@@ -505,6 +505,10 @@ __shadowing_token:parse() {
             move=true
             next_state=curly-braces
             ;;
+          '#')
+            token='$#'
+            move=true
+            ;;
 
           [0-9a-zA-Z_])
             next_state=variable
@@ -582,7 +586,7 @@ __shadowing_token:parse() {
             fi
             ;;
 
-          ':'|';'|','|'@')
+          ':'|';'|','|'@'|'+'|'-'|'*'|'/'|'^'|'%')
             belongs=false
             skip_term=false
             next_class=special
@@ -1066,6 +1070,39 @@ ast:from() {
   setvar "$3" "${Asts["$2-$1"]}"
 }
 
+ast:all-from() {
+  local __af_expr="$1"
+  shift
+
+  while [ $# -gt 0 ]; do
+    case "$1" in
+      -e|--expr)
+        setvar "$2" $__af_expr
+        shift 2
+        ;;
+      -v|--value)
+        ast:from $__af_expr value "$2"
+        shift 2
+        ;;
+      -h|--head)
+        ast:from $__af_expr head "$2"
+        shift 2
+        ;;
+      -c|--children)
+        ast:from $__af_expr children "$2"
+        shift 2
+        ;;
+      -@|--@children)
+        ast:children $__af_expr "${@:2}"
+        shift $#
+        ;;
+      *)
+        ast:error "Invalid flag $1, expected -[evhc@]"
+        ;;
+    esac
+  done
+}
+
 ast:set() {
   Asts["$2-$1"]="$3"
 }
@@ -1341,6 +1378,7 @@ __shadowing_ast:parse:top() {
       case "$expr_value" in
         'if')      ast:parse:if 'if' "$out" ;;
         'for')     ast:parse:for     "$out" ;;
+        'math')    ast:parse:math    "$out" ;;
         'while')   ast:parse:while   "$out" ;;
         'switch')  ast:parse:switch  "$out" ;;
         'require') ast:parse:require "$out" ;;
@@ -1394,6 +1432,10 @@ __shadowing_ast:parse:expr() {
     token:ignore-whitespace
     token:get -v value -c class -g glued
 
+    if ast:state-is math && [ ! $class = eof ] && [ ! $class = newline ]; then
+      glued=true
+    fi
+
     if $glued || [ $exprnum = 0 ]; then
       case $class in
         name|string)
@@ -1411,6 +1453,19 @@ __shadowing_ast:parse:expr() {
 
             '$(')
               ast:parse:command-substitution expression
+              ;;
+            '$#')
+              local next_value next_class
+              token:peek -v next_value -c next_class
+
+              if [ $next_class = "name" ] && [[ "$next_value" =~ [a-zA-Z_][a-zA-Z_0-9]* ]]; then
+                ast:set $root value $next_value
+                root_head=array-length
+                token:skip
+              else
+                make:ast root name '$#'
+                root_head=name
+              fi
               ;;
 
             '('|'{')
@@ -1436,7 +1491,7 @@ __shadowing_ast:parse:expr() {
                 ']') opener='['; ;;
                 '}') opener='{'; ;;
               esac
-              if ast:state-is $opener; then
+              if ast:state-is $opener || ast:state-is math; then
                 root_head=determinable
               else
                 ast:make expression string "$value"
@@ -1445,9 +1500,29 @@ __shadowing_ast:parse:expr() {
 
             '=')
               if [ $exprnum = 1 ] && ast:is $last_expression name; then
-                ast:parse:assign $root
                 exprnum=2
+                ast:parse:assign $root
                 ast:from $root head root_head
+              elif [ $exprnum = 2 ] && ast:is $last_expression name; then
+                local name op
+                ast:children $root name op
+                ast:from $op value op
+
+                case "$op" in
+                  '+'|'-'|'*'|'/'|'^'|'%')
+                    ast:parse:math-assign $root $name "$op"
+                    root_head=assign
+                    ;;
+                  '@')
+                    ast:parse:push-assign $root $name
+                    root_head=indexing-assign
+                    ;;
+                  *)
+                    ast:make expression string "="
+                    ;;
+                esac
+
+
               else
                 ast:make expression string "="
               fi
@@ -1457,11 +1532,10 @@ __shadowing_ast:parse:expr() {
                 local index
                 ast:push-state '['
                 ast:parse:expr index
-
                 token:require special ']'
                 ast:pop-state
 
-                if token:next-is special '=' && ast:is $index name; then
+                if token:next-is special '='; then
                   token:skip
                   ast:parse:expr expression
                   root_head=indexing-assign
@@ -1485,6 +1559,29 @@ __shadowing_ast:parse:expr() {
                 ast:parse:list ']' root
                 root_head=list
                 ast:pop-state
+              fi
+              ;;
+
+            '+'|'-'|'*'|'/'|'^'|'%')
+              if ast:state-is 'math'; then
+
+                if [ $exprnum = 0 ]; then
+                  if [ $value = '+' ] || [ $value = '-' ]; then
+                    ast:parse:math-unary $root $value
+                  else
+                    ast:error "$value is not an unary operator"
+                  fi
+
+                elif [ $exprnum = 1 ]; then
+                  ast:parse:math-binary $root $last_expression "$value"
+
+                else
+                  ast:error "trailling $value in math expression"
+                fi
+                ast:from $root head root_head
+
+              else
+                ast:make expression name "$value"
               fi
               ;;
 
@@ -1537,40 +1634,6 @@ ast:parse:expr() {
 
 
 
-ast:parse:expr-and-set() {
-  local __paeas_expr
-  ast:parse:expr __paeas_expr
-
-  while [ $# -gt 0 ]; do
-    case "$1" in
-      -e|--expr)
-        setvar "$2" $__paeas_expr
-        shift 2
-        ;;
-      -v|--value)
-        ast:from $__paeas_expr value "$2"
-        shift 2
-        ;;
-      -h|--head)
-        ast:from $__paeas_expr head "$2"
-        shift 2
-        ;;
-      -c|--children)
-        ast:from $__paeas_expr children "$2"
-        shift 2
-        ;;
-      -@|--@children)
-        ast:children $__paeas_expr "${@:2}"
-        shift $#
-        ;;
-      *)
-        ast:error "Invalid flag $1, expected -[evhc@]"
-        ;;
-    esac
-  done
-}
-
-
 
 __shadowing_ast:parse:specific-expr() {
   local expr expr_head required="$1" out="$2"
@@ -1615,6 +1678,36 @@ ast:parse:assign() {
   ast:push-child $expr $assigned_value
 }
 
+ast:parse:math-assign() {
+  local expr="$1" name="$2" op="$3"
+  local name_value right_operand math_expr assigned name_subst
+
+  ast:from $name value name_value
+
+  ast:push-state math
+  ast:parse:expr right_operand
+  ast:pop-state
+
+  ast:make name_subst simple-substitution "$name_value"
+  ast:make math_expr math "$op" $name_subst $right_operand
+  ast:make assigned  math-assigned "" $math_expr
+
+  ast:set $expr head assign
+  ast:set $expr children "$name $assigned"
+}
+
+ast:parse:push-assign() {
+  local expr="$1" name="$2"
+  local name_value index value
+
+  ast:from $name value name_value
+
+  ast:make index array-length "$name_value"
+
+  ast:parse:expr value
+  ast:set $expr children "$name $index $value"
+  ast:set $expr head indexing-assign
+}
 
 
 __shadowing_ast:parse:substitution() {
@@ -1622,7 +1715,8 @@ __shadowing_ast:parse:substitution() {
   local expr value head varname index lb rb aft
   local cat_children cat_array dollar
 
-  ast:parse:expr-and-set -e expr -v value -h head -@ varname lb index rb aft
+  ast:parse:expr expr
+  ast:all-from "$expr" -v value -h head -@ varname lb index rb aft
 
   case "$head" in
     name)
@@ -1634,6 +1728,9 @@ __shadowing_ast:parse:substitution() {
           ast:from $varname value value
           ast:make subst indexing-substitution "$value" $index
           if [ -n "$aft" ]; then
+            if ast:state-is math; then
+              ast:error "invalid math expression: $(ast:print $expr)"
+            fi
             ast:from $expr children cat_children
             cat_array=( $cat_children )
             ast:make subst cat $subst "${cat_array[@:4]}"
@@ -1666,6 +1763,7 @@ ast:parse:substitution() {
 
 
 
+
 __shadowing_ast:parse:curly-substitution() {
   local out="$1"
   local subst
@@ -1689,6 +1787,7 @@ ast:parse:curly-substitution() {
 
 
 
+
 __shadowing_ast:parse:command-substitution() {
   local out="$1"
   local cmd call
@@ -1696,8 +1795,14 @@ __shadowing_ast:parse:command-substitution() {
   ast:make "$out" command-substitution ''
 
   ast:push-state '$('
+
   ast:parse:expr cmd
-  ast:parse:commandcall $cmd call
+  if ast:is $cmd name math; then
+    ast:parse:math call
+    token:require special ')'
+  else
+    ast:parse:commandcall $cmd call
+  fi
   ast:pop-state
 
   ast:push-child "${!out}" $call
@@ -1800,6 +1905,93 @@ ast:parse:arguments() {
   done
 }
 
+ast:parse:math-unary() {
+  local expr="$1" op="$2"
+  local operand value head
+
+  ast:parse:expr operand
+  ast:parse:validate-math-operand $operand
+  ast:push-child $expr $operand
+
+  ast:set $expr value "$op"
+  ast:set $expr head  math
+}
+
+ast:parse:math-binary() {
+  local expr="$1" left="$2" op="$3"
+  local right
+
+  ast:parse:expr right
+  ast:parse:validate-math-operand $left
+  ast:parse:validate-math-operand $right
+  ast:push-child $expr $right
+
+  ast:set $expr value "$op"
+  ast:set $expr head  math
+}
+
+
+ast:parse:validate-math-operand() {
+  local operand="$1"
+
+  ast:all-from "$operand" -v value -h head
+
+  case "$head" in
+    name)
+      if [[ "$value" =~ ([a-zA-Z_][a-zA-Z_0-9]*|@) ]]; then
+        ast:set $operand head simple-substitution
+      elif [[ "$value" =~ [0-9]+ ]]; then
+        true
+      else
+        ast:error "invalid variable name '$value' in math expression"
+      fi
+      ;;
+    *substitution|math)
+      ;;
+    list)
+      local element elements count=0
+      ast:from $operand children elements
+      for element in $elements; do
+        ast:parse:validate-math-operand $element
+        count=$((count+1))
+      done
+      if [ ! $count = 1 ]; then
+        ast:error "invalid math expression $(ast:print operand): trailling expressions in parentheses"
+      fi
+      ;;
+    *)
+      ast:error "not a valid math expression: $(ast:print operand) :: $head"
+      ;;
+  esac
+}
+
+
+__shadowing_ast:parse:math() {
+  local out="$1"
+  local expr math_expr
+
+
+  ast:push-state math
+  ast:parse:expr expr
+  ast:pop-state
+
+  ast:parse:validate-math-operand $expr
+
+  ast:make math_expr math-top '' $expr
+  setvar "$out" $math_expr
+}
+
+ast:parse:math() {
+  if [ -z ${__noshadow_16_+x} ]; then
+    local __noshadow_16_
+    local __noshadow_16_1
+  fi
+  __shadowing_ast:parse:math  __noshadow_16_1
+  setvar "$1" "$__noshadow_16_1"
+}
+
+
+
 
 # ast:parse:if $block_type $out
 #
@@ -1833,12 +2025,12 @@ __shadowing_ast:parse:if() {
 }
 
 ast:parse:if() {
-  if [ -z ${__noshadow_16_+x} ]; then
-    local __noshadow_16_
-    local __noshadow_16_2
+  if [ -z ${__noshadow_17_+x} ]; then
+    local __noshadow_17_
+    local __noshadow_17_2
   fi
-  __shadowing_ast:parse:if "$1"  __noshadow_16_2
-  setvar "$2" "$__noshadow_16_2"
+  __shadowing_ast:parse:if "$1"  __noshadow_17_2
+  setvar "$2" "$__noshadow_17_2"
 }
 
 
@@ -1913,12 +2105,12 @@ __shadowing_ast:parse:for() {
 }
 
 ast:parse:for() {
-  if [ -z ${__noshadow_17_+x} ]; then
-    local __noshadow_17_
-    local __noshadow_17_1
+  if [ -z ${__noshadow_18_+x} ]; then
+    local __noshadow_18_
+    local __noshadow_18_1
   fi
-  __shadowing_ast:parse:for  __noshadow_17_1
-  setvar "$1" "$__noshadow_17_1"
+  __shadowing_ast:parse:for  __noshadow_18_1
+  setvar "$1" "$__noshadow_18_1"
 }
 
 
@@ -1965,12 +2157,12 @@ __shadowing_ast:parse:conditional() {
 }
 
 ast:parse:conditional() {
-  if [ -z ${__noshadow_18_+x} ]; then
-    local __noshadow_18_
-    local __noshadow_18_1
+  if [ -z ${__noshadow_19_+x} ]; then
+    local __noshadow_19_
+    local __noshadow_19_1
   fi
-  __shadowing_ast:parse:conditional  __noshadow_18_1
-  setvar "$1" "$__noshadow_18_1"
+  __shadowing_ast:parse:conditional  __noshadow_19_1
+  setvar "$1" "$__noshadow_19_1"
 }
 
 
@@ -1987,12 +2179,12 @@ __shadowing_ast:parse:negated-conditional() {
 }
 
 ast:parse:negated-conditional() {
-  if [ -z ${__noshadow_19_+x} ]; then
-    local __noshadow_19_
-    local __noshadow_19_1
+  if [ -z ${__noshadow_20_+x} ]; then
+    local __noshadow_20_
+    local __noshadow_20_1
   fi
-  __shadowing_ast:parse:negated-conditional  __noshadow_19_1
-  setvar "$1" "$__noshadow_19_1"
+  __shadowing_ast:parse:negated-conditional  __noshadow_20_1
+  setvar "$1" "$__noshadow_20_1"
 }
 
 
@@ -2010,12 +2202,12 @@ __shadowing_ast:parse:command-conditional() {
 }
 
 ast:parse:command-conditional() {
-  if [ -z ${__noshadow_20_+x} ]; then
-    local __noshadow_20_
-    local __noshadow_20_2
+  if [ -z ${__noshadow_21_+x} ]; then
+    local __noshadow_21_
+    local __noshadow_21_2
   fi
-  __shadowing_ast:parse:command-conditional "$1"  __noshadow_20_2
-  setvar "$2" "$__noshadow_20_2"
+  __shadowing_ast:parse:command-conditional "$1"  __noshadow_21_2
+  setvar "$2" "$__noshadow_21_2"
 }
 
 
@@ -2048,12 +2240,12 @@ __shadowing_ast:parse:composite-conditional() {
 }
 
 ast:parse:composite-conditional() {
-  if [ -z ${__noshadow_21_+x} ]; then
-    local __noshadow_21_
-    local __noshadow_21_2
+  if [ -z ${__noshadow_22_+x} ]; then
+    local __noshadow_22_
+    local __noshadow_22_2
   fi
-  __shadowing_ast:parse:composite-conditional "$1"  __noshadow_21_2
-  setvar "$2" "$__noshadow_21_2"
+  __shadowing_ast:parse:composite-conditional "$1"  __noshadow_22_2
+  setvar "$2" "$__noshadow_22_2"
 }
 
 
@@ -2076,12 +2268,12 @@ __shadowing_ast:parse:function-definition() {
 }
 
 ast:parse:function-definition() {
-  if [ -z ${__noshadow_22_+x} ]; then
-    local __noshadow_22_
-    local __noshadow_22_2
+  if [ -z ${__noshadow_23_+x} ]; then
+    local __noshadow_23_
+    local __noshadow_23_2
   fi
-  __shadowing_ast:parse:function-definition "$1"  __noshadow_22_2
-  setvar "$2" "$__noshadow_22_2"
+  __shadowing_ast:parse:function-definition "$1"  __noshadow_23_2
+  setvar "$2" "$__noshadow_23_2"
 }
 
 
@@ -2154,12 +2346,12 @@ __shadowing_ast:parse:block() {
 }
 
 ast:parse:block() {
-  if [ -z ${__noshadow_23_+x} ]; then
-    local __noshadow_23_
-    local __noshadow_23_2
+  if [ -z ${__noshadow_24_+x} ]; then
+    local __noshadow_24_
+    local __noshadow_24_2
   fi
-  __shadowing_ast:parse:block "$1"  __noshadow_23_2
-  setvar "$2" "$__noshadow_23_2"
+  __shadowing_ast:parse:block "$1"  __noshadow_24_2
+  setvar "$2" "$__noshadow_24_2"
 }
 
 
@@ -2201,12 +2393,12 @@ __shadowing_ast:parse:list() {
 }
 
 ast:parse:list() {
-  if [ -z ${__noshadow_24_+x} ]; then
-    local __noshadow_24_
-    local __noshadow_24_2
+  if [ -z ${__noshadow_25_+x} ]; then
+    local __noshadow_25_
+    local __noshadow_25_2
   fi
-  __shadowing_ast:parse:list "$1"  __noshadow_24_2
-  setvar "$2" "$__noshadow_24_2"
+  __shadowing_ast:parse:list "$1"  __noshadow_25_2
+  setvar "$2" "$__noshadow_25_2"
 }
 
 
@@ -2252,7 +2444,7 @@ __shadowing_bash:compile() {
       sh:compile $expr "$out"
       ;;
 
-    elements|simple-substitution|function-def|local|block|elements)
+    elements|simple-substitution|function-def|local|block|math|math-top|math-assigned)
       sh:compile $expr "$out"
       ;;
 
@@ -2305,6 +2497,12 @@ __shadowing_bash:compile() {
       setvar "$out" "declare -A $name"
       ;;
 
+    array-length)
+      local name
+      ast:from $expr value name
+
+      setvar "$out" "\${#$name[@]}"
+      ;;
     list)
       local expr_children child_ast child result
 
@@ -2358,16 +2556,19 @@ __shadowing_bash:compile() {
           ;;
       esac
       ;;
+    *)
+      >&2 echo "unimplemented: $expr_head"
+      ;;
   esac
 }
 
 bash:compile() {
-  if [ -z ${__noshadow_25_+x} ]; then
-    local __noshadow_25_
-    local __noshadow_25_2
+  if [ -z ${__noshadow_26_+x} ]; then
+    local __noshadow_26_
+    local __noshadow_26_2
   fi
-  __shadowing_bash:compile "$1"  __noshadow_25_2
-  setvar "$2" "$__noshadow_25_2"
+  __shadowing_bash:compile "$1"  __noshadow_26_2
+  setvar "$2" "$__noshadow_26_2"
 }
 
 # FILE: lang/bash/compile.bash
@@ -2438,6 +2639,16 @@ __shadowing_sh:compile() {
       setvar "$out" "$var=$value"
       ;;
 
+    math-assigned)
+      local value_ast value
+
+      ast:from $expr children value_ast
+
+      NO_QUOTING=true backend:compile $value_ast value
+
+      setvar "$out" "\$(( $value ))"
+      ;;
+
     call)
       local children arg_ast
       local result cmd arg
@@ -2460,9 +2671,17 @@ __shadowing_sh:compile() {
 
       ast:from $expr children call_ast
 
-      sh:compile $call_ast call
+      backend:compile $call_ast call
 
-      setvar "$out" '$('"$call"')'
+      if ast:is $call_ast math-top; then
+        setvar "$out" "${call:5}"
+      else
+        if ${NO_QUOTING-false}; then
+          setvar "$out" "\$( $call )"
+        else
+          setvar "$out" "\"\$( $call )\""
+        fi
+      fi
       ;;
 
     if|elif)
@@ -2521,7 +2740,49 @@ __shadowing_sh:compile() {
     simple-substitution)
       local name
       ast:from $expr value name
-      setvar "$out" "\"\${$name}\""
+
+      if ${NO_QUOTING-false}; then
+        setvar "$out" "\${$name}"
+      else
+        setvar "$out" "\"\${$name}\""
+      fi
+      ;;
+
+    math-top)
+      local child_ast child
+
+      ast:from $expr children child_ast
+      NO_QUOTING=true backend:compile $child_ast child
+
+      setvar "$out" "echo \$(( $child ))"
+      ;;
+
+    math)
+      local left_ast right_ast op
+      local left right
+
+      ast:all-from $expr -v op -@ left_ast right_ast
+
+      if [ "$op" = "^" ]; then
+        case $PowscriptBackend in
+          sh)
+            >&2 echo "unimplemented: ^ operator in math"
+            return
+            ;;
+          bash)
+            op="**"
+            ;;
+        esac
+      fi
+
+      backend:compile $left_ast left
+
+      if [ -n "$right_ast" ]; then
+        backend:compile $right_ast right
+        setvar "$out" "$left$op$right"
+      else
+        setvar "$out" "$op$left"
+      fi
       ;;
 
     function-def)
@@ -2625,12 +2886,12 @@ __shadowing_sh:compile() {
 }
 
 sh:compile() {
-  if [ -z ${__noshadow_26_+x} ]; then
-    local __noshadow_26_
-    local __noshadow_26_2
+  if [ -z ${__noshadow_27_+x} ]; then
+    local __noshadow_27_
+    local __noshadow_27_2
   fi
-  __shadowing_sh:compile "$1"  __noshadow_26_2
-  setvar "$2" "$__noshadow_26_2"
+  __shadowing_sh:compile "$1"  __noshadow_27_2
+  setvar "$2" "$__noshadow_27_2"
 }
 
 # FILE: lang/sh/compile.bash
@@ -2885,12 +3146,12 @@ __shadowing_interactive:get-remaining-input() {
 }
 
 interactive:get-remaining-input() {
-  if [ -z ${__noshadow_27_+x} ]; then
-    local __noshadow_27_
-    local __noshadow_27_1
+  if [ -z ${__noshadow_28_+x} ]; then
+    local __noshadow_28_
+    local __noshadow_28_1
   fi
-  __shadowing_interactive:get-remaining-input  __noshadow_27_1
-  setvar "$1" "$__noshadow_27_1"
+  __shadowing_interactive:get-remaining-input  __noshadow_28_1
+  setvar "$1" "$__noshadow_28_1"
 }
 
 
