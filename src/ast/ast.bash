@@ -763,7 +763,7 @@ ast:parse:conditional() { #<<NOSHADOW>>
 
     if [ $class = name ]; then
       case "$value" in
-        is|isnt|'>'|'<'|'<='|'>='|'!='|'='|match)
+        is|isnt|'>'|'<'|'<='|'>='|'!='|'='|'=='|match)
           is_command=false
           token:skip
           ;;

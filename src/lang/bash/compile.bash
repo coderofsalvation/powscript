@@ -110,6 +110,7 @@ bash:compile() { #<<NOSHADOW>>
           case "$op" in
             'is'|'=')     op='='    quoted=single ;;
             'isnt'|'!=')  op='!='   quoted=single ;;
+            '==')         op='-eq'  quoted=single ;;
             '>')          op='-gt'  quoted=single ;;
             '>=')         op='-ge'  quoted=single ;;
             '<')          op='-lt'  quoted=single ;;
@@ -130,7 +131,7 @@ bash:compile() { #<<NOSHADOW>>
     newline|eof|'')
       ;;
     *)
-      >&2 echo "unimplemented: '$expr_head'"
+      backend:error "unimplemented: '$expr_head'"
       ;;
   esac
 }

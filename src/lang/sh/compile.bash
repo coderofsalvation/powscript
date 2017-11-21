@@ -36,6 +36,7 @@ sh:compile() { #<<NOSHADOW>>
       backend:compile $var_ast   var
       backend:compile $value_ast value
 
+
       setvar "$out" "$var=$value"
       ;;
 
@@ -166,7 +167,7 @@ sh:compile() { #<<NOSHADOW>>
       if [ "$op" = "^" ]; then
         case $PowscriptBackend in
           sh)
-            >&2 echo "unimplemented: ^ operator in math"
+            backend:error "unimplemented: ^ operator in math"
             return
             ;;
           bash)
@@ -186,16 +187,14 @@ sh:compile() { #<<NOSHADOW>>
       ;;
 
     function-def)
+      local name_ast args_ast block_ast
       local name args_ast arg_assign_ast argval_ast block_ast block
       local args arg argval argnum locals_ast argname_ast
 
-      ast:from $expr children expr_children
-      expr_children=( $expr_children )
 
-      sh:compile ${expr_children[0]} name
+      ast:children $expr name_ast args_ast block_ast
 
-      args_ast=${expr_children[1]}
-      block_ast=${expr_children[2]}
+      sh:compile $name_ast name
 
       ast:make locals_ast local
 
@@ -273,7 +272,7 @@ sh:compile() { #<<NOSHADOW>>
             '<=')         op='-le'  quoted=single ;;
             'and'|'&&')   op='&&' ;;
             'or'|'||')    op='||' ;;
-            *) >&2 echo "unimplemented: condition: $op" ;;
+            *) backend:error "unimplemented: condition: $op" ;;
           esac
 
           case $quoted in
@@ -286,7 +285,7 @@ sh:compile() { #<<NOSHADOW>>
     newline|eof|'')
       ;;
     *)
-      >&2 echo "unimplemented: '$expr_head'"
+      backend:error "unimplemented: '$expr_head'"
       ;;
   esac
 }

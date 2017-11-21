@@ -555,7 +555,7 @@ __shadowing_token:parse() {
             ;;
         esac
         state_end=true
-        class=special
+        class=name
         ;;
 
       *)
@@ -597,7 +597,7 @@ __shadowing_token:parse() {
               belongs=false
               skip_term=false
               next_class=special
-            elif [[ "$token" =~ ^[=+*-\<\>\!/]$ ]]; then
+            elif [[ "$token" =~ ^[+*-\<\>\!/]$ ]]; then
               token="$token$c"
               class=special
             elif [ -z "$token" ]; then
@@ -2209,7 +2209,7 @@ __shadowing_ast:parse:conditional() {
 
     if [ $class = name ]; then
       case "$value" in
-        is|isnt|'>'|'<'|'<='|'>='|'!='|'='|match)
+        is|isnt|'>'|'<'|'<='|'>='|'!='|'='|'=='|match)
           is_command=false
           token:skip
           ;;
@@ -2502,6 +2502,15 @@ ast:parse:list() {
 # FILE: ast/ast.bash
 declare -gA PowscriptBackends
 
+backend:error() {
+  local message="$1"
+  >&2 echo "$message"
+  if ! powscript:is-interactive; then
+    exit 1
+  fi
+}
+
+# FILE: lang/common.bash
 bash:interactive() {
   local wfifo="$1"
   local rfifo="$2"
@@ -2640,6 +2649,7 @@ __shadowing_bash:compile() {
           case "$op" in
             'is'|'=')     op='='    quoted=single ;;
             'isnt'|'!=')  op='!='   quoted=single ;;
+            '==')         op='-eq'  quoted=single ;;
             '>')          op='-gt'  quoted=single ;;
             '>=')         op='-ge'  quoted=single ;;
             '<')          op='-lt'  quoted=single ;;
@@ -2660,7 +2670,7 @@ __shadowing_bash:compile() {
     newline|eof|'')
       ;;
     *)
-      >&2 echo "unimplemented: '$expr_head'"
+      backend:error "unimplemented: '$expr_head'"
       ;;
   esac
 }
@@ -2738,6 +2748,7 @@ __shadowing_sh:compile() {
 
       backend:compile $var_ast   var
       backend:compile $value_ast value
+
 
       setvar "$out" "$var=$value"
       ;;
@@ -2869,7 +2880,7 @@ __shadowing_sh:compile() {
       if [ "$op" = "^" ]; then
         case $PowscriptBackend in
           sh)
-            >&2 echo "unimplemented: ^ operator in math"
+            backend:error "unimplemented: ^ operator in math"
             return
             ;;
           bash)
@@ -2889,16 +2900,14 @@ __shadowing_sh:compile() {
       ;;
 
     function-def)
+      local name_ast args_ast block_ast
       local name args_ast arg_assign_ast argval_ast block_ast block
       local args arg argval argnum locals_ast argname_ast
 
-      ast:from $expr children expr_children
-      expr_children=( $expr_children )
 
-      sh:compile ${expr_children[0]} name
+      ast:children $expr name_ast args_ast block_ast
 
-      args_ast=${expr_children[1]}
-      block_ast=${expr_children[2]}
+      sh:compile $name_ast name
 
       ast:make locals_ast local
 
@@ -2976,7 +2985,7 @@ __shadowing_sh:compile() {
             '<=')         op='-le'  quoted=single ;;
             'and'|'&&')   op='&&' ;;
             'or'|'||')    op='||' ;;
-            *) >&2 echo "unimplemented: condition: $op" ;;
+            *) backend:error "unimplemented: condition: $op" ;;
           esac
 
           case $quoted in
@@ -2989,7 +2998,7 @@ __shadowing_sh:compile() {
     newline|eof|'')
       ;;
     *)
-      >&2 echo "unimplemented: '$expr_head'"
+      backend:error "unimplemented: '$expr_head'"
       ;;
   esac
 }

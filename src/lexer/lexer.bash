@@ -182,7 +182,7 @@ token:parse() { #<<NOSHADOW>>
             ;;
         esac
         state_end=true
-        class=special
+        class=name
         ;;
 
       *)
@@ -224,7 +224,7 @@ token:parse() { #<<NOSHADOW>>
               belongs=false
               skip_term=false
               next_class=special
-            elif [[ "$token" =~ ^[=+*-\<\>\!/]$ ]]; then
+            elif [[ "$token" =~ ^[+*-\<\>\!/]$ ]]; then
               token="$token$c"
               class=special
             elif [ -z "$token" ]; then
