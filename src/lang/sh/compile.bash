@@ -256,6 +256,10 @@ sh:compile() { #<<NOSHADOW>>
           sh:compile ${expr_children[0]} right
           setvar "$out" "! $right"
           ;;
+        -*)
+          bash:compile ${expr_children[0]} right
+          setvar "$out" "[ $op $right ]"
+          ;;
         *)
           sh:compile ${expr_children[0]} left
           sh:compile ${expr_children[1]} right

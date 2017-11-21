@@ -1247,6 +1247,26 @@ ast:print-child() {
       ast:print-child ${child_array[0]}
       printf ')'
       ;;
+    math-top)
+      printf 'math '
+      ast:print-child ${child_array[0]}
+      ;;
+    math)
+      if [ -n "${child_array[1]}" ]; then
+        ast:print-child ${child_array[0]}
+        printf '%s' "$ast_value"
+        ast:print-child ${child_array[1]}
+      else
+        printf '%s' "$ast_value"
+        ast:print-child ${child_array[0]}
+      fi
+      ;;
+    math-assigned)
+      ast:print ${child_array[0]}
+      ;;
+    array-length)
+      printf '$#%s' "$ast_value"
+      ;;
     function-def)
       local name=${child_array[0]} args=${child_array[1]} block=${child_array[2]}
 
@@ -1254,6 +1274,42 @@ ast:print-child() {
       ast:print-child $args
       echo
       ast:print-child $block
+      ;;
+    if|elif)
+      printf '%s ' $ast_head
+      ast:print-child ${child_array[0]}
+      echo
+      ast:print-child ${child_array[1]}
+      ast:print-child ${child_array[2]}
+      ;;
+    else)
+      printf 'else\n'
+      ast:print-child ${child_array[0]}
+      ast:print-child ${child_array[1]}
+      ;;
+    end_if)
+      ;;
+    condition)
+      case $ast_value in
+        command)
+          ast:print-child ${child_array[0]}
+          ;;
+        not|-*)
+          printf '%s ' "$ast_value"
+          ast:print-child ${child_array[0]}
+          ;;
+        *)
+          ast:print-child ${child_array[0]}
+          printf '%s' "$ast_value"
+          ast:print-child ${child_array[1]}
+          ;;
+      esac
+      ;;
+    for)
+      printf 'for %s in' $ast_value
+      ast:print-child ${child_array[0]}
+      echo
+      ast:print-child ${child_array[1]}
       ;;
     list)
       local element
@@ -1265,7 +1321,6 @@ ast:print-child() {
       done
       printf ')'
       ;;
-
     block)
       local statement
 
@@ -2114,7 +2169,20 @@ ast:parse:for() {
 }
 
 
+ast:is-flag() {
+  local expr="$1" minus name extra
 
+  if ast:is $expr cat; then
+    ast:children $expr minus name extra
+    if ast:is $minus name '-' && ast:is $name name && [ -z "$extra" ]; then
+      return 0
+    else
+      return 1
+    fi
+  else
+    return 1
+  fi
+}
 
 
 __shadowing_ast:parse:conditional() {
@@ -2129,6 +2197,10 @@ __shadowing_ast:parse:conditional() {
 
   if [ "$initial_head $initial_value" = "name not" ]; then
     ast:parse:negated-conditional condition
+
+  elif ast:is-flag $initial; then
+    ast:parse:flag-conditional $initial condition
+
   else
     local value class is_command=true
 
@@ -2190,6 +2262,30 @@ ast:parse:negated-conditional() {
 
 
 
+__shadowing_ast:parse:flag-conditional() {
+  local initial="$1" out="$2"
+  local minus name flag expr
+
+  ast:children $initial minus name
+  ast:from $name value flag
+  flag="-$flag"
+
+  ast:parse:expr expr
+  ast:make "$out" condition "$flag" $expr
+}
+
+ast:parse:flag-conditional() {
+  if [ -z ${__noshadow_21_+x} ]; then
+    local __noshadow_21_
+    local __noshadow_21_2
+  fi
+  __shadowing_ast:parse:flag-conditional "$1"  __noshadow_21_2
+  setvar "$2" "$__noshadow_21_2"
+}
+
+
+
+
 __shadowing_ast:parse:command-conditional() {
   local cmd="$1" cmd_ast out="$2"
 
@@ -2202,12 +2298,12 @@ __shadowing_ast:parse:command-conditional() {
 }
 
 ast:parse:command-conditional() {
-  if [ -z ${__noshadow_21_+x} ]; then
-    local __noshadow_21_
-    local __noshadow_21_2
+  if [ -z ${__noshadow_22_+x} ]; then
+    local __noshadow_22_
+    local __noshadow_22_2
   fi
-  __shadowing_ast:parse:command-conditional "$1"  __noshadow_21_2
-  setvar "$2" "$__noshadow_21_2"
+  __shadowing_ast:parse:command-conditional "$1"  __noshadow_22_2
+  setvar "$2" "$__noshadow_22_2"
 }
 
 
@@ -2240,12 +2336,12 @@ __shadowing_ast:parse:composite-conditional() {
 }
 
 ast:parse:composite-conditional() {
-  if [ -z ${__noshadow_22_+x} ]; then
-    local __noshadow_22_
-    local __noshadow_22_2
+  if [ -z ${__noshadow_23_+x} ]; then
+    local __noshadow_23_
+    local __noshadow_23_2
   fi
-  __shadowing_ast:parse:composite-conditional "$1"  __noshadow_22_2
-  setvar "$2" "$__noshadow_22_2"
+  __shadowing_ast:parse:composite-conditional "$1"  __noshadow_23_2
+  setvar "$2" "$__noshadow_23_2"
 }
 
 
@@ -2268,12 +2364,12 @@ __shadowing_ast:parse:function-definition() {
 }
 
 ast:parse:function-definition() {
-  if [ -z ${__noshadow_23_+x} ]; then
-    local __noshadow_23_
-    local __noshadow_23_2
+  if [ -z ${__noshadow_24_+x} ]; then
+    local __noshadow_24_
+    local __noshadow_24_2
   fi
-  __shadowing_ast:parse:function-definition "$1"  __noshadow_23_2
-  setvar "$2" "$__noshadow_23_2"
+  __shadowing_ast:parse:function-definition "$1"  __noshadow_24_2
+  setvar "$2" "$__noshadow_24_2"
 }
 
 
@@ -2346,12 +2442,12 @@ __shadowing_ast:parse:block() {
 }
 
 ast:parse:block() {
-  if [ -z ${__noshadow_24_+x} ]; then
-    local __noshadow_24_
-    local __noshadow_24_2
+  if [ -z ${__noshadow_25_+x} ]; then
+    local __noshadow_25_
+    local __noshadow_25_2
   fi
-  __shadowing_ast:parse:block "$1"  __noshadow_24_2
-  setvar "$2" "$__noshadow_24_2"
+  __shadowing_ast:parse:block "$1"  __noshadow_25_2
+  setvar "$2" "$__noshadow_25_2"
 }
 
 
@@ -2393,12 +2489,12 @@ __shadowing_ast:parse:list() {
 }
 
 ast:parse:list() {
-  if [ -z ${__noshadow_25_+x} ]; then
-    local __noshadow_25_
-    local __noshadow_25_2
+  if [ -z ${__noshadow_26_+x} ]; then
+    local __noshadow_26_
+    local __noshadow_26_2
   fi
-  __shadowing_ast:parse:list "$1"  __noshadow_25_2
-  setvar "$2" "$__noshadow_25_2"
+  __shadowing_ast:parse:list "$1"  __noshadow_26_2
+  setvar "$2" "$__noshadow_26_2"
 }
 
 
@@ -2532,6 +2628,10 @@ __shadowing_bash:compile() {
           bash:compile ${expr_children[0]} right
           setvar "$out" "! $right"
           ;;
+        -*)
+          bash:compile ${expr_children[0]} right
+          setvar "$out" "[ $op $right ]"
+          ;;
         *)
           bash:compile ${expr_children[0]} left
           bash:compile ${expr_children[1]} right
@@ -2565,12 +2665,12 @@ __shadowing_bash:compile() {
 }
 
 bash:compile() {
-  if [ -z ${__noshadow_26_+x} ]; then
-    local __noshadow_26_
-    local __noshadow_26_2
+  if [ -z ${__noshadow_27_+x} ]; then
+    local __noshadow_27_
+    local __noshadow_27_2
   fi
-  __shadowing_bash:compile "$1"  __noshadow_26_2
-  setvar "$2" "$__noshadow_26_2"
+  __shadowing_bash:compile "$1"  __noshadow_27_2
+  setvar "$2" "$__noshadow_27_2"
 }
 
 # FILE: lang/bash/compile.bash
@@ -2858,6 +2958,10 @@ __shadowing_sh:compile() {
           sh:compile ${expr_children[0]} right
           setvar "$out" "! $right"
           ;;
+        -*)
+          bash:compile ${expr_children[0]} right
+          setvar "$out" "[ $op $right ]"
+          ;;
         *)
           sh:compile ${expr_children[0]} left
           sh:compile ${expr_children[1]} right
@@ -2890,12 +2994,12 @@ __shadowing_sh:compile() {
 }
 
 sh:compile() {
-  if [ -z ${__noshadow_27_+x} ]; then
-    local __noshadow_27_
-    local __noshadow_27_2
+  if [ -z ${__noshadow_28_+x} ]; then
+    local __noshadow_28_
+    local __noshadow_28_2
   fi
-  __shadowing_sh:compile "$1"  __noshadow_27_2
-  setvar "$2" "$__noshadow_27_2"
+  __shadowing_sh:compile "$1"  __noshadow_28_2
+  setvar "$2" "$__noshadow_28_2"
 }
 
 # FILE: lang/sh/compile.bash
@@ -3150,12 +3254,12 @@ __shadowing_interactive:get-remaining-input() {
 }
 
 interactive:get-remaining-input() {
-  if [ -z ${__noshadow_28_+x} ]; then
-    local __noshadow_28_
-    local __noshadow_28_1
+  if [ -z ${__noshadow_29_+x} ]; then
+    local __noshadow_29_
+    local __noshadow_29_1
   fi
-  __shadowing_interactive:get-remaining-input  __noshadow_28_1
-  setvar "$1" "$__noshadow_28_1"
+  __shadowing_interactive:get-remaining-input  __noshadow_29_1
+  setvar "$1" "$__noshadow_29_1"
 }
 
 

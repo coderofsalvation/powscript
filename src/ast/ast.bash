@@ -724,7 +724,20 @@ ast:parse:for() { #<<NOSHADOW>>
 }
 noshadow ast:parse:for
 
+ast:is-flag() {
+  local expr="$1" minus name extra
 
+  if ast:is $expr cat; then
+    ast:children $expr minus name extra
+    if ast:is $minus name '-' && ast:is $name name && [ -z "$extra" ]; then
+      return 0
+    else
+      return 1
+    fi
+  else
+    return 1
+  fi
+}
 
 ast:parse:conditional() { #<<NOSHADOW>>
   local out="$1"
@@ -738,6 +751,10 @@ ast:parse:conditional() { #<<NOSHADOW>>
 
   if [ "$initial_head $initial_value" = "name not" ]; then
     ast:parse:negated-conditional condition
+
+  elif ast:is-flag $initial; then
+    ast:parse:flag-conditional $initial condition
+
   else
     local value class is_command=true
 
@@ -777,6 +794,20 @@ ast:parse:negated-conditional() { #<<NOSHADOW>>
   ast:make "$out" condition not $condition
 }
 noshadow ast:parse:negated-conditional
+
+
+ast:parse:flag-conditional() { #<<NOSHADOW>>
+  local initial="$1" out="$2"
+  local minus name flag expr
+
+  ast:children $initial minus name
+  ast:from $name value flag
+  flag="-$flag"
+
+  ast:parse:expr expr
+  ast:make "$out" condition "$flag" $expr
+}
+noshadow ast:parse:flag-conditional 1
 
 
 ast:parse:command-conditional() { #<<NOSHADOW>>

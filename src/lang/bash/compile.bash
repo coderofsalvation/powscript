@@ -99,6 +99,10 @@ bash:compile() { #<<NOSHADOW>>
           bash:compile ${expr_children[0]} right
           setvar "$out" "! $right"
           ;;
+        -*)
+          bash:compile ${expr_children[0]} right
+          setvar "$out" "[ $op $right ]"
+          ;;
         *)
           bash:compile ${expr_children[0]} left
           bash:compile ${expr_children[1]} right

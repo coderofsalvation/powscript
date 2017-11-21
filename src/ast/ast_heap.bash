@@ -200,6 +200,26 @@ ast:print-child() {
       ast:print-child ${child_array[0]}
       printf ')'
       ;;
+    math-top)
+      printf 'math '
+      ast:print-child ${child_array[0]}
+      ;;
+    math)
+      if [ -n "${child_array[1]}" ]; then
+        ast:print-child ${child_array[0]}
+        printf '%s' "$ast_value"
+        ast:print-child ${child_array[1]}
+      else
+        printf '%s' "$ast_value"
+        ast:print-child ${child_array[0]}
+      fi
+      ;;
+    math-assigned)
+      ast:print ${child_array[0]}
+      ;;
+    array-length)
+      printf '$#%s' "$ast_value"
+      ;;
     function-def)
       local name=${child_array[0]} args=${child_array[1]} block=${child_array[2]}
 
@@ -207,6 +227,42 @@ ast:print-child() {
       ast:print-child $args
       echo
       ast:print-child $block
+      ;;
+    if|elif)
+      printf '%s ' $ast_head
+      ast:print-child ${child_array[0]}
+      echo
+      ast:print-child ${child_array[1]}
+      ast:print-child ${child_array[2]}
+      ;;
+    else)
+      printf 'else\n'
+      ast:print-child ${child_array[0]}
+      ast:print-child ${child_array[1]}
+      ;;
+    end_if)
+      ;;
+    condition)
+      case $ast_value in
+        command)
+          ast:print-child ${child_array[0]}
+          ;;
+        not|-*)
+          printf '%s ' "$ast_value"
+          ast:print-child ${child_array[0]}
+          ;;
+        *)
+          ast:print-child ${child_array[0]}
+          printf '%s' "$ast_value"
+          ast:print-child ${child_array[1]}
+          ;;
+      esac
+      ;;
+    for)
+      printf 'for %s in' $ast_value
+      ast:print-child ${child_array[0]}
+      echo
+      ast:print-child ${child_array[1]}
       ;;
     list)
       local element
@@ -218,7 +274,6 @@ ast:print-child() {
       done
       printf ')'
       ;;
-
     block)
       local statement
 
