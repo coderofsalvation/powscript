@@ -19,7 +19,7 @@ ast:parse:expr() { #<<NOSHADOW>>
     token:ignore-whitespace
     token:get -v value -c class -g glued
 
-    if ast:state-is math && [ ! $class = eof ] && [ ! $class = newline ]; then
+    if ${AST_MATH_MODE-false} && [ $class = special ]; then
       glued=true
     fi
 
@@ -65,8 +65,12 @@ ast:parse:expr() { #<<NOSHADOW>>
                 root_head=determinable
               else
                 ast:push-state $value
-                ast:parse:list $closer root
-                root_head=list
+                if ${AST_MATH_MODE-false}; then
+                  ast:parse:list $closer expression
+                else
+                  ast:parse:list $closer root
+                  root_head=list
+                fi
                 ast:pop-state
               fi
               ;;
@@ -78,7 +82,7 @@ ast:parse:expr() { #<<NOSHADOW>>
                 ']') opener='['; ;;
                 '}') opener='{'; ;;
               esac
-              if [ $exprnum -gt 0 ] && { ast:state-is $opener || ast:state-is math; }; then
+              if [ $exprnum -gt 0 ] && { ast:state-is $opener || ${AST_MATH_MODE-false}; }; then
                 root_head=determinable
               else
                 ast:make expression string "$value"
@@ -144,14 +148,18 @@ ast:parse:expr() { #<<NOSHADOW>>
                 root=determinable
               else
                 ast:push-state '['
-                ast:parse:list ']' root
-                root_head=list
+                if ${AST_MATH_MODE-false}; then
+                  ast:parse:list ']' expression
+                else
+                  ast:parse:list ']' root
+                  root_head=list
+                fi
                 ast:pop-state
               fi
               ;;
 
             '+'|'-'|'*'|'/'|'^'|'%')
-              if ast:state-is 'math'; then
+              if ${AST_MATH_MODE-false}; then
 
                 if [ $exprnum = 0 ]; then
                   if [ $value = '+' ] || [ $value = '-' ]; then

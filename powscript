@@ -1353,7 +1353,7 @@ __shadowing_ast:parse:substitution() {
           ast:from $varname value value
           ast:make subst indexing-substitution "$value" $index
           if [ -n "$aft" ]; then
-            if ast:state-is math; then
+            if ${AST_MATH_MODE-false}; then
               ast:error "invalid math expression: $(ast:print $expr)"
             fi
             ast:from $expr children cat_children
@@ -1474,7 +1474,7 @@ __shadowing_ast:parse:expr() {
     token:ignore-whitespace
     token:get -v value -c class -g glued
 
-    if ast:state-is math && [ ! $class = eof ] && [ ! $class = newline ]; then
+    if ${AST_MATH_MODE-false} && [ $class = special ]; then
       glued=true
     fi
 
@@ -1520,8 +1520,12 @@ __shadowing_ast:parse:expr() {
                 root_head=determinable
               else
                 ast:push-state $value
-                ast:parse:list $closer root
-                root_head=list
+                if ${AST_MATH_MODE-false}; then
+                  ast:parse:list $closer expression
+                else
+                  ast:parse:list $closer root
+                  root_head=list
+                fi
                 ast:pop-state
               fi
               ;;
@@ -1533,7 +1537,7 @@ __shadowing_ast:parse:expr() {
                 ']') opener='['; ;;
                 '}') opener='{'; ;;
               esac
-              if [ $exprnum -gt 0 ] && { ast:state-is $opener || ast:state-is math; }; then
+              if [ $exprnum -gt 0 ] && { ast:state-is $opener || ${AST_MATH_MODE-false}; }; then
                 root_head=determinable
               else
                 ast:make expression string "$value"
@@ -1599,14 +1603,18 @@ __shadowing_ast:parse:expr() {
                 root=determinable
               else
                 ast:push-state '['
-                ast:parse:list ']' root
-                root_head=list
+                if ${AST_MATH_MODE-false}; then
+                  ast:parse:list ']' expression
+                else
+                  ast:parse:list ']' root
+                  root_head=list
+                fi
                 ast:pop-state
               fi
               ;;
 
             '+'|'-'|'*'|'/'|'^'|'%')
-              if ast:state-is 'math'; then
+              if ${AST_MATH_MODE-false}; then
 
                 if [ $exprnum = 0 ]; then
                   if [ $value = '+' ] || [ $value = '-' ]; then
@@ -1768,15 +1776,23 @@ ast:parse:list() {
 __shadowing_ast:parse:math() {
   local out="$1"
   local expr math_expr
+  local float_precision
 
-
-  ast:push-state math
-  ast:parse:expr expr
-  ast:pop-state
+  AST_MATH_MODE=true ast:parse:expr expr
 
   ast:parse:validate-math-operand $expr
 
-  ast:make math_expr math-top '' $expr
+  if token:next-is name; then
+    token:get -v float_precision
+    if [[ "$float_precision" =~ [0-9]+ ]]; then
+      ast:make math_expr math-float "$float_precision" $expr
+    else
+      ast:error "expected number for floating point precision in math expression, got $float_precision"
+    fi
+  else
+    ast:make math_expr math-top '' $expr
+  fi
+
   setvar "$out" $math_expr
 }
 
@@ -2811,7 +2827,7 @@ __shadowing_bash:compile() {
       sh:compile $expr "$out"
       ;;
 
-    elements|simple-substitution|function-def|local|block|math|math-top|math-assigned)
+    elements|simple-substitution|function-def|local|block|math|math-top|math-float|math-assigned)
       sh:compile $expr "$out"
       ;;
 
@@ -3147,6 +3163,15 @@ __shadowing_sh:compile() {
       fi
       ;;
 
+    math-float)
+      local precision child_ast child
+
+      ast:from $expr value precision
+      ast:from $expr children child_ast
+      NO_QUOTING=true FLOAT_MATH=true backend:compile $child_ast child
+
+      setvar "$out" "echo \"{scale=$precision; $child}\" | bc"
+      ;;
     math-top)
       local child_ast child
 
@@ -3162,7 +3187,7 @@ __shadowing_sh:compile() {
 
       ast:all-from $expr -v op -@ left_ast right_ast
 
-      if [ "$op" = "^" ]; then
+      if [ "$op" = "^" ] && ! ${FLOAT_MATH-false}; then
         case $PowscriptBackend in
           sh)
             backend:error "unimplemented: ^ operator in math"

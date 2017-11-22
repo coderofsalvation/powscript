@@ -21,7 +21,7 @@ ast:parse:substitution() { #<<NOSHADOW>>
           ast:from $varname value value
           ast:make subst indexing-substitution "$value" $index
           if [ -n "$aft" ]; then
-            if ast:state-is math; then
+            if ${AST_MATH_MODE-false}; then
               ast:error "invalid math expression: $(ast:print $expr)"
             fi
             ast:from $expr children cat_children

@@ -6,15 +6,23 @@
 ast:parse:math() { #<<NOSHADOW>>
   local out="$1"
   local expr math_expr
+  local float_precision
 
-
-  ast:push-state math
-  ast:parse:expr expr
-  ast:pop-state
+  AST_MATH_MODE=true ast:parse:expr expr
 
   ast:parse:validate-math-operand $expr
 
-  ast:make math_expr math-top '' $expr
+  if token:next-is name; then
+    token:get -v float_precision
+    if [[ "$float_precision" =~ [0-9]+ ]]; then
+      ast:make math_expr math-float "$float_precision" $expr
+    else
+      ast:error "expected number for floating point precision in math expression, got $float_precision"
+    fi
+  else
+    ast:make math_expr math-top '' $expr
+  fi
+
   setvar "$out" $math_expr
 }
 noshadow ast:parse:math

@@ -11,7 +11,7 @@ bash:compile() { #<<NOSHADOW>>
       sh:compile $expr "$out"
       ;;
 
-    elements|simple-substitution|function-def|local|block|math|math-top|math-assigned)
+    elements|simple-substitution|function-def|local|block|math|math-top|math-float|math-assigned)
       sh:compile $expr "$out"
       ;;
 

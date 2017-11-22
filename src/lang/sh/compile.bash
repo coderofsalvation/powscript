@@ -173,6 +173,15 @@ sh:compile() { #<<NOSHADOW>>
       fi
       ;;
 
+    math-float)
+      local precision child_ast child
+
+      ast:from $expr value precision
+      ast:from $expr children child_ast
+      NO_QUOTING=true FLOAT_MATH=true backend:compile $child_ast child
+
+      setvar "$out" "echo \"{scale=$precision; $child}\" | bc"
+      ;;
     math-top)
       local child_ast child
 
@@ -188,7 +197,7 @@ sh:compile() { #<<NOSHADOW>>
 
       ast:all-from $expr -v op -@ left_ast right_ast
 
-      if [ "$op" = "^" ]; then
+      if [ "$op" = "^" ] && ! ${FLOAT_MATH-false}; then
         case $PowscriptBackend in
           sh)
             backend:error "unimplemented: ^ operator in math"
