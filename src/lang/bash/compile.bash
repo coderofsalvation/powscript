@@ -7,7 +7,7 @@ bash:compile() { #<<NOSHADOW>>
   ast:from $expr head expr_head
 
   case "$expr_head" in
-    name|string|assign|cat|if|elif|else|end_if|call|for|command-substitution)
+    name|string|assign|cat|if|elif|else|end_if|call|for|command-substitution|switch|case)
       sh:compile $expr "$out"
       ;;
 

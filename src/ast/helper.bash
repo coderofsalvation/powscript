@@ -7,7 +7,7 @@ ast:error() {
   local message="$1"
 
   if ${POWSCRIPT_ALLOW_INCOMPLETE-false}; then
-    POWSCRIPT_INCOMPLETE_STATE="AST parse error: $message"
+    POWSCRIPT_INCOMPLETE_STATE="error: while parsing the AST: $message"
     if ${POWSCRIPT_SHOW_INCOMPLETE_MESSAGE-false}; then
       >&2 echo "$message"
     fi

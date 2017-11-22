@@ -125,6 +125,30 @@ sh:compile() { #<<NOSHADOW>>
       setvar "$out" "for $varname in $elements; do"$'\n'"${block:2:-2}"$'\ndone'
       ;;
 
+    switch)
+      local value_ast cases_ast
+      local value cases
+
+      ast:children $expr value_ast cases_ast
+
+      backend:compile $value_ast value
+      backend:compile $cases_ast cases
+
+      setvar "$out" "case $value in"$'\n'"${cases:2:-2}"$'\n'"esac"
+      ;;
+
+    case)
+      local pattern_ast block_ast
+      local pattern block
+
+      ast:children $expr pattern_ast block_ast
+
+      backend:compile $pattern_ast pattern
+      backend:compile $block_ast   block
+
+      setvar "$out" "$pattern)"$'\n'"${block:2:-2}"$'\n;;'
+      ;;
+
     elements)
       local e elements r result
 
@@ -266,6 +290,7 @@ sh:compile() { #<<NOSHADOW>>
           case "$op" in
             'is'|'=')     op='='    quoted=single ;;
             'isnt'|'!=')  op='!='   quoted=single ;;
+            '==')         op='-eq'  quoted=single ;;
             '>')          op='-gt'  quoted=single ;;
             '>=')         op='-ge'  quoted=single ;;
             '<')          op='-lt'  quoted=single ;;

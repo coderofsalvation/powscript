@@ -118,6 +118,58 @@ ast:parse:for() { #<<NOSHADOW>>
 noshadow ast:parse:for
 
 
+# ast:parse:switch $out
+#
+# Parses expressions of the form:
+#  switch <expr>
+#    case <expr> # at least one
+#      <block>
+#
+
+ast:parse:switch() { #<<NOSHADOW>>
+  local out="$1"
+  local value cases_block case_ast cases
+  local count
+
+  ast:parse:expr value
+  ast:parse:require-newline
+  ast:parse:block swt cases_block
+
+  ast:from $cases_block children cases
+
+  for case_ast in $cases; do
+    if ! ast:is $case_ast 'case'; then
+      ast:error "expected case block in switch statement, found $(ast:from $case_ast head)"
+    fi
+  done
+
+  ast:make "$out" switch '' $value $cases_block
+}
+noshadow ast:parse:switch
+
+
+# ast:parse:case
+#
+# Parses the case blocks from switch statements
+#
+
+ast:parse:case() { #<<NOSHADOW>>
+  local out="$1"
+  local pattern block
+
+  if ! ast:state-is swt; then
+    ast:error "case blocks must be inside switch blocks"
+  fi
+
+  ast:parse:expr pattern
+  ast:parse:require-newline
+  ast:parse:block cs block
+
+  ast:make "$out" 'case' '' $pattern $block
+}
+noshadow ast:parse:case
+
+
 # ast:parse:conditional $out
 #
 # Parses an expression of the form:

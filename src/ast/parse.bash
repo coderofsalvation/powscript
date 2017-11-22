@@ -80,6 +80,7 @@ ast:parse:top() { #<<NOSHADOW>>
       case "$expr_value" in
         'if')      ast:parse:if 'if' "$out" ;;
         'for')     ast:parse:for     "$out" ;;
+        'case')    ast:parse:case    "$out" ;;
         'math')    ast:parse:math    "$out" ;;
         'while')   ast:parse:while   "$out" ;;
         'switch')  ast:parse:switch  "$out" ;;
