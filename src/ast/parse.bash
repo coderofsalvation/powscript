@@ -3,6 +3,7 @@ powscript_source ast/expressions.bash  #<<EXPAND>>
 powscript_source ast/math.bash         #<<EXPAND>>
 powscript_source ast/commands.bash     #<<EXPAND>>
 powscript_source ast/blocks.bash       #<<EXPAND>>
+powscript_source ast/patterns.bash     #<<EXPAND>>
 powscript_source ast/conditionals.bash #<<EXPAND>>
 powscript_source ast/functions.bash    #<<EXPAND>>
 powscript_source ast/print.bash        #<<EXPAND>>

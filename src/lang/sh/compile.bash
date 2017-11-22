@@ -86,24 +86,15 @@ sh:compile() { #<<NOSHADOW>>
       ;;
 
     if|elif)
-      local condition_ast block_ast after_ast
       local condition block after
-
-      ast:children $expr condition_ast block_ast after_ast
-
-      backend:compile $condition_ast condition
-      backend:compile $block_ast     block
-      backend:compile $after_ast     after
+      backend:compile-children $expr condition block after
 
       setvar "$out" "$expr_head $condition; then"$'\n'"${block:2:-2}"$'\n'"$after"
       ;;
 
     else)
-      local block_ast
       local block
-
-      ast:children $expr block_ast
-      backend:compile $block_ast block
+      backend:compile-children $expr block
 
       setvar "$out" "else"$'\n'"${block:2:-2}"$'\n'"fi"
       ;;
@@ -113,38 +104,31 @@ sh:compile() { #<<NOSHADOW>>
       ;;
 
     for)
-      local varname elements_ast block_ast
+      local varname
       local elements block
 
       ast:from $expr value varname
-      ast:children $expr elements_ast block_ast
-
-      backend:compile $elements_ast elements
-      backend:compile $block_ast block
+      backend:compile-children $expr elements block
 
       setvar "$out" "for $varname in $elements; do"$'\n'"${block:2:-2}"$'\ndone'
       ;;
 
+    while)
+      local condition block
+      backend:compile-children $expr condition block
+
+      setvar "$out" "while $condition; do"$'\n'"${block:2:-2}"$'\ndone'
+      ;;
     switch)
-      local value_ast cases_ast
       local value cases
-
-      ast:children $expr value_ast cases_ast
-
-      backend:compile $value_ast value
-      backend:compile $cases_ast cases
+      backend:compile-children $expr value cases
 
       setvar "$out" "case $value in"$'\n'"${cases:2:-2}"$'\n'"esac"
       ;;
 
     case)
-      local pattern_ast block_ast
       local pattern block
-
-      ast:children $expr pattern_ast block_ast
-
-      backend:compile $pattern_ast pattern
-      backend:compile $block_ast   block
+      backend:compile-children $expr pattern block
 
       setvar "$out" "$pattern)"$'\n'"${block:2:-2}"$'\n;;'
       ;;
@@ -271,6 +255,10 @@ sh:compile() { #<<NOSHADOW>>
       result="$result"$'\n}'
 
       setvar "$out" "$result"
+      ;;
+
+    pattern)
+      ast:from $expr value "$out"
       ;;
 
     condition)

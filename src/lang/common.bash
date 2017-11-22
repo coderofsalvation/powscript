@@ -6,3 +6,15 @@ backend:error() {
   fi
 }
 
+backend:compile-children() {
+  local expr="$1"
+  local __ast __asts
+
+  ast:from $expr children __asts
+
+  for __ast in $__asts; do
+    shift
+    backend:compile $__ast "$1"
+  done
+}
+

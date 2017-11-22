@@ -88,6 +88,27 @@ ast:parse:post-if() {
   esac
 }
 
+
+# ast:parse:while $out
+#
+# Parses and expression of the form:
+#   while <expr>
+#     <block>
+#
+
+ast:parse:while() { #<<NOSHADOW>>
+  local out="$1"
+  local condition block
+
+  ast:parse:conditional condition
+  ast:parse:require-newline 'while statement'
+  ast:parse:block wh block
+
+  ast:make "$out" 'while' '' $condition $block
+}
+noshadow ast:parse:while
+
+
 # ast:parse:for $out
 #
 # Parses an expression of the form:
@@ -110,7 +131,6 @@ ast:parse:for() { #<<NOSHADOW>>
     ast:parse:arguments $elements_ast
 
     ast:parse:block 'for' block_ast
-
   fi
 
   ast:make "$out" 'for' "$value" $elements_ast $block_ast
@@ -161,7 +181,7 @@ ast:parse:case() { #<<NOSHADOW>>
     ast:error "case blocks must be inside switch blocks"
   fi
 
-  ast:parse:expr pattern
+  ast:parse:pattern pattern
   ast:parse:require-newline "case statement"
   ast:parse:block cs block
 
@@ -213,7 +233,11 @@ ast:parse:conditional() { #<<NOSHADOW>>
       ast:parse:command-conditional $initial condition
     else
       local left=$initial right
-      ast:parse:expr right
+      if [ "$value" = match ]; then
+        ast:parse:pattern right
+      else
+        ast:parse:expr right
+      fi
       ast:make condition condition $value $left $right
     fi
   fi

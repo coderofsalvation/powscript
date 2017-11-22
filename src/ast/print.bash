@@ -128,7 +128,7 @@ ast:print-child() {
       echo
       ast:print-child ${child_array[1]}
       ;;
-    switch|case)
+    switch|case|while)
       printf '%s ' "$ast_head"
       ast:print-child ${child_array[0]}
       echo
