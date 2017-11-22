@@ -132,7 +132,7 @@ ast:parse:switch() { #<<NOSHADOW>>
   local count
 
   ast:parse:expr value
-  ast:parse:require-newline
+  ast:parse:require-newline "switch statement"
   ast:parse:block swt cases_block
 
   ast:from $cases_block children cases
@@ -162,7 +162,7 @@ ast:parse:case() { #<<NOSHADOW>>
   fi
 
   ast:parse:expr pattern
-  ast:parse:require-newline
+  ast:parse:require-newline "case statement"
   ast:parse:block cs block
 
   ast:make "$out" 'case' '' $pattern $block
