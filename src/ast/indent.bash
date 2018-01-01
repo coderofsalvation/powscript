@@ -30,7 +30,10 @@ ast:test-indentation() { #<<NOSHADOW>>
       result=error-start
     fi
   else
-    if [ $found -eq $req ]; then
+    if [ $found -eq -1 ]; then
+      result=error-eof
+
+    elif [ $found -eq $req ]; then
       result=ok
 
     elif [ $found -lt $req ]; then

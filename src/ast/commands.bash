@@ -3,80 +3,35 @@
 # parse an AST of the form: command expr1 expr2...
 #
 
-ast:parse:commandcall() { #<<NOSHADOW>>
-  local command_ast=$1 out="$2"
-  local expression child expr_head=none
+ast:parse:command-call() { #<<NOSHADOW>>
+  local assigns=$1 command_ast=$2 out="$3"
+  local expression child predicate
 
-  ast:make expression call '' $command_ast
+  ast:make expression call '' $assigns $command_ast
 
-  ast:parse:arguments $expression
+  if ast:state-is ==; then
+    predicate='ast:parse:not-binary-conditional %'
+  else
+    predicate='true'
+  fi
+
+  ast:parse:sequence $expression "$predicate"
 
   setvar "$out" $expression
 }
-noshadow ast:parse:commandcall 1
+noshadow ast:parse:command-call 2
 
 
-# ast:parse:arguments $expr
-#
-# Loop that parses the arguments of a commandcall.
-#
-
-ast:parse:arguments() {
+ast:parse:not-binary-conditional() {
   local expr="$1"
-  local expr_head=none expr_value child unfinished=true state state_s
+  local name
 
-  ast:last-state state
-  case $state in
-    '(')
-      state_s='c'
-      ;;
-    top)
-      state_s='t'
-      ;;
-    '==')
-      state_s='i'
-      ;;
-    *)
-      state_s='o'
-      ;;
-  esac
-
-
-  while $unfinished; do
-    ast:parse:expr child
-    ast:from $child head  expr_head
-    ast:from $child value expr_value
-
-    case "$state_s/$expr_head/$expr_value" in
-      'c/string/)'|[ti]'/eof/'*|[oti]'/newline/'*)
-        unfinished=false
-        ;;
-
-      'i/name/'*)
-        ast:from $child value expr_value
-
-        case "$expr_value" in
-          or|and|'&&'|'||') unfinished=false; ;;
-          *) ast:push-child $expr $child; ;;
-        esac
-        ;;
-
-      */eof/*)
-        if ${POWSCRIPT_ALLOW_INCOMPLETE-false}; then
-          POWSCRIPT_INCOMPLETE_STATE=$state
-          exit
-        else
-          ast:error "unexpected end of file while parsing command."
-        fi
-        ;;
-
-      */newline/*)
-        ;;
-
-      *)
-        ast:push-child $expr $child
-        ;;
+  if ast:is $expr name; then
+    ast:from $expr value name
+    case "$name" in
+      and|or|'&&'|'||') return 1 ;;
+      *)                return 0 ;;
     esac
-  done
+  fi
+  return 0
 }
-

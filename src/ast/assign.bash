@@ -41,20 +41,15 @@ ast:parse:assign() {
 
 ast:parse:math-assign() {
   local expr="$1" name="$2" op="$3"
-  local name_value right_operand math_expr assigned name_subst
-
-  ast:from $name value name_value
+  local right_side
 
   ast:push-state math
-  ast:parse:expr right_operand
+  ast:parse:expr right_side
   ast:pop-state
 
-  ast:make name_subst simple-substitution "$name_value"
-  ast:make math_expr math "$op" $name_subst $right_operand
-  ast:make assigned  math-assigned "" $math_expr
-
-  ast:set $expr head assign
-  ast:set $expr children "$name $assigned"
+  ast:set $expr head math-assign
+  ast:set $expr value "$op"
+  ast:set $expr children "$name $right_side"
 }
 
 
@@ -75,5 +70,57 @@ ast:parse:push-assign() {
   ast:parse:expr value
   ast:set $expr children "$name $index $value"
   ast:set $expr head indexing-assign
+}
+
+# ast:parse:concat-assign $expr $name
+#
+# Parse an AST to be concatenated to a variable
+#
+
+ast:parse:concat-assign() {
+  local expr="$1" name="$2"
+  local name_value value subst concat
+
+  ast:from $name value name_value
+
+  ast:parse:expr value
+
+  ast:set $expr children "$name $value"
+  ast:set $expr head concat-assign
+}
+
+
+# ast:parse:assign-sequence $first $out
+#
+# parse a sequence of assignments, followed by either a newline or command call
+#
+
+ast:parse:assign-sequence() { #<<NOSHADOW>>
+  local first=$1 out="$2"
+  local seq extra cmd
+
+  ast:make seq assign-sequence '' $first
+
+  ast:parse:sequence $seq 'ast:is-assign %' extra
+
+  if [ "$extra" = '-1' ]; then
+    setvar "$out" $seq
+  else
+    ast:parse:command-call $seq $extra cmd
+    setvar "$out" $cmd
+  fi
+}
+noshadow ast:parse:assign-sequence 1
+
+ast:is-assign() {
+  local expr="$1"
+  local expr_head
+
+  ast:from $expr head expr_head
+
+  case $expr_head in
+    *assign) return 0 ;;
+    *)       return 1 ;;
+  esac
 }
 

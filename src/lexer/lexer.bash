@@ -58,7 +58,7 @@ token:parse() { #<<NOSHADOW>>
         # putting it in the token, otherwise just put the character
         case "$c" in
           [bfnrtv]) printf -v token "%s\\$c" "$token" ;;
-          *)        token="$token$c" ;;
+          *)        token+="$c" ;;
         esac
         state=double-quotes
         ;;
@@ -67,7 +67,7 @@ token:parse() { #<<NOSHADOW>>
         # for escaped spaces and newlines
         case "$c" in
           $'\n') ;;
-          *) token="$token$c" ;;
+          *) token+="$c" ;;
         esac
         token:pop-state state
         ;;
@@ -78,7 +78,7 @@ token:parse() { #<<NOSHADOW>>
           class=string
           state_end=true
         else
-          token="$token$c"
+          token+="$c"
         fi
         ;;
 
@@ -99,7 +99,7 @@ token:parse() { #<<NOSHADOW>>
             state_end=true
             ;;
           *)
-            token="$token$c"
+            token+="$c"
             ;;
         esac
         ;;
@@ -107,7 +107,7 @@ token:parse() { #<<NOSHADOW>>
       whitespace)
         # indentation
         if [ "$c" = ' ' ]; then
-          token="$token$c"
+          token+="$c"
         else
           token=${#token}
           move=false
@@ -126,6 +126,11 @@ token:parse() { #<<NOSHADOW>>
             token='$('
             move=true
             next_state=parentheses
+            ;;
+          '[')
+            token='$['
+            move=true
+            next_state=brackets
             ;;
           '{')
             token='${'
@@ -153,7 +158,7 @@ token:parse() { #<<NOSHADOW>>
       variable)
         case "$c" in
           [0-9a-zA-Z_])
-            token="$token$c"
+            token+="$c"
             ;;
           *)
             class=name
@@ -185,6 +190,19 @@ token:parse() { #<<NOSHADOW>>
         class=special
         ;;
 
+      special)
+        case "$c" in
+          ':'|';'|','|'@'|'+'|'-'|'*'|'/'|'^'|'%'|'&')
+            token+="$c"
+            ;;
+          *)
+            move=false
+            state_end=true
+            class=special
+            ;;
+        esac
+        ;;
+
       *)
         # all other contexts follow similar parsing rules,
         # the only difference being what token ends it
@@ -213,10 +231,10 @@ token:parse() { #<<NOSHADOW>>
             fi
             ;;
 
-          ':'|';'|','|'@'|'+'|'-'|'*'|'/'|'^'|'%')
+          ':'|';'|','|'@'|'+'|'-'|'*'|'/'|'^'|'%'|'&')
             belongs=false
             skip_term=false
-            next_class=special
+            [ -z "$token" ] && next_state=special
             ;;
 
           '=')
@@ -224,15 +242,15 @@ token:parse() { #<<NOSHADOW>>
               belongs=false
               skip_term=false
               next_class=special
-            elif [[ "$token" =~ ^[+*-\<\>\!/]$ ]]; then
-              token="$token$c"
+            elif [[ "$token" =~ ^[\&+*-\<\>\!/]$ ]]; then
+              token+="$c"
               class=special
             elif [ -z "$token" ]; then
               belongs=false
               skip_term=false
               next_state='equals'
             else
-              token="$token$c"
+              token+="$c"
             fi
             ;;
           '\')
@@ -270,9 +288,10 @@ token:parse() { #<<NOSHADOW>>
             ;;
 
           *)
-            token="$token$c"
+            token+="$c"
             ;;
         esac
+        # this is still part of the '*)' state case
         if ! $belongs; then
           # found a terminating character while parsing
           if [ -z "$token" ]; then

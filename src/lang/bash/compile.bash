@@ -7,12 +7,31 @@ bash:compile() { #<<NOSHADOW>>
   ast:from $expr head expr_head
 
   case "$expr_head" in
-    name|string|assign|cat|if|elif|else|end_if|call|for|while|command-substitution|switch|case|pattern)
+    name|string|assign|cat|if|elif|else|end_if|call|for|while|command-substitution|switch|case|pattern|\
+    elements|simple-substitution|function-def|local|block|math|math-top|math-float|math-assigned|assign-sequence)
+
       sh:compile $expr "$out"
       ;;
 
-    elements|simple-substitution|function-def|local|block|math|math-top|math-float|math-assigned)
-      sh:compile $expr "$out"
+    declare)
+      local result type child_ast child expr_children
+
+      ast:from $expr value type
+      ast:from $expr children expr_children
+
+      case "$type" in
+        integer) result="declare -i" ;;
+        array)   result="declare -a" ;;
+        map)     result="declare -A" ;;
+        string)  result="declare" ;;
+      esac
+
+      for child_ast in $expr_children; do
+        bash:compile $child_ast child
+        result+=" $child"
+      done
+
+      setvar "$out" "$result"
       ;;
 
     indexing-substitution)
@@ -50,13 +69,24 @@ bash:compile() { #<<NOSHADOW>>
       setvar "$out" "$name=$list"
       ;;
 
+    add-assign)
+      local name_ast value_ast name value
+
+      ast:children $expr name_ast value_ast
+
+      bash:compile $name_ast  name
+      bash:compile $value_ast value
+
+      setvar "$out" "$name+=$value"
+      ;;
+
     associative-assign)
       local name_ast name value_ast value_children
 
       ast:children $expr name_ast value_ast
       ast:from $value_ast children value_children
 
-      sh:compile $name_ast name
+      backend:compile $name_ast name
 
       if [ -n "$value_children" ]; then
         >&2 echo "warning: Associative arrays with elements aren't implemented yet. Ignoring elements."
@@ -70,6 +100,19 @@ bash:compile() { #<<NOSHADOW>>
 
       setvar "$out" "\${#$name[@]}"
       ;;
+
+    concat-assign)
+      local name_ast value_ast
+      local name value
+
+      ast:children $expr name_ast value_ast
+
+      backend:compile $name_ast  name
+      backend:compile $value_ast value
+
+      setvar "$out" "$name=\"\${$name}\"$value"
+      ;;
+
     list)
       local expr_children child_ast child result
 

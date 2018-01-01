@@ -431,7 +431,7 @@ __shadowing_token:parse() {
         # putting it in the token, otherwise just put the character
         case "$c" in
           [bfnrtv]) printf -v token "%s\\$c" "$token" ;;
-          *)        token="$token$c" ;;
+          *)        token+="$c" ;;
         esac
         state=double-quotes
         ;;
@@ -440,7 +440,7 @@ __shadowing_token:parse() {
         # for escaped spaces and newlines
         case "$c" in
           $'\n') ;;
-          *) token="$token$c" ;;
+          *) token+="$c" ;;
         esac
         token:pop-state state
         ;;
@@ -451,7 +451,7 @@ __shadowing_token:parse() {
           class=string
           state_end=true
         else
-          token="$token$c"
+          token+="$c"
         fi
         ;;
 
@@ -472,7 +472,7 @@ __shadowing_token:parse() {
             state_end=true
             ;;
           *)
-            token="$token$c"
+            token+="$c"
             ;;
         esac
         ;;
@@ -480,7 +480,7 @@ __shadowing_token:parse() {
       whitespace)
         # indentation
         if [ "$c" = ' ' ]; then
-          token="$token$c"
+          token+="$c"
         else
           token=${#token}
           move=false
@@ -499,6 +499,11 @@ __shadowing_token:parse() {
             token='$('
             move=true
             next_state=parentheses
+            ;;
+          '[')
+            token='$['
+            move=true
+            next_state=brackets
             ;;
           '{')
             token='${'
@@ -526,7 +531,7 @@ __shadowing_token:parse() {
       variable)
         case "$c" in
           [0-9a-zA-Z_])
-            token="$token$c"
+            token+="$c"
             ;;
           *)
             class=name
@@ -558,6 +563,19 @@ __shadowing_token:parse() {
         class=special
         ;;
 
+      special)
+        case "$c" in
+          ':'|';'|','|'@'|'+'|'-'|'*'|'/'|'^'|'%'|'&')
+            token+="$c"
+            ;;
+          *)
+            move=false
+            state_end=true
+            class=special
+            ;;
+        esac
+        ;;
+
       *)
         # all other contexts follow similar parsing rules,
         # the only difference being what token ends it
@@ -586,10 +604,10 @@ __shadowing_token:parse() {
             fi
             ;;
 
-          ':'|';'|','|'@'|'+'|'-'|'*'|'/'|'^'|'%')
+          ':'|';'|','|'@'|'+'|'-'|'*'|'/'|'^'|'%'|'&')
             belongs=false
             skip_term=false
-            next_class=special
+            [ -z "$token" ] && next_state=special
             ;;
 
           '=')
@@ -597,15 +615,15 @@ __shadowing_token:parse() {
               belongs=false
               skip_term=false
               next_class=special
-            elif [[ "$token" =~ ^[+*-\<\>\!/]$ ]]; then
-              token="$token$c"
+            elif [[ "$token" =~ ^[\&+*-\<\>\!/]$ ]]; then
+              token+="$c"
               class=special
             elif [ -z "$token" ]; then
               belongs=false
               skip_term=false
               next_state='equals'
             else
-              token="$token$c"
+              token+="$c"
             fi
             ;;
           '\')
@@ -643,9 +661,10 @@ __shadowing_token:parse() {
             ;;
 
           *)
-            token="$token$c"
+            token+="$c"
             ;;
         esac
+        # this is still part of the '*)' state case
         if ! $belongs; then
           # found a terminating character while parsing
           if [ -z "$token" ]; then
@@ -939,7 +958,10 @@ __shadowing_ast:test-indentation() {
       result=error-start
     fi
   else
-    if [ $found -eq $req ]; then
+    if [ $found -eq -1 ]; then
+      result=error-eof
+
+    elif [ $found -eq $req ]; then
       result=ok
 
     elif [ $found -lt $req ]; then
@@ -1024,6 +1046,30 @@ ast:clear-states() {
   AstStates[index]=0
   AstStates[0]=top
 }
+
+ast:ends-state() {
+  local expr="$1"
+  local state expr_value
+
+  ast:last-state state
+
+  if ast:is $expr name; then
+    ast:from $expr value expr_value
+
+    case "$state $expr_value" in
+      "( )"|"[ ]"|"{ }")
+        return 0
+        ;;
+      *)
+        return 1
+        ;;
+    esac
+  else
+    return 1
+  fi
+}
+
+
 # FILE: ast/states.bash
 
 
@@ -1113,12 +1159,11 @@ ast:is() {
   ast:from $1 value ast_value
 
   case $# in
-    2)
-      [ $ast_head = "$2" ] && res=true
-      ;;
-    3)
-      [ $ast_head = "$2" ] && [ "$ast_value" = "$3" ] && res=true
-      ;;
+    2) case $ast_head  in $2) res=true ;; esac
+       ;;
+    3) case $ast_head  in $2)
+       case $ast_value in $3) res=true ;; esac ;; esac
+       ;;
   esac
   $res
 }
@@ -1249,6 +1294,100 @@ ast:is-flag() {
   fi
 }
 # FILE: ast/helper.bash
+
+__shadowing_ast:parse:list() {
+  local out="$1"
+  local list_expr
+
+  ast:make list_expr list
+  ast:parse:sequence $list_expr
+
+  setvar "$out" $list_expr
+}
+
+ast:parse:list() {
+  if [ -z ${__noshadow_8_+x} ]; then
+    local __noshadow_8_
+    local __noshadow_8_1
+  fi
+  __shadowing_ast:parse:list  __noshadow_8_1
+  setvar "$1" "$__noshadow_8_1"
+}
+
+
+ast:parse:sequence() {
+  local __discard__
+  ast:parse:sequence_ "$1" "$2" "${3:-__discard__}"
+}
+
+
+__shadowing_ast:parse:sequence_() {
+  local seq="$1" predicate="${2:-true}" out="$3"
+  local expr state
+
+  ast:last-state state
+
+  while true; do
+    ast:parse:expr expr
+
+    if ast:is $expr newline; then
+      ast:parse:sequence:multiline $state || break
+
+    elif ast:is $expr eof; then
+      if ${POWSCRIPT_ALLOW_INCOMPLETE-false} || [ $state = top ]; then
+        break
+      else
+        ast:error "unexpected end-of-file while parsing '$state' sequence"
+      fi
+
+    elif ast:parse:sequence:multiline-end $expr $state; then
+      break
+
+    elif ! ${predicate//%/$expr}; then
+      setvar "$out" "$expr"
+      break
+
+    else
+      ast:push-child $seq $expr
+
+    fi
+  done
+
+  if [ -z "${!out}" ]; then
+    setvar "$out" '-1'
+  fi
+}
+
+ast:parse:sequence_() {
+  if [ -z ${__noshadow_9_+x} ]; then
+    local __noshadow_9_
+    local __noshadow_9_3
+  fi
+  __shadowing_ast:parse:sequence_ "$1" "$2"  __noshadow_9_3
+  setvar "$3" "$__noshadow_9_3"
+}
+
+
+ast:parse:sequence:multiline() {
+  local state="$1"
+
+  case $state in
+    '('|'['|'{') return 0 ;;
+    *)           return 1 ;;
+  esac
+}
+
+ast:parse:sequence:multiline-end() {
+  local expr="$1" state="$2"
+
+  case $state in
+    '(') ast:is $expr name ')' && return 0 ;;
+    '[') ast:is $expr name ']' && return 0 ;;
+    '{') ast:is $expr name '}' && return 0 ;;
+  esac
+  return 1
+}
+# FILE: ast/sequence.bash
 # ast:parse:assign $expr
 #
 # Parse an AST representing the attribution
@@ -1292,20 +1431,15 @@ ast:parse:assign() {
 
 ast:parse:math-assign() {
   local expr="$1" name="$2" op="$3"
-  local name_value right_operand math_expr assigned name_subst
-
-  ast:from $name value name_value
+  local right_side
 
   ast:push-state math
-  ast:parse:expr right_operand
+  ast:parse:expr right_side
   ast:pop-state
 
-  ast:make name_subst simple-substitution "$name_value"
-  ast:make math_expr math "$op" $name_subst $right_operand
-  ast:make assigned  math-assigned "" $math_expr
-
-  ast:set $expr head assign
-  ast:set $expr children "$name $assigned"
+  ast:set $expr head math-assign
+  ast:set $expr value "$op"
+  ast:set $expr children "$name $right_side"
 }
 
 
@@ -1326,6 +1460,68 @@ ast:parse:push-assign() {
   ast:parse:expr value
   ast:set $expr children "$name $index $value"
   ast:set $expr head indexing-assign
+}
+
+# ast:parse:concat-assign $expr $name
+#
+# Parse an AST to be concatenated to a variable
+#
+
+ast:parse:concat-assign() {
+  local expr="$1" name="$2"
+  local name_value value subst concat
+
+  ast:from $name value name_value
+
+  ast:parse:expr value
+
+  ast:set $expr children "$name $value"
+  ast:set $expr head concat-assign
+}
+
+
+# ast:parse:assign-sequence $first $out
+#
+# parse a sequence of assignments, followed by either a newline or command call
+#
+
+
+__shadowing_ast:parse:assign-sequence() {
+  local first=$1 out="$2"
+  local seq extra cmd
+
+  ast:make seq assign-sequence '' $first
+
+  ast:parse:sequence $seq 'ast:is-assign %' extra
+
+  if [ "$extra" = '-1' ]; then
+    setvar "$out" $seq
+  else
+    ast:parse:command-call $seq $extra cmd
+    setvar "$out" $cmd
+  fi
+}
+
+ast:parse:assign-sequence() {
+  if [ -z ${__noshadow_10_+x} ]; then
+    local __noshadow_10_
+    local __noshadow_10_2
+  fi
+  __shadowing_ast:parse:assign-sequence "$1"  __noshadow_10_2
+  setvar "$2" "$__noshadow_10_2"
+}
+
+
+ast:is-assign() {
+  local expr="$1"
+  local expr_head
+
+  ast:from $expr head expr_head
+
+  case $expr_head in
+    *assign) return 0 ;;
+    *)       return 1 ;;
+  esac
 }
 
 # FILE: ast/assign.bash
@@ -1378,12 +1574,12 @@ __shadowing_ast:parse:substitution() {
 }
 
 ast:parse:substitution() {
-  if [ -z ${__noshadow_8_+x} ]; then
-    local __noshadow_8_
-    local __noshadow_8_1
+  if [ -z ${__noshadow_11_+x} ]; then
+    local __noshadow_11_
+    local __noshadow_11_1
   fi
-  __shadowing_ast:parse:substitution  __noshadow_8_1
-  setvar "$1" "$__noshadow_8_1"
+  __shadowing_ast:parse:substitution  __noshadow_11_1
+  setvar "$1" "$__noshadow_11_1"
 }
 
 
@@ -1407,12 +1603,12 @@ __shadowing_ast:parse:curly-substitution() {
 }
 
 ast:parse:curly-substitution() {
-  if [ -z ${__noshadow_9_+x} ]; then
-    local __noshadow_9_
-    local __noshadow_9_1
+  if [ -z ${__noshadow_12_+x} ]; then
+    local __noshadow_12_
+    local __noshadow_12_1
   fi
-  __shadowing_ast:parse:curly-substitution  __noshadow_9_1
-  setvar "$1" "$__noshadow_9_1"
+  __shadowing_ast:parse:curly-substitution  __noshadow_12_1
+  setvar "$1" "$__noshadow_12_1"
 }
 
 
@@ -1444,12 +1640,12 @@ __shadowing_ast:parse:command-substitution() {
 }
 
 ast:parse:command-substitution() {
-  if [ -z ${__noshadow_10_+x} ]; then
-    local __noshadow_10_
-    local __noshadow_10_1
+  if [ -z ${__noshadow_13_+x} ]; then
+    local __noshadow_13_
+    local __noshadow_13_1
   fi
-  __shadowing_ast:parse:command-substitution  __noshadow_10_1
-  setvar "$1" "$__noshadow_10_1"
+  __shadowing_ast:parse:command-substitution  __noshadow_13_1
+  setvar "$1" "$__noshadow_13_1"
 }
 
 
@@ -1511,19 +1707,14 @@ __shadowing_ast:parse:expr() {
               ;;
 
             '('|'{')
-              local closer
-              case $value in
-                '(') closer=')'; ;;
-                '{') closer='}'; ;;
-              esac
               if [ $exprnum -gt 0 ]; then
                 root_head=determinable
               else
                 ast:push-state $value
                 if ${AST_MATH_MODE-false}; then
-                  ast:parse:list $closer expression
+                  ast:parse:list expression
                 else
-                  ast:parse:list $closer root
+                  ast:parse:list root
                   root_head=list
                 fi
                 ast:pop-state
@@ -1540,7 +1731,7 @@ __shadowing_ast:parse:expr() {
               if [ $exprnum -gt 0 ] && { ast:state-is $opener || ${AST_MATH_MODE-false}; }; then
                 root_head=determinable
               else
-                ast:make expression string "$value"
+                ast:make expression name "$value"
               fi
               ;;
 
@@ -1551,24 +1742,27 @@ __shadowing_ast:parse:expr() {
                 ast:from $root head root_head
 
               elif [ $exprnum = 2 ] && ast:is $last_expression name; then
-                local name op
+                local name op value
                 ast:children $root name op
                 ast:from $op value op
 
                 case "$op" in
                   '+'|'-'|'*'|'/'|'^'|'%')
                     ast:parse:math-assign $root $name "$op"
-                    root_head=assign
+                    root_head=math-assign
                     ;;
                   '@')
                     ast:parse:push-assign $root $name
                     root_head=indexing-assign
                     ;;
+                  '&')
+                    ast:parse:concat-assign $root $name
+                    root_head=concat-assign
+                    ;;
                   *)
                     ast:make expression string "="
                     ;;
                 esac
-
 
               else
                 ast:make expression string "="
@@ -1604,9 +1798,9 @@ __shadowing_ast:parse:expr() {
               else
                 ast:push-state '['
                 if ${AST_MATH_MODE-false}; then
-                  ast:parse:list ']' expression
+                  ast:parse:list expression
                 else
-                  ast:parse:list ']' root
+                  ast:parse:list expression
                   root_head=list
                 fi
                 ast:pop-state
@@ -1675,12 +1869,12 @@ __shadowing_ast:parse:expr() {
 }
 
 ast:parse:expr() {
-  if [ -z ${__noshadow_11_+x} ]; then
-    local __noshadow_11_
-    local __noshadow_11_1
+  if [ -z ${__noshadow_14_+x} ]; then
+    local __noshadow_14_
+    local __noshadow_14_1
   fi
-  __shadowing_ast:parse:expr  __noshadow_11_1
-  setvar "$1" "$__noshadow_11_1"
+  __shadowing_ast:parse:expr  __noshadow_14_1
+  setvar "$1" "$__noshadow_14_1"
 }
 
 
@@ -1706,65 +1900,13 @@ __shadowing_ast:parse:specific-expr() {
 }
 
 ast:parse:specific-expr() {
-  if [ -z ${__noshadow_12_+x} ]; then
-    local __noshadow_12_
-    local __noshadow_12_2
+  if [ -z ${__noshadow_15_+x} ]; then
+    local __noshadow_15_
+    local __noshadow_15_2
   fi
-  __shadowing_ast:parse:specific-expr "$1"  __noshadow_12_2
-  setvar "$2" "$__noshadow_12_2"
+  __shadowing_ast:parse:specific-expr "$1"  __noshadow_15_2
+  setvar "$2" "$__noshadow_15_2"
 }
-
-
-
-# ast:parse:list $closer $out
-#
-# Parses an AST of the form (...), [...] or {...}
-#
-
-
-__shadowing_ast:parse:list() {
-  local closer="$1" out="$2"
-  local expr child open=true
-  local class value
-
-  ast:make expr list
-
-  while $open; do
-    token:peek -v value -c class
-    case "$class $value" in
-      "special $closer")
-        open=false
-        token:skip
-        ;;
-      'newline '*)
-        token:skip
-        ;;
-      'eof '*)
-        if ${POWSCRIPT_ALLOW_INCOMPLETE-false}; then
-          POWSCRIPT_INCOMPLETE_STATE="$(ast:last-state)"
-          exit
-        else
-          ast:error "end of file while parsing list"
-        fi
-        ;;
-      *)
-        ast:parse:expr child
-        ast:push-child $expr $child
-        ;;
-    esac
-  done
-  setvar "$out" $expr
-}
-
-ast:parse:list() {
-  if [ -z ${__noshadow_13_+x} ]; then
-    local __noshadow_13_
-    local __noshadow_13_2
-  fi
-  __shadowing_ast:parse:list "$1"  __noshadow_13_2
-  setvar "$2" "$__noshadow_13_2"
-}
-
 
 # FILE: ast/expressions.bash
 # ast:parse:math $out
@@ -1797,12 +1939,12 @@ __shadowing_ast:parse:math() {
 }
 
 ast:parse:math() {
-  if [ -z ${__noshadow_14_+x} ]; then
-    local __noshadow_14_
-    local __noshadow_14_1
+  if [ -z ${__noshadow_16_+x} ]; then
+    local __noshadow_16_
+    local __noshadow_16_1
   fi
-  __shadowing_ast:parse:math  __noshadow_14_1
-  setvar "$1" "$__noshadow_14_1"
+  __shadowing_ast:parse:math  __noshadow_16_1
+  setvar "$1" "$__noshadow_16_1"
 }
 
 
@@ -1893,92 +2035,47 @@ ast:parse:validate-math-operand() {
 #
 
 
-__shadowing_ast:parse:commandcall() {
-  local command_ast=$1 out="$2"
-  local expression child expr_head=none
+__shadowing_ast:parse:command-call() {
+  local assigns=$1 command_ast=$2 out="$3"
+  local expression child predicate
 
-  ast:make expression call '' $command_ast
+  ast:make expression call '' $assigns $command_ast
 
-  ast:parse:arguments $expression
+  if ast:state-is ==; then
+    predicate='ast:parse:not-binary-conditional %'
+  else
+    predicate='true'
+  fi
+
+  ast:parse:sequence $expression "$predicate"
 
   setvar "$out" $expression
 }
 
-ast:parse:commandcall() {
-  if [ -z ${__noshadow_15_+x} ]; then
-    local __noshadow_15_
-    local __noshadow_15_2
+ast:parse:command-call() {
+  if [ -z ${__noshadow_17_+x} ]; then
+    local __noshadow_17_
+    local __noshadow_17_3
   fi
-  __shadowing_ast:parse:commandcall "$1"  __noshadow_15_2
-  setvar "$2" "$__noshadow_15_2"
+  __shadowing_ast:parse:command-call "$1" "$2"  __noshadow_17_3
+  setvar "$3" "$__noshadow_17_3"
 }
 
 
 
-# ast:parse:arguments $expr
-#
-# Loop that parses the arguments of a commandcall.
-#
-
-ast:parse:arguments() {
+ast:parse:not-binary-conditional() {
   local expr="$1"
-  local expr_head=none expr_value child unfinished=true state state_s
+  local name
 
-  ast:last-state state
-  case $state in
-    '(')
-      state_s='c'
-      ;;
-    top)
-      state_s='t'
-      ;;
-    '==')
-      state_s='i'
-      ;;
-    *)
-      state_s='o'
-      ;;
-  esac
-
-
-  while $unfinished; do
-    ast:parse:expr child
-    ast:from $child head  expr_head
-    ast:from $child value expr_value
-
-    case "$state_s/$expr_head/$expr_value" in
-      'c/string/)'|[ti]'/eof/'*|[oti]'/newline/'*)
-        unfinished=false
-        ;;
-
-      'i/name/'*)
-        ast:from $child value expr_value
-
-        case "$expr_value" in
-          or|and|'&&'|'||') unfinished=false; ;;
-          *) ast:push-child $expr $child; ;;
-        esac
-        ;;
-
-      */eof/*)
-        if ${POWSCRIPT_ALLOW_INCOMPLETE-false}; then
-          POWSCRIPT_INCOMPLETE_STATE=$state
-          exit
-        else
-          ast:error "unexpected end of file while parsing command."
-        fi
-        ;;
-
-      */newline/*)
-        ;;
-
-      *)
-        ast:push-child $expr $child
-        ;;
+  if ast:is $expr name; then
+    ast:from $expr value name
+    case "$name" in
+      and|or|'&&'|'||') return 1 ;;
+      *)                return 0 ;;
     esac
-  done
+  fi
+  return 0
 }
-
 # FILE: ast/commands.bash
 # ast:parse:block
 #
@@ -2040,12 +2137,12 @@ __shadowing_ast:parse:block() {
 }
 
 ast:parse:block() {
-  if [ -z ${__noshadow_16_+x} ]; then
-    local __noshadow_16_
-    local __noshadow_16_2
+  if [ -z ${__noshadow_18_+x} ]; then
+    local __noshadow_18_
+    local __noshadow_18_2
   fi
-  __shadowing_ast:parse:block "$1"  __noshadow_16_2
-  setvar "$2" "$__noshadow_16_2"
+  __shadowing_ast:parse:block "$1"  __noshadow_18_2
+  setvar "$2" "$__noshadow_18_2"
 }
 
 
@@ -2089,12 +2186,12 @@ __shadowing_ast:parse:pattern() {
 }
 
 ast:parse:pattern() {
-  if [ -z ${__noshadow_17_+x} ]; then
-    local __noshadow_17_
-    local __noshadow_17_1
+  if [ -z ${__noshadow_19_+x} ]; then
+    local __noshadow_19_
+    local __noshadow_19_1
   fi
-  __shadowing_ast:parse:pattern  __noshadow_17_1
-  setvar "$1" "$__noshadow_17_1"
+  __shadowing_ast:parse:pattern  __noshadow_19_1
+  setvar "$1" "$__noshadow_19_1"
 }
 
 
@@ -2135,12 +2232,12 @@ __shadowing_ast:parse:if() {
 }
 
 ast:parse:if() {
-  if [ -z ${__noshadow_18_+x} ]; then
-    local __noshadow_18_
-    local __noshadow_18_2
+  if [ -z ${__noshadow_20_+x} ]; then
+    local __noshadow_20_
+    local __noshadow_20_2
   fi
-  __shadowing_ast:parse:if "$1"  __noshadow_18_2
-  setvar "$2" "$__noshadow_18_2"
+  __shadowing_ast:parse:if "$1"  __noshadow_20_2
+  setvar "$2" "$__noshadow_20_2"
 }
 
 
@@ -2220,12 +2317,12 @@ __shadowing_ast:parse:while() {
 }
 
 ast:parse:while() {
-  if [ -z ${__noshadow_19_+x} ]; then
-    local __noshadow_19_
-    local __noshadow_19_1
+  if [ -z ${__noshadow_21_+x} ]; then
+    local __noshadow_21_
+    local __noshadow_21_1
   fi
-  __shadowing_ast:parse:while  __noshadow_19_1
-  setvar "$1" "$__noshadow_19_1"
+  __shadowing_ast:parse:while  __noshadow_21_1
+  setvar "$1" "$__noshadow_21_1"
 }
 
 
@@ -2259,12 +2356,12 @@ __shadowing_ast:parse:for() {
 }
 
 ast:parse:for() {
-  if [ -z ${__noshadow_20_+x} ]; then
-    local __noshadow_20_
-    local __noshadow_20_1
+  if [ -z ${__noshadow_22_+x} ]; then
+    local __noshadow_22_
+    local __noshadow_22_1
   fi
-  __shadowing_ast:parse:for  __noshadow_20_1
-  setvar "$1" "$__noshadow_20_1"
+  __shadowing_ast:parse:for  __noshadow_22_1
+  setvar "$1" "$__noshadow_22_1"
 }
 
 
@@ -2299,12 +2396,12 @@ __shadowing_ast:parse:switch() {
 }
 
 ast:parse:switch() {
-  if [ -z ${__noshadow_21_+x} ]; then
-    local __noshadow_21_
-    local __noshadow_21_1
+  if [ -z ${__noshadow_23_+x} ]; then
+    local __noshadow_23_
+    local __noshadow_23_1
   fi
-  __shadowing_ast:parse:switch  __noshadow_21_1
-  setvar "$1" "$__noshadow_21_1"
+  __shadowing_ast:parse:switch  __noshadow_23_1
+  setvar "$1" "$__noshadow_23_1"
 }
 
 
@@ -2331,12 +2428,12 @@ __shadowing_ast:parse:case() {
 }
 
 ast:parse:case() {
-  if [ -z ${__noshadow_22_+x} ]; then
-    local __noshadow_22_
-    local __noshadow_22_1
+  if [ -z ${__noshadow_24_+x} ]; then
+    local __noshadow_24_
+    local __noshadow_24_1
   fi
-  __shadowing_ast:parse:case  __noshadow_22_1
-  setvar "$1" "$__noshadow_22_1"
+  __shadowing_ast:parse:case  __noshadow_24_1
+  setvar "$1" "$__noshadow_24_1"
 }
 
 
@@ -2399,12 +2496,12 @@ __shadowing_ast:parse:conditional() {
 }
 
 ast:parse:conditional() {
-  if [ -z ${__noshadow_23_+x} ]; then
-    local __noshadow_23_
-    local __noshadow_23_1
+  if [ -z ${__noshadow_25_+x} ]; then
+    local __noshadow_25_
+    local __noshadow_25_1
   fi
-  __shadowing_ast:parse:conditional  __noshadow_23_1
-  setvar "$1" "$__noshadow_23_1"
+  __shadowing_ast:parse:conditional  __noshadow_25_1
+  setvar "$1" "$__noshadow_25_1"
 }
 
 
@@ -2426,12 +2523,12 @@ __shadowing_ast:parse:negated-conditional() {
 }
 
 ast:parse:negated-conditional() {
-  if [ -z ${__noshadow_24_+x} ]; then
-    local __noshadow_24_
-    local __noshadow_24_1
+  if [ -z ${__noshadow_26_+x} ]; then
+    local __noshadow_26_
+    local __noshadow_26_1
   fi
-  __shadowing_ast:parse:negated-conditional  __noshadow_24_1
-  setvar "$1" "$__noshadow_24_1"
+  __shadowing_ast:parse:negated-conditional  __noshadow_26_1
+  setvar "$1" "$__noshadow_26_1"
 }
 
 
@@ -2455,12 +2552,12 @@ __shadowing_ast:parse:flag-conditional() {
 }
 
 ast:parse:flag-conditional() {
-  if [ -z ${__noshadow_25_+x} ]; then
-    local __noshadow_25_
-    local __noshadow_25_2
+  if [ -z ${__noshadow_27_+x} ]; then
+    local __noshadow_27_
+    local __noshadow_27_2
   fi
-  __shadowing_ast:parse:flag-conditional "$1"  __noshadow_25_2
-  setvar "$2" "$__noshadow_25_2"
+  __shadowing_ast:parse:flag-conditional "$1"  __noshadow_27_2
+  setvar "$2" "$__noshadow_27_2"
 }
 
 
@@ -2473,9 +2570,20 @@ ast:parse:flag-conditional() {
 
 __shadowing_ast:parse:command-conditional() {
   local cmd="$1" cmd_ast out="$2"
+  local cmd_head assigns value class
+
+  ast:from $cmd head cmd_head
 
   ast:push-state '=='
-  ast:parse:commandcall $cmd cmd_ast
+  case $cmd_head in
+    *assign)
+      ast:parse:assign-sequence $cmd cmd_ast
+      ;;
+    *)
+      ast:make assigns assign-sequence
+      ast:parse:command-call $assigns $cmd cmd_ast
+      ;;
+  esac
   ast:pop-state
 
   ast:make "$out" condition 'command' $cmd_ast
@@ -2483,12 +2591,12 @@ __shadowing_ast:parse:command-conditional() {
 }
 
 ast:parse:command-conditional() {
-  if [ -z ${__noshadow_26_+x} ]; then
-    local __noshadow_26_
-    local __noshadow_26_2
+  if [ -z ${__noshadow_28_+x} ]; then
+    local __noshadow_28_
+    local __noshadow_28_2
   fi
-  __shadowing_ast:parse:command-conditional "$1"  __noshadow_26_2
-  setvar "$2" "$__noshadow_26_2"
+  __shadowing_ast:parse:command-conditional "$1"  __noshadow_28_2
+  setvar "$2" "$__noshadow_28_2"
 }
 
 
@@ -2528,12 +2636,12 @@ __shadowing_ast:parse:composite-conditional() {
 }
 
 ast:parse:composite-conditional() {
-  if [ -z ${__noshadow_27_+x} ]; then
-    local __noshadow_27_
-    local __noshadow_27_2
+  if [ -z ${__noshadow_29_+x} ]; then
+    local __noshadow_29_
+    local __noshadow_29_2
   fi
-  __shadowing_ast:parse:composite-conditional "$1"  __noshadow_27_2
-  setvar "$2" "$__noshadow_27_2"
+  __shadowing_ast:parse:composite-conditional "$1"  __noshadow_29_2
+  setvar "$2" "$__noshadow_29_2"
 }
 
 
@@ -2564,16 +2672,279 @@ __shadowing_ast:parse:function-definition() {
 }
 
 ast:parse:function-definition() {
-  if [ -z ${__noshadow_28_+x} ]; then
-    local __noshadow_28_
-    local __noshadow_28_2
+  if [ -z ${__noshadow_30_+x} ]; then
+    local __noshadow_30_
+    local __noshadow_30_2
   fi
-  __shadowing_ast:parse:function-definition "$1"  __noshadow_28_2
-  setvar "$2" "$__noshadow_28_2"
+  __shadowing_ast:parse:function-definition "$1"  __noshadow_30_2
+  setvar "$2" "$__noshadow_30_2"
 }
 
 
 # FILE: ast/functions.bash
+
+
+__shadowing_ast:lower() {
+  local expr="$1" out="$2"
+
+  local VarsInScope=''
+  declare -i CurrentScope
+  declare -A VarTypes
+  CurrentScope=0
+
+  typing:scan $expr
+
+  CurrentScope=0
+  ast:lower-scanned $expr "$out"
+}
+
+ast:lower() {
+  if [ -z ${__noshadow_31_+x} ]; then
+    local __noshadow_31_
+    local __noshadow_31_2
+  fi
+  __shadowing_ast:lower "$1"  __noshadow_31_2
+  setvar "$2" "$__noshadow_31_2"
+}
+
+
+
+__shadowing_ast:lower-scanned() {
+  local expr="$1" out="$2"
+  local result
+  local expr_head
+
+  ast:from $expr head expr_head
+
+  case $expr_head in
+    math-assign)
+      local var varname value op type
+
+      ast:from $expr value op
+      ast:children $expr var value
+
+      ast:from $var value varname
+      typing:var-type "$varname" type
+
+      if [ "$PowscriptBackend" = 'bash' ] && [ "$op" = '+' ] && [ "$type" = 'integer' ]; then
+        local math_expr
+
+        ast:make math_expr math-assigned "" $value
+        ast:make result add-assign "" $var $math_expr
+
+      else
+        local math_expr math_assigned subst varname
+
+        ast:from $var value varname
+
+        ast:make subst simple-substitution "$varname"
+        ast:make math_expr math "$op" $subst $value
+        ast:make math_assigned math-assigned '' $math_expr
+
+        ast:make result assign '' $var $math_assigned
+      fi
+      ;;
+    concat-assign)
+      local var varname value type
+
+      ast:children $expr var value
+
+      ast:from $var value varname
+      typing:var-type "$varname" type
+
+      if [ "$PowscriptBackend" = 'bash' ] && [ "$type" = string ]; then
+        ast:make result add-assign '' $var $value
+      else
+        result=$expr
+      fi
+      ;;
+    function-def)
+      local name args arg_locals block block_lowered
+
+      typing:start-scope
+      ast:children $expr name args block
+
+      ast:make-argument-locals $args arg_locals
+
+      ast:lower-scanned $block block_lowered
+      ast:unshift-child $block_lowered $arg_locals
+      ast:make result function-def '' $name $args $block_lowered
+
+      typing:end-scope
+      ;;
+    name|math*|string)
+      result=$expr
+      ;;
+    *)
+      local expr_value expr_children child lowered_child
+
+      ast:from $expr value expr_value
+      ast:from $expr children expr_children
+
+      ast:make result "$expr_head" "$expr_value"
+
+      for child in $expr_children; do
+        ast:lower-scanned $child lowered_child
+        ast:push-child $result $lowered_child
+      done
+      ;;
+  esac
+
+  setvar "$out" $result
+}
+
+ast:lower-scanned() {
+  if [ -z ${__noshadow_32_+x} ]; then
+    local __noshadow_32_
+    local __noshadow_32_2
+  fi
+  __shadowing_ast:lower-scanned "$1"  __noshadow_32_2
+  setvar "$2" "$__noshadow_32_2"
+}
+
+
+
+__shadowing_ast:make-argument-locals() {
+  local args="$1" out="$2"
+  local result assign_expr child args_children
+  declare -i count
+
+  ast:make result local
+
+  count=1
+  ast:from $args children args_children
+
+  for child in $args_children; do
+    ast:make subst simple-substitution $count
+    ast:make assign_expr assign '' $child $subst
+    ast:push-child $result $assign_expr
+    count+=1
+  done
+
+  setvar "$out" $result
+}
+
+ast:make-argument-locals() {
+  if [ -z ${__noshadow_33_+x} ]; then
+    local __noshadow_33_
+    local __noshadow_33_2
+  fi
+  __shadowing_ast:make-argument-locals "$1"  __noshadow_33_2
+  setvar "$2" "$__noshadow_33_2"
+}
+
+
+
+typing:start-scope() {
+  CurrentScope+=1
+}
+
+typing:end-scope() {
+  return
+}
+
+
+typing:set-type() {
+  local var="$1" type="$2"
+  VarTypes["${var}|$CurrentScope"]=$type
+}
+
+typing:var-type() {
+  setvar "$2" "${VarTypes[${1}|$CurrentScope]}"
+}
+
+typing:declare-all() {
+  local expr="$1" type="$2"
+  local var child expr_children
+
+  ast:from $expr children expr_children
+
+  for child in $expr_children; do
+    typing:declared-name $child var
+    typing:set-type $var $type
+  done
+}
+
+
+__shadowing_typing:declared-name() {
+  local expr="$1" out="$2"
+  local expr_head
+
+  ast:from $expr head expr_head
+  case $expr_head in
+    name)
+      ;;
+    *assign)
+      ast:children $expr expr
+      ;;
+    *)
+      ast:error "invalid expression in local/declare: $(ast:print $expr)"
+      ;;
+  esac
+
+  ast:from $expr value "$out"
+}
+
+typing:declared-name() {
+  if [ -z ${__noshadow_34_+x} ]; then
+    local __noshadow_34_
+    local __noshadow_34_2
+  fi
+  __shadowing_typing:declared-name "$1"  __noshadow_34_2
+  setvar "$2" "$__noshadow_34_2"
+}
+
+
+
+typing:scan() {
+  local expr="$1"
+  local expr_head
+
+  ast:from $expr head expr_head
+
+  case $expr_head in
+    declare)
+      local type
+
+      ast:from $expr value type
+
+      case "$type" in
+        integer|string|array|map|function) ;;
+        *) ast:error "in declare statement: invalid type $type" ;;
+      esac
+
+      typing:declare-all $expr $type
+      ;;
+
+    local)
+      typing:declare-all $expr string
+      ;;
+
+    function-def)
+      local _ args block
+      ast:children $expr _ args block
+
+      typing:start-scope
+
+      typing:declare-all $args string
+      typing:scan $block
+
+      typing:end-scope
+      ;;
+
+    *)
+      local child expr_children
+
+      ast:from $expr children expr_children
+
+      for child in $expr_children; do
+        typing:scan $child
+      done
+      ;;
+  esac
+}
+
+# FILE: ast/lowerer.bash
 ast:print() {
   printf '`'
   ast:print-child "$1" "$2"
@@ -2627,6 +2998,16 @@ ast:print-child() {
       printf ']='
       ast:print-child $value
       ;;
+    math-assign)
+      ast:print-child ${child_array[0]}
+      printf '%s=' $ast_value
+      ast:print-child ${child_array[1]}
+      ;;
+    concat-assign)
+      ast:print-child ${child_array[0]}
+      printf '&='
+      ast:print-child ${child_array[1]}
+      ;;
     simple-substitution)
       printf '$%s' "$ast_value"
       ;;
@@ -2655,7 +3036,7 @@ ast:print-child() {
       fi
       ;;
     math-assigned)
-      ast:print ${child_array[0]}
+      ast:print-child ${child_array[0]}
       ;;
     array-length)
       printf '$#%s' "$ast_value"
@@ -2790,12 +3171,12 @@ __shadowing_ast:parse:linestart() {
 }
 
 ast:parse:linestart() {
-  if [ -z ${__noshadow_29_+x} ]; then
-    local __noshadow_29_
-    local __noshadow_29_1
+  if [ -z ${__noshadow_35_+x} ]; then
+    local __noshadow_35_
+    local __noshadow_35_1
   fi
-  __shadowing_ast:parse:linestart  __noshadow_29_1
-  setvar "$1" "$__noshadow_29_1"
+  __shadowing_ast:parse:linestart  __noshadow_35_1
+  setvar "$1" "$__noshadow_35_1"
 }
 
 
@@ -2808,7 +3189,7 @@ ast:parse:linestart() {
 
 __shadowing_ast:parse:top() {
   local out="$1"
-  local expr expr_head
+  local expr expr_head assigns
 
   ast:parse:expr expr
   ast:from $expr head expr_head
@@ -2825,34 +3206,46 @@ __shadowing_ast:parse:top() {
         'while')   ast:parse:while   "$out" ;;
         'switch')  ast:parse:switch  "$out" ;;
         'require') ast:parse:require "$out" ;;
+        'declare')
+          local type_ast type
+
+          ast:parse:specific-expr name type_ast
+          ast:from $type_ast value type
+
+          ast:make "$out" declare
+          ast:set "${!out}" value $type
+          ast:parse:sequence "${!out}" 'ast:is % name'
+          ;;
         *)
           if token:next-is special '('; then
             ast:parse:function-definition $expr "$out"
           else
-            ast:parse:commandcall $expr "$out"
+            ast:make assigns assign-sequence
+            ast:parse:command-call $assigns $expr "$out"
           fi
           ;;
       esac
       ;;
-    assign|indexing-assign)
-      setvar "$out" $expr
+    *assign)
+      ast:parse:assign-sequence $expr "$out"
       ;;
     newline)
       setvar "$out" -1
       ;;
     *)
-      ast:parse:commandcall $expr "$out"
+      ast:make assigns assign-sequence
+      ast:parse:command-call $assigns $expr "$out"
       ;;
   esac
 }
 
 ast:parse:top() {
-  if [ -z ${__noshadow_30_+x} ]; then
-    local __noshadow_30_
-    local __noshadow_30_1
+  if [ -z ${__noshadow_36_+x} ]; then
+    local __noshadow_36_
+    local __noshadow_36_1
   fi
-  __shadowing_ast:parse:top  __noshadow_30_1
-  setvar "$1" "$__noshadow_30_1"
+  __shadowing_ast:parse:top  __noshadow_36_1
+  setvar "$1" "$__noshadow_36_1"
 }
 
 
@@ -2917,12 +3310,31 @@ __shadowing_bash:compile() {
   ast:from $expr head expr_head
 
   case "$expr_head" in
-    name|string|assign|cat|if|elif|else|end_if|call|for|while|command-substitution|switch|case|pattern)
+    name|string|assign|cat|if|elif|else|end_if|call|for|while|command-substitution|switch|case|pattern|\
+    elements|simple-substitution|function-def|local|block|math|math-top|math-float|math-assigned|assign-sequence)
+
       sh:compile $expr "$out"
       ;;
 
-    elements|simple-substitution|function-def|local|block|math|math-top|math-float|math-assigned)
-      sh:compile $expr "$out"
+    declare)
+      local result type child_ast child expr_children
+
+      ast:from $expr value type
+      ast:from $expr children expr_children
+
+      case "$type" in
+        integer) result="declare -i" ;;
+        array)   result="declare -a" ;;
+        map)     result="declare -A" ;;
+        string)  result="declare" ;;
+      esac
+
+      for child_ast in $expr_children; do
+        bash:compile $child_ast child
+        result+=" $child"
+      done
+
+      setvar "$out" "$result"
       ;;
 
     indexing-substitution)
@@ -2960,13 +3372,24 @@ __shadowing_bash:compile() {
       setvar "$out" "$name=$list"
       ;;
 
+    add-assign)
+      local name_ast value_ast name value
+
+      ast:children $expr name_ast value_ast
+
+      bash:compile $name_ast  name
+      bash:compile $value_ast value
+
+      setvar "$out" "$name+=$value"
+      ;;
+
     associative-assign)
       local name_ast name value_ast value_children
 
       ast:children $expr name_ast value_ast
       ast:from $value_ast children value_children
 
-      sh:compile $name_ast name
+      backend:compile $name_ast name
 
       if [ -n "$value_children" ]; then
         >&2 echo "warning: Associative arrays with elements aren't implemented yet. Ignoring elements."
@@ -2980,6 +3403,19 @@ __shadowing_bash:compile() {
 
       setvar "$out" "\${#$name[@]}"
       ;;
+
+    concat-assign)
+      local name_ast value_ast
+      local name value
+
+      ast:children $expr name_ast value_ast
+
+      backend:compile $name_ast  name
+      backend:compile $value_ast value
+
+      setvar "$out" "$name=\"\${$name}\"$value"
+      ;;
+
     list)
       local expr_children child_ast child result
 
@@ -3047,12 +3483,12 @@ __shadowing_bash:compile() {
 }
 
 bash:compile() {
-  if [ -z ${__noshadow_31_+x} ]; then
-    local __noshadow_31_
-    local __noshadow_31_2
+  if [ -z ${__noshadow_37_+x} ]; then
+    local __noshadow_37_
+    local __noshadow_37_2
   fi
-  __shadowing_bash:compile "$1"  __noshadow_31_2
-  setvar "$2" "$__noshadow_31_2"
+  __shadowing_bash:compile "$1"  __noshadow_37_2
+  setvar "$2" "$__noshadow_37_2"
 }
 
 # FILE: lang/bash/compile.bash
@@ -3120,8 +3556,20 @@ __shadowing_sh:compile() {
       backend:compile $var_ast   var
       backend:compile $value_ast value
 
-
       setvar "$out" "$var=$value"
+      ;;
+
+    assign-sequence)
+      local assign_ast expr_children
+      local result="" assign
+
+      ast:from $expr children expr_children
+
+      for assign_ast in $expr_children; do
+        backend:compile $assign_ast assign
+        result+="$assign "
+      done
+      setvar "$out" "$result"
       ;;
 
     math-assigned)
@@ -3134,17 +3582,30 @@ __shadowing_sh:compile() {
       setvar "$out" "\$(( $value ))"
       ;;
 
+    concat-assign)
+      local var_ast value_ast
+      local var value
+
+      ast:children $expr var_ast value_ast
+
+      backend:compile $var_ast   var
+      backend:compile $value_ast value
+
+      setvar "$out" "$var=\"\${$var}\"$value"
+      ;;
+
     call)
       local children arg_ast
-      local result cmd arg
+      local result assigns cmd arg
 
       ast:from $expr children children
       children=( $children )
 
-      backend:compile ${children[0]} cmd
+      backend:compile ${children[0]} assigns
+      backend:compile ${children[1]} cmd
 
-      result="$cmd"
-      for arg_ast in "${children[@]:1}"; do
+      result="$assigns$cmd"
+      for arg_ast in "${children[@]:2}"; do
         backend:compile $arg_ast arg
         result="$result $arg"
       done
@@ -3289,28 +3750,12 @@ __shadowing_sh:compile() {
 
     function-def)
       local name_ast args_ast block_ast
-      local name args_ast arg_assign_ast argval_ast block_ast block
-      local args arg argval argnum locals_ast argname_ast
-
+      local name block
 
       ast:children $expr name_ast args_ast block_ast
 
-      sh:compile $name_ast name
-
-      ast:make locals_ast local
-
-      ast:from $args_ast children args
-
-      argnum=1
-      for arg in $args; do
-        ast:make argval_ast simple-substitution $argnum
-        ast:make arg_assign_ast assign '' $arg $argval_ast
-        ast:push-child $locals_ast $arg_assign_ast
-        argnum=$((argnum+1))
-      done
-      ast:unshift-child $block_ast $locals_ast
-
-      sh:compile $block_ast block
+      backend:compile $name_ast name
+      backend:compile $block_ast block
 
       setvar "$out" "$name() $block"
       ;;
@@ -3323,6 +3768,15 @@ __shadowing_sh:compile() {
         sh:compile $child_ast child
         result="$result $child"
       done
+
+      setvar "$out" "$result"
+      ;;
+
+    declare)
+      local result
+      ast:set $expr head local
+      sh:compile $expr result
+      ast:set $expr head declare
 
       setvar "$out" "$result"
       ;;
@@ -3397,12 +3851,12 @@ __shadowing_sh:compile() {
 }
 
 sh:compile() {
-  if [ -z ${__noshadow_32_+x} ]; then
-    local __noshadow_32_
-    local __noshadow_32_2
+  if [ -z ${__noshadow_38_+x} ]; then
+    local __noshadow_38_
+    local __noshadow_38_2
   fi
-  __shadowing_sh:compile "$1"  __noshadow_32_2
-  setvar "$2" "$__noshadow_32_2"
+  __shadowing_sh:compile "$1"  __noshadow_38_2
+  setvar "$2" "$__noshadow_38_2"
 }
 
 # FILE: lang/sh/compile.bash
@@ -3591,6 +4045,7 @@ interactive:start() {
         while [ ! "$state" = top ]; do
           interactive:clear-compilation
           state="$( { stream:init; POWSCRIPT_SHOW_INCOMPLETE_MESSAGE=$incomplete_flag ast:parse:try; } <<< "$code" )"
+          [ -z "$line" ] && state=top
           case "$state" in
             top)
               interactive:clear-compilation
@@ -3626,6 +4081,7 @@ interactive:start() {
           interactive:show-ast $ast
           echo "---------------------"
         fi
+        ast:lower $ast ast
         backend:compile $ast compiled_code
         if $compile_flag; then
           echo "--- COMPILED CODE ---"
@@ -3657,12 +4113,12 @@ __shadowing_interactive:get-remaining-input() {
 }
 
 interactive:get-remaining-input() {
-  if [ -z ${__noshadow_33_+x} ]; then
-    local __noshadow_33_
-    local __noshadow_33_1
+  if [ -z ${__noshadow_39_+x} ]; then
+    local __noshadow_39_
+    local __noshadow_39_1
   fi
-  __shadowing_interactive:get-remaining-input  __noshadow_33_1
-  setvar "$1" "$__noshadow_33_1"
+  __shadowing_interactive:get-remaining-input  __noshadow_39_1
+  setvar "$1" "$__noshadow_39_1"
 }
 
 

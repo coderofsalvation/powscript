@@ -84,12 +84,11 @@ ast:is() {
   ast:from $1 value ast_value
 
   case $# in
-    2)
-      [ $ast_head = "$2" ] && res=true
-      ;;
-    3)
-      [ $ast_head = "$2" ] && [ "$ast_value" = "$3" ] && res=true
-      ;;
+    2) case $ast_head  in $2) res=true ;; esac
+       ;;
+    3) case $ast_head  in $2)
+       case $ast_value in $3) res=true ;; esac ;; esac
+       ;;
   esac
   $res
 }

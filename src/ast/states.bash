@@ -30,3 +30,27 @@ ast:clear-states() {
   AstStates[index]=0
   AstStates[0]=top
 }
+
+ast:ends-state() {
+  local expr="$1"
+  local state expr_value
+
+  ast:last-state state
+
+  if ast:is $expr name; then
+    ast:from $expr value expr_value
+
+    case "$state $expr_value" in
+      "( )"|"[ ]"|"{ }")
+        return 0
+        ;;
+      *)
+        return 1
+        ;;
+    esac
+  else
+    return 1
+  fi
+}
+
+

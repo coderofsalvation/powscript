@@ -1,4 +1,5 @@
 powscript_source ast/helper.bash       #<<EXPAND>>
+powscript_source ast/sequence.bash  #<<EXPAND>>
 powscript_source ast/expressions.bash  #<<EXPAND>>
 powscript_source ast/math.bash         #<<EXPAND>>
 powscript_source ast/commands.bash     #<<EXPAND>>
@@ -6,6 +7,7 @@ powscript_source ast/blocks.bash       #<<EXPAND>>
 powscript_source ast/patterns.bash     #<<EXPAND>>
 powscript_source ast/conditionals.bash #<<EXPAND>>
 powscript_source ast/functions.bash    #<<EXPAND>>
+powscript_source ast/lowerer.bash      #<<EXPAND>>
 powscript_source ast/print.bash        #<<EXPAND>>
 
 # ast:parse:try
@@ -70,7 +72,7 @@ noshadow ast:parse:linestart
 
 ast:parse:top() { #<<NOSHADOW>>
   local out="$1"
-  local expr expr_head
+  local expr expr_head assigns
 
   ast:parse:expr expr
   ast:from $expr head expr_head
@@ -87,23 +89,35 @@ ast:parse:top() { #<<NOSHADOW>>
         'while')   ast:parse:while   "$out" ;;
         'switch')  ast:parse:switch  "$out" ;;
         'require') ast:parse:require "$out" ;;
+        'declare')
+          local type_ast type
+
+          ast:parse:specific-expr name type_ast
+          ast:from $type_ast value type
+
+          ast:make "$out" declare
+          ast:set "${!out}" value $type
+          ast:parse:sequence "${!out}" 'ast:is % name'
+          ;;
         *)
           if token:next-is special '('; then
             ast:parse:function-definition $expr "$out"
           else
-            ast:parse:commandcall $expr "$out"
+            ast:make assigns assign-sequence
+            ast:parse:command-call $assigns $expr "$out"
           fi
           ;;
       esac
       ;;
-    assign|indexing-assign)
-      setvar "$out" $expr
+    *assign)
+      ast:parse:assign-sequence $expr "$out"
       ;;
     newline)
       setvar "$out" -1
       ;;
     *)
-      ast:parse:commandcall $expr "$out"
+      ast:make assigns assign-sequence
+      ast:parse:command-call $assigns $expr "$out"
       ;;
   esac
 }

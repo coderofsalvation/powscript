@@ -58,6 +58,7 @@ interactive:start() {
         while [ ! "$state" = top ]; do
           interactive:clear-compilation
           state="$( { stream:init; POWSCRIPT_SHOW_INCOMPLETE_MESSAGE=$incomplete_flag ast:parse:try; } <<< "$code" )"
+          [ -z "$line" ] && state=top
           case "$state" in
             top)
               interactive:clear-compilation
@@ -93,6 +94,7 @@ interactive:start() {
           interactive:show-ast $ast
           echo "---------------------"
         fi
+        ast:lower $ast ast
         backend:compile $ast compiled_code
         if $compile_flag; then
           echo "--- COMPILED CODE ---"

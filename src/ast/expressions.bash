@@ -56,19 +56,14 @@ ast:parse:expr() { #<<NOSHADOW>>
               ;;
 
             '('|'{')
-              local closer
-              case $value in
-                '(') closer=')'; ;;
-                '{') closer='}'; ;;
-              esac
               if [ $exprnum -gt 0 ]; then
                 root_head=determinable
               else
                 ast:push-state $value
                 if ${AST_MATH_MODE-false}; then
-                  ast:parse:list $closer expression
+                  ast:parse:list expression
                 else
-                  ast:parse:list $closer root
+                  ast:parse:list root
                   root_head=list
                 fi
                 ast:pop-state
@@ -85,7 +80,7 @@ ast:parse:expr() { #<<NOSHADOW>>
               if [ $exprnum -gt 0 ] && { ast:state-is $opener || ${AST_MATH_MODE-false}; }; then
                 root_head=determinable
               else
-                ast:make expression string "$value"
+                ast:make expression name "$value"
               fi
               ;;
 
@@ -96,24 +91,27 @@ ast:parse:expr() { #<<NOSHADOW>>
                 ast:from $root head root_head
 
               elif [ $exprnum = 2 ] && ast:is $last_expression name; then
-                local name op
+                local name op value
                 ast:children $root name op
                 ast:from $op value op
 
                 case "$op" in
                   '+'|'-'|'*'|'/'|'^'|'%')
                     ast:parse:math-assign $root $name "$op"
-                    root_head=assign
+                    root_head=math-assign
                     ;;
                   '@')
                     ast:parse:push-assign $root $name
                     root_head=indexing-assign
                     ;;
+                  '&')
+                    ast:parse:concat-assign $root $name
+                    root_head=concat-assign
+                    ;;
                   *)
                     ast:make expression string "="
                     ;;
                 esac
-
 
               else
                 ast:make expression string "="
@@ -149,9 +147,9 @@ ast:parse:expr() { #<<NOSHADOW>>
               else
                 ast:push-state '['
                 if ${AST_MATH_MODE-false}; then
-                  ast:parse:list ']' expression
+                  ast:parse:list expression
                 else
-                  ast:parse:list ']' root
+                  ast:parse:list expression
                   root_head=list
                 fi
                 ast:pop-state
@@ -240,45 +238,3 @@ ast:parse:specific-expr() { #<<NOSHADOW>>
  fi
 }
 noshadow ast:parse:specific-expr 1
-
-
-# ast:parse:list $closer $out
-#
-# Parses an AST of the form (...), [...] or {...}
-#
-
-ast:parse:list() { #<<NOSHADOW>>
-  local closer="$1" out="$2"
-  local expr child open=true
-  local class value
-
-  ast:make expr list
-
-  while $open; do
-    token:peek -v value -c class
-    case "$class $value" in
-      "special $closer")
-        open=false
-        token:skip
-        ;;
-      'newline '*)
-        token:skip
-        ;;
-      'eof '*)
-        if ${POWSCRIPT_ALLOW_INCOMPLETE-false}; then
-          POWSCRIPT_INCOMPLETE_STATE="$(ast:last-state)"
-          exit
-        else
-          ast:error "end of file while parsing list"
-        fi
-        ;;
-      *)
-        ast:parse:expr child
-        ast:push-child $expr $child
-        ;;
-    esac
-  done
-  setvar "$out" $expr
-}
-noshadow ast:parse:list 1
-

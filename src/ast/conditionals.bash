@@ -291,9 +291,20 @@ noshadow ast:parse:flag-conditional 1
 
 ast:parse:command-conditional() { #<<NOSHADOW>>
   local cmd="$1" cmd_ast out="$2"
+  local cmd_head assigns value class
+
+  ast:from $cmd head cmd_head
 
   ast:push-state '=='
-  ast:parse:commandcall $cmd cmd_ast
+  case $cmd_head in
+    *assign)
+      ast:parse:assign-sequence $cmd cmd_ast
+      ;;
+    *)
+      ast:make assigns assign-sequence
+      ast:parse:command-call $assigns $cmd cmd_ast
+      ;;
+  esac
   ast:pop-state
 
   ast:make "$out" condition 'command' $cmd_ast

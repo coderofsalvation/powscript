@@ -36,8 +36,20 @@ sh:compile() { #<<NOSHADOW>>
       backend:compile $var_ast   var
       backend:compile $value_ast value
 
-
       setvar "$out" "$var=$value"
+      ;;
+
+    assign-sequence)
+      local assign_ast expr_children
+      local result="" assign
+
+      ast:from $expr children expr_children
+
+      for assign_ast in $expr_children; do
+        backend:compile $assign_ast assign
+        result+="$assign "
+      done
+      setvar "$out" "$result"
       ;;
 
     math-assigned)
@@ -50,17 +62,30 @@ sh:compile() { #<<NOSHADOW>>
       setvar "$out" "\$(( $value ))"
       ;;
 
+    concat-assign)
+      local var_ast value_ast
+      local var value
+
+      ast:children $expr var_ast value_ast
+
+      backend:compile $var_ast   var
+      backend:compile $value_ast value
+
+      setvar "$out" "$var=\"\${$var}\"$value"
+      ;;
+
     call)
       local children arg_ast
-      local result cmd arg
+      local result assigns cmd arg
 
       ast:from $expr children children
       children=( $children )
 
-      backend:compile ${children[0]} cmd
+      backend:compile ${children[0]} assigns
+      backend:compile ${children[1]} cmd
 
-      result="$cmd"
-      for arg_ast in "${children[@]:1}"; do
+      result="$assigns$cmd"
+      for arg_ast in "${children[@]:2}"; do
         backend:compile $arg_ast arg
         result="$result $arg"
       done
@@ -205,28 +230,12 @@ sh:compile() { #<<NOSHADOW>>
 
     function-def)
       local name_ast args_ast block_ast
-      local name args_ast arg_assign_ast argval_ast block_ast block
-      local args arg argval argnum locals_ast argname_ast
-
+      local name block
 
       ast:children $expr name_ast args_ast block_ast
 
-      sh:compile $name_ast name
-
-      ast:make locals_ast local
-
-      ast:from $args_ast children args
-
-      argnum=1
-      for arg in $args; do
-        ast:make argval_ast simple-substitution $argnum
-        ast:make arg_assign_ast assign '' $arg $argval_ast
-        ast:push-child $locals_ast $arg_assign_ast
-        argnum=$((argnum+1))
-      done
-      ast:unshift-child $block_ast $locals_ast
-
-      sh:compile $block_ast block
+      backend:compile $name_ast name
+      backend:compile $block_ast block
 
       setvar "$out" "$name() $block"
       ;;
@@ -239,6 +248,15 @@ sh:compile() { #<<NOSHADOW>>
         sh:compile $child_ast child
         result="$result $child"
       done
+
+      setvar "$out" "$result"
+      ;;
+
+    declare)
+      local result
+      ast:set $expr head local
+      sh:compile $expr result
+      ast:set $expr head declare
 
       setvar "$out" "$result"
       ;;

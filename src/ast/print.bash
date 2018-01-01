@@ -51,6 +51,16 @@ ast:print-child() {
       printf ']='
       ast:print-child $value
       ;;
+    math-assign)
+      ast:print-child ${child_array[0]}
+      printf '%s=' $ast_value
+      ast:print-child ${child_array[1]}
+      ;;
+    concat-assign)
+      ast:print-child ${child_array[0]}
+      printf '&='
+      ast:print-child ${child_array[1]}
+      ;;
     simple-substitution)
       printf '$%s' "$ast_value"
       ;;
@@ -79,7 +89,7 @@ ast:print-child() {
       fi
       ;;
     math-assigned)
-      ast:print ${child_array[0]}
+      ast:print-child ${child_array[0]}
       ;;
     array-length)
       printf '$#%s' "$ast_value"
