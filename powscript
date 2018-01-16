@@ -2333,26 +2333,75 @@ ast:parse:while() {
 #   for <var> in <expr>
 #     <block>
 #
+# or
+#   for <var> of <expr>
+#     <block>
+#
+# or
+#  for <var>,<var> of <expr>
+#    <block>
+#
 
 
 __shadowing_ast:parse:for() {
   local out="$1"
-  local value class elements_ast block_ast
+  local value value2 class class2 result
+  local var_ast var2_ast elements_ast block_ast
 
   token:get -v value -c class
 
   if [ ! "$class" = name ]; then
     ast:error "Expected a variable name in 'for' expression, found a $class token instead."
   else
-    token:require name "in"
+    if token:next-is name 'in'; then
+      token:skip
 
-    ast:make elements_ast elements
-    ast:parse:arguments $elements_ast
+      ast:make var_ast name "$value"
 
-    ast:parse:block 'for' block_ast
+      ast:make elements_ast elements
+      ast:parse:sequence $elements_ast
+
+      ast:parse:block 'for' block_ast
+
+      ast:make result 'for' '' $var_ast $elements_ast $block_ast
+
+    elif token:next-is name 'of'; then
+      token:skip
+
+      ast:make var_ast name "$value"
+
+      ast:parse:expr elements_ast
+      ast:parse:require-newline 'for-of'
+
+      ast:parse:block 'for' block_ast
+
+      ast:make result 'for-of' '' $var_ast $elements_ast $block_ast
+
+    elif token:next-is special ','; then
+      token:skip
+      token:get -v value2 -c class2
+
+      if [ ! "$class" = name ]; then
+        ast:error "Expected a variable name in 'for-of' expression, found a $class2 token instead."
+      fi
+
+      token:require name 'of'
+
+      ast:make var_ast  name "$value"
+      ast:make var2_ast name "$value2"
+
+      ast:parse:expr elements_ast
+      ast:parse:require-newline 'for-of'
+
+      ast:parse:block 'for' block_ast
+
+      ast:make result 'for-of-map' '' $var_ast $var2_ast $elements_ast $block_ast
+    else
+      ast:error "expected 'in', 'of' or ',' after variable name in for expression, found a ${class}: $value"
+    fi
   fi
 
-  ast:make "$out" 'for' "$value" $elements_ast $block_ast
+  setvar "$out" $result
 }
 
 ast:parse:for() {
@@ -2717,6 +2766,48 @@ __shadowing_ast:lower-scanned() {
   ast:from $expr head expr_head
 
   case $expr_head in
+    for-of)
+      local var array block
+      local array_name at elements
+
+      ast:children $expr var array block
+
+      if ! ast:is $array name; then
+        ast:error "for-of expression expected an array's name, got a $(ast:from $array head)"
+      fi
+      ast:from $array value array_name
+
+      ast:make at name '@'
+      ast:make elements indexing-substitution "$array_name" $at
+
+      ast:make result 'for' '' $var $elements $block
+      ;;
+    for-of-map)
+      local key val array block
+      local array_name at elements
+      local val_assign val_get key_name key_subst
+      local newblock block_value block_children
+
+      ast:children $expr key val array block
+
+      if ! ast:is $array name; then
+        ast:error "for-of expression expected an array's name, got a $(ast:from $array head)"
+      fi
+      ast:from $array value array_name
+
+      ast:make at name '@'
+      ast:make elements indirect-indexing-substitution "$array_name" $at
+
+      ast:from $key value key_name
+      ast:make key_subst simple-substitution "$key_name"
+      ast:make val_get indexing-substitution "$array_name" $key_subst
+      ast:make val_assign assign '' $val $val_get
+
+      ast:all-from $block -v block_value -c block_children
+      ast:make newblock block "$block_value" $val_assign $block_children
+
+      ast:make result 'for' '' $key $elements $newblock
+      ;;
     math-assign)
       local var varname value op type
 
@@ -3349,6 +3440,16 @@ __shadowing_bash:compile() {
       setvar "$out" "\"\${$name[$index]}\""
       ;;
 
+    indirect-indexing-substitution)
+      ast:from $expr children expr_children
+      expr_children=( $expr_children )
+
+      ast:from $expr value name
+      bash:compile ${expr_children[0]} index
+
+      setvar "$out" "\"\${!$name[$index]}\""
+      ;;
+
     indexing-assign)
       local name index value
       ast:from $expr children expr_children
@@ -3652,8 +3753,7 @@ __shadowing_sh:compile() {
       local varname
       local elements block
 
-      ast:from $expr value varname
-      backend:compile-children $expr elements block
+      backend:compile-children $expr varname elements block
 
       setvar "$out" "for $varname in $elements; do"$'\n'"${block:2:-2}"$'\ndone'
       ;;

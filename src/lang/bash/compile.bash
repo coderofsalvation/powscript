@@ -46,6 +46,16 @@ bash:compile() { #<<NOSHADOW>>
       setvar "$out" "\"\${$name[$index]}\""
       ;;
 
+    indirect-indexing-substitution)
+      ast:from $expr children expr_children
+      expr_children=( $expr_children )
+
+      ast:from $expr value name
+      bash:compile ${expr_children[0]} index
+
+      setvar "$out" "\"\${!$name[$index]}\""
+      ;;
+
     indexing-assign)
       local name index value
       ast:from $expr children expr_children

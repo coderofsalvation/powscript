@@ -115,25 +115,74 @@ noshadow ast:parse:while
 #   for <var> in <expr>
 #     <block>
 #
+# or
+#   for <var> of <expr>
+#     <block>
+#
+# or
+#  for <var>,<var> of <expr>
+#    <block>
+#
 
 ast:parse:for() { #<<NOSHADOW>>
   local out="$1"
-  local value class elements_ast block_ast
+  local value value2 class class2 result
+  local var_ast var2_ast elements_ast block_ast
 
   token:get -v value -c class
 
   if [ ! "$class" = name ]; then
     ast:error "Expected a variable name in 'for' expression, found a $class token instead."
   else
-    token:require name "in"
+    if token:next-is name 'in'; then
+      token:skip
 
-    ast:make elements_ast elements
-    ast:parse:arguments $elements_ast
+      ast:make var_ast name "$value"
 
-    ast:parse:block 'for' block_ast
+      ast:make elements_ast elements
+      ast:parse:sequence $elements_ast
+
+      ast:parse:block 'for' block_ast
+
+      ast:make result 'for' '' $var_ast $elements_ast $block_ast
+
+    elif token:next-is name 'of'; then
+      token:skip
+
+      ast:make var_ast name "$value"
+
+      ast:parse:expr elements_ast
+      ast:parse:require-newline 'for-of'
+
+      ast:parse:block 'for' block_ast
+
+      ast:make result 'for-of' '' $var_ast $elements_ast $block_ast
+
+    elif token:next-is special ','; then
+      token:skip
+      token:get -v value2 -c class2
+
+      if [ ! "$class" = name ]; then
+        ast:error "Expected a variable name in 'for-of' expression, found a $class2 token instead."
+      fi
+
+      token:require name 'of'
+
+      ast:make var_ast  name "$value"
+      ast:make var2_ast name "$value2"
+
+      ast:parse:expr elements_ast
+      ast:parse:require-newline 'for-of'
+
+      ast:parse:block 'for' block_ast
+
+      ast:make result 'for-of-map' '' $var_ast $var2_ast $elements_ast $block_ast
+    else
+      ast:error "expected 'in', 'of' or ',' after variable name in for expression, found a ${class}: $value"
+    fi
   fi
 
-  ast:make "$out" 'for' "$value" $elements_ast $block_ast
+  setvar "$out" $result
 }
 noshadow ast:parse:for
 

@@ -22,6 +22,48 @@ ast:lower-scanned() { #<<NOSHADOW>>
   ast:from $expr head expr_head
 
   case $expr_head in
+    for-of)
+      local var array block
+      local array_name at elements
+
+      ast:children $expr var array block
+
+      if ! ast:is $array name; then
+        ast:error "for-of expression expected an array's name, got a $(ast:from $array head)"
+      fi
+      ast:from $array value array_name
+
+      ast:make at name '@'
+      ast:make elements indexing-substitution "$array_name" $at
+
+      ast:make result 'for' '' $var $elements $block
+      ;;
+    for-of-map)
+      local key val array block
+      local array_name at elements
+      local val_assign val_get key_name key_subst
+      local newblock block_value block_children
+
+      ast:children $expr key val array block
+
+      if ! ast:is $array name; then
+        ast:error "for-of expression expected an array's name, got a $(ast:from $array head)"
+      fi
+      ast:from $array value array_name
+
+      ast:make at name '@'
+      ast:make elements indirect-indexing-substitution "$array_name" $at
+
+      ast:from $key value key_name
+      ast:make key_subst simple-substitution "$key_name"
+      ast:make val_get indexing-substitution "$array_name" $key_subst
+      ast:make val_assign assign '' $val $val_get
+
+      ast:all-from $block -v block_value -c block_children
+      ast:make newblock block "$block_value" $val_assign $block_children
+
+      ast:make result 'for' '' $key $elements $newblock
+      ;;
     math-assign)
       local var varname value op type
 

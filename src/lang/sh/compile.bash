@@ -132,8 +132,7 @@ sh:compile() { #<<NOSHADOW>>
       local varname
       local elements block
 
-      ast:from $expr value varname
-      backend:compile-children $expr elements block
+      backend:compile-children $expr varname elements block
 
       setvar "$out" "for $varname in $elements; do"$'\n'"${block:2:-2}"$'\ndone'
       ;;
