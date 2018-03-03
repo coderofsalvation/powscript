@@ -102,6 +102,16 @@ ast:unshift-child() {
   Asts["children-$1"]="$2 ${Asts["children-$1"]}"
 }
 
+ast:shift-child() {
+  setvar "$2" "${Asts["children-$1"]%% *}"
+  Asts["children-$1"]="${Asts["children-$1"]#* }"
+}
+
+ast:pop-child() {
+  setvar "$2" "${Asts["children-$1"]##* }"
+  Asts["children-$1"]="${Asts["children-$1"]% *}"
+}
+
 ast:children() { #<<NOSHADOW>>
   local ast="$1"
   local ast_children children_array child i

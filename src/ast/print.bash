@@ -43,6 +43,11 @@ ast:print-child() {
       printf '='
       ast:print-child $value
       ;;
+    and)
+      ast:print-child ${child_array[0]}
+      printf " and "
+      ast:print-child ${child_array[1]}
+      ;;
     indexing-assign)
       local name=${child_array[0]} index=${child_array[1]} value=${child_array[2]}
       ast:print-child $name
@@ -127,21 +132,51 @@ ast:print-child() {
           ;;
         *)
           ast:print-child ${child_array[0]}
-          printf '%s' "$ast_value"
+          printf ' %s ' "$ast_value"
           ast:print-child ${child_array[1]}
           ;;
       esac
       ;;
     for)
-      printf 'for %s in ' $ast_value
+      printf 'for '
+      ast:print-child ${child_array[0]}
+      printf ' in '
+      ast:print-child ${child_array[1]}
+      echo
+      ast:print-child ${child_array[2]}
+      ;;
+    for-of)
+      printf 'for '
+      ast:print-child ${child_array[0]}
+      printf ' of '
+      ast:print-child ${child_array[1]}
+      echo
+      ast:print-child ${child_array[2]}
+      ;;
+    switch|case|while)
+      printf '%s' "$ast_head"
       ast:print-child ${child_array[0]}
       echo
       ast:print-child ${child_array[1]}
       ;;
-    switch|case|while)
-      printf '%s ' "$ast_head"
+    await*)
+      printf "await "
       ast:print-child ${child_array[0]}
-      echo
+      printf " then"
+
+      if [ "$ast_head" = 'await-pipe' ]; then
+        printf ' |\n'
+        ast:print-child ${child_array[1]}
+        printf 'when done\n'
+        ast:print-child ${child_array[2]}
+      else
+        echo
+        ast:print-child ${child_array[1]}
+      fi
+      ;;
+    pipe)
+      ast:print-child ${child_array[0]}
+      printf " | "
       ast:print-child ${child_array[1]}
       ;;
     list)
@@ -153,6 +188,14 @@ ast:print-child() {
         printf ' '
       done
       printf ')'
+      ;;
+    elements)
+      local element
+
+      for element in "${child_array[@]}"; do
+        ast:print-child $element
+        printf ' '
+      done
       ;;
     block)
       local statement

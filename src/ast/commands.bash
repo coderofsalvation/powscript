@@ -4,6 +4,19 @@
 #
 
 ast:parse:command-call() { #<<NOSHADOW>>
+  local assigns="$1" out="$2"
+  local cmd
+
+  if [ -z "$assigns" ]; then
+    ast:make assigns 'assign-sequence' ''
+  fi
+
+  ast:parse:expr cmd
+  ast:parse:command-call-with-cmd "$assigns" "$cmd" "$out"
+}
+noshadow ast:parse:command-call 1
+
+ast:parse:command-call-with-cmd() { #<<NOSHADOW>>
   local assigns=$1 command_ast=$2 out="$3"
   local expression child predicate
 
@@ -19,7 +32,7 @@ ast:parse:command-call() { #<<NOSHADOW>>
 
   setvar "$out" $expression
 }
-noshadow ast:parse:command-call 2
+noshadow ast:parse:command-call-with-cmd 2
 
 
 ast:parse:not-binary-conditional() {

@@ -351,7 +351,7 @@ ast:parse:command-conditional() { #<<NOSHADOW>>
       ;;
     *)
       ast:make assigns assign-sequence
-      ast:parse:command-call $assigns $cmd cmd_ast
+      ast:parse:command-call-with-cmd $assigns $cmd cmd_ast
       ;;
   esac
   ast:pop-state

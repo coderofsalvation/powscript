@@ -64,6 +64,39 @@ ast:lower-scanned() { #<<NOSHADOW>>
 
       ast:make result 'for' '' $key $elements $newblock
       ;;
+    await-then)
+      local cmd then
+      local set_async var t block
+      local block_lowered
+
+      ast:children $expr cmd then
+
+      ast:make var 'name' 'ASYNC'
+      ast:make t   'name' '1'
+      ast:make set_async 'assign' '' $var $t
+
+      ast:make block 'block' '' $cmd $then
+      ast:lower-scanned $block block_lowered
+
+      ast:make result 'and' '' $block_lowered $set_async
+      ;;
+    await-pipe)
+      local cmd then done_block
+      local set_async var t block pipe
+      local block_lowere d
+
+      ast:children $expr cmd then done_block
+
+      ast:make var 'name' 'ASYNC'
+      ast:make t   'name' '1'
+      ast:make set_async 'assign' '' $var $t
+
+      ast:make pipe  'pipe'  '' $cmd  $then
+      ast:make block 'block' '' $pipe $done_block
+      ast:lower-scanned $block block_lowered
+
+      ast:make result 'and' '' $block_lowered $set_async
+      ;;
     math-assign)
       local var varname value op type
 

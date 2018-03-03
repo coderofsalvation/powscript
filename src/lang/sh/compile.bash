@@ -27,6 +27,23 @@ sh:compile() { #<<NOSHADOW>>
       setvar "$out" "$result"
       ;;
 
+    and|pipe)
+      local left_ast right_ast
+      local left right op
+
+      ast:children $expr left_ast right_ast
+
+      backend:compile $left_ast  left
+      backend:compile $right_ast right
+
+      case "$expr_head" in
+        and)  op='&' ;;
+        pipe) op='|' ;;
+      esac
+
+      setvar "$out" "$left $op $right"
+      ;;
+
     assign)
       local var_ast value_ast
       local var value

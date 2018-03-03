@@ -1,5 +1,5 @@
 powscript_source ast/helper.bash       #<<EXPAND>>
-powscript_source ast/sequence.bash  #<<EXPAND>>
+powscript_source ast/sequence.bash     #<<EXPAND>>
 powscript_source ast/expressions.bash  #<<EXPAND>>
 powscript_source ast/math.bash         #<<EXPAND>>
 powscript_source ast/commands.bash     #<<EXPAND>>
@@ -7,6 +7,7 @@ powscript_source ast/blocks.bash       #<<EXPAND>>
 powscript_source ast/patterns.bash     #<<EXPAND>>
 powscript_source ast/conditionals.bash #<<EXPAND>>
 powscript_source ast/functions.bash    #<<EXPAND>>
+powscript_source ast/parallel.bash     #<<EXPAND>>
 powscript_source ast/lowerer.bash      #<<EXPAND>>
 powscript_source ast/print.bash        #<<EXPAND>>
 
@@ -88,6 +89,7 @@ ast:parse:top() { #<<NOSHADOW>>
         'math')    ast:parse:math    "$out" ;;
         'while')   ast:parse:while   "$out" ;;
         'switch')  ast:parse:switch  "$out" ;;
+        'await')   ast:parse:await   "$out" ;;
         'require') ast:parse:require "$out" ;;
         'declare')
           local type_ast type
@@ -104,7 +106,7 @@ ast:parse:top() { #<<NOSHADOW>>
             ast:parse:function-definition $expr "$out"
           else
             ast:make assigns assign-sequence
-            ast:parse:command-call $assigns $expr "$out"
+            ast:parse:command-call-with-cmd $assigns $expr "$out"
           fi
           ;;
       esac
@@ -117,7 +119,7 @@ ast:parse:top() { #<<NOSHADOW>>
       ;;
     *)
       ast:make assigns assign-sequence
-      ast:parse:command-call $assigns $expr "$out"
+      ast:parse:command-call-with-cmd $assigns $expr "$out"
       ;;
   esac
 }
