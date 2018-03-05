@@ -123,11 +123,15 @@ noshadow ast:parse:while
 #  for <var>,<var> of <expr>
 #    <block>
 #
+# or
+#  for <var> from <expr>
+#    <block>
+#
 
 ast:parse:for() { #<<NOSHADOW>>
   local out="$1"
   local value value2 class class2 result
-  local var_ast var2_ast elements_ast block_ast
+  local var_ast var2_ast elements_ast file_ast block_ast
 
   token:get -v value -c class
 
@@ -157,6 +161,18 @@ ast:parse:for() { #<<NOSHADOW>>
       ast:parse:block 'for' block_ast
 
       ast:make result 'for-of' '' $var_ast $elements_ast $block_ast
+
+    elif token:next-is name 'from'; then
+      token:skip
+
+      ast:make var_ast name "$value"
+
+      ast:parse:expr file_ast
+      ast:parse:require-newline 'for-from'
+
+      ast:parse:block 'for' block_ast
+
+      ast:make result 'for-from' '' $var_ast $file_ast $block_ast
 
     elif token:next-is special ','; then
       token:skip

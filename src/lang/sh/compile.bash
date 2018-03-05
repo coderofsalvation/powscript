@@ -27,7 +27,7 @@ sh:compile() { #<<NOSHADOW>>
       setvar "$out" "$result"
       ;;
 
-    and|pipe)
+    and|pipe|file-input)
       local left_ast right_ast
       local left right op
 
@@ -37,8 +37,9 @@ sh:compile() { #<<NOSHADOW>>
       backend:compile $right_ast right
 
       case "$expr_head" in
-        and)  op='&' ;;
-        pipe) op='|' ;;
+        and)        op='&' ;;
+        pipe)       op='|' ;;
+        file-input) op='<' ;;
       esac
 
       setvar "$out" "$left $op $right"
@@ -69,6 +70,16 @@ sh:compile() { #<<NOSHADOW>>
       setvar "$out" "$result"
       ;;
 
+    readline)
+      local var_ast
+      local var
+
+      ast:children $expr var_ast
+
+      backend:compile $var_ast var
+
+      setvar "$out" "IFS= read $var || [ -n \"\$$var\" ]"
+      ;;
     math-assigned)
       local value_ast value
 

@@ -160,18 +160,34 @@ ast:print-child() {
       ast:print-child ${child_array[1]}
       ;;
     await*)
-      printf "await "
-      ast:print-child ${child_array[0]}
-      printf " then"
+      local then
 
-      if [ "$ast_head" = 'await-pipe' ]; then
-        printf ' |\n'
-        ast:print-child ${child_array[1]}
+      printf 'await '
+      ast:print-child ${child_array[0]}
+      printf ' then'
+
+      case "$ast_head" in
+        await-for)
+          then=2
+          printf ' for '
+          ast:print-child ${child_array[1]}
+          echo
+          ;;
+        await-pipe)
+          then=1
+          printf ' |\n'
+          ;;
+        await-then)
+          then=1
+          echo
+          ;;
+      esac
+
+      ast:print-child ${child_array[$then]}
+
+      if [ -n "${child_array[$((then+1))]}" ]; then
         printf 'when done\n'
-        ast:print-child ${child_array[2]}
-      else
-        echo
-        ast:print-child ${child_array[1]}
+        ast:print-child ${child_array[$((then+1))]}
       fi
       ;;
     pipe)

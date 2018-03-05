@@ -64,6 +64,16 @@ ast:lower-scanned() { #<<NOSHADOW>>
 
       ast:make result 'for' '' $key $elements $newblock
       ;;
+    for-from)
+      local var file block
+      local while_block readline
+
+      ast:children $expr var file block
+
+      ast:make readline 'readline' '' $var
+      ast:make while_block 'while' '' $readline $block
+      ast:make result 'file-input' '' $while_block $file
+      ;;
     await-then)
       local cmd then
       local set_async var t block
@@ -83,7 +93,7 @@ ast:lower-scanned() { #<<NOSHADOW>>
     await-pipe)
       local cmd then done_block
       local set_async var t block pipe
-      local block_lowere d
+      local block_lowered
 
       ast:children $expr cmd then done_block
 
@@ -92,6 +102,28 @@ ast:lower-scanned() { #<<NOSHADOW>>
       ast:make set_async 'assign' '' $var $t
 
       ast:make pipe  'pipe'  '' $cmd  $then
+      ast:make block 'block' '' $pipe $done_block
+      ast:lower-scanned $block block_lowered
+
+      ast:make result 'and' '' $block_lowered $set_async
+      ;;
+    await-for)
+      local cmd var then done_block
+      local set_async avar t block
+      local while_block readline pipe
+      local block_lowered
+
+      ast:children $expr cmd var then done_block
+
+      ast:make avar 'name' 'ASYNC'
+      ast:make t    'name' '1'
+      ast:make set_async 'assign' '' $avar $t
+
+      ast:make readline 'readline' '' $var
+
+      ast:make while_block 'while' '' $readline $then
+
+      ast:make pipe  'pipe'  '' $cmd  $while_block
       ast:make block 'block' '' $pipe $done_block
       ast:lower-scanned $block block_lowered
 
