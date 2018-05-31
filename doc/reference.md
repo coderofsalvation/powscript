@@ -226,7 +226,7 @@ if $f match ^([f]oo)
       <pre>
         <code>
 # extended pattern matching
-# (google 'extglob' for more info)
+# (google 'extglob' for more)
         </code>
         <code>
 if [[ "$f" =~ ^([f]oo) ]]; then
@@ -333,8 +333,8 @@ math '9 / 2' 4
       <pre>
         <code>
 # outputs: '4' and '4.5000'
-# NOTE: the second requires bc to be
-# installed for floatingpoint math
+# NOTE: floating point math
+#       requires bc
         </code>
       </pre>
     </td>
