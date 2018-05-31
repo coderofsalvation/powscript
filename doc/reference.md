@@ -412,14 +412,12 @@ json={}
 cat package.json | json_decode json
 echo $json['repository.url']
         </code>
-        <code>
-# outputs: git+https://coderofsalvation@github.com/coderofsalvation/powscript.git
-        </code>
       </pre>
     </td>
     <td>
       <pre>
         <code>
+# outputs: git+https://coderofsalvation@github.com/coderofsalvation/powscript.git
         </code>
       </pre>
     </td>
@@ -437,14 +435,12 @@ myfunc()
 curry curriedfunc abc
 echo -e "foo\nbar\n" | mappipe curriedfunc
         </code>
-        <code>
-# outputs: '1=abc 2=foo' and '1=abc 2=bar'
-        </code>
       </pre>
     </td>
     <td>
       <pre>
         <code>
+# outputs: '1=abc 2=foo' and '1=abc 2=bar'
         </code>
       </pre>
     </td>
@@ -505,13 +501,13 @@ bar={}
 foo["one"]="foo"
 bar["foo"]="123"
 map foo values | unpipe pick bar
-# outputs: '123'
         </code>
       </pre>
     </td>
     <td>
       <pre>
         <code>
+# outputs: '123'
         </code>
       </pre>
     </td>
@@ -533,14 +529,12 @@ funcB()
 compose decorate_string funcA funcB
 decorate_string "foo"
         </code>
-        <code>
-# outputs: '(|foo|)'
-        </code>
       </pre>
     </td>
     <td>
       <pre>
         <code>
+# outputs: '(|foo|)'
         </code>
       </pre>
     </td>
