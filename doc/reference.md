@@ -74,13 +74,13 @@ if $i is "foo"
   echo "foo"
 else
   echo "bar"
-
+</code>
+<code>
 if not $j is "foo" and $x is "bar"
   if $j is "foo" or $j is "xfoo"
     if $j > $y and $j != $y or $j >= $y
       echo "foo"
-
-        </code>
+</code>
       </pre>
     </td>
     <td>
@@ -224,7 +224,8 @@ fi
 # include bash- or powscript
 # at compiletime (=portable)
 require 'mymodule.pow'
-
+        </code>
+        <code>
 # include remote bashscript
 # at runtime
 source foo.bash
@@ -249,7 +250,8 @@ bar()
     echo "no argument given"
   if not empty $1
     echo "string given"
-
+        <code>
+        </code>
 foo "$@"
         </code>
       </pre>
@@ -265,7 +267,8 @@ foo(){
     echo "string given"
   fi
 }
-
+        </code>
+        <code>
 foo "$@"
         </code>
       </pre>
@@ -279,9 +282,11 @@ foo "$@"
         <code>
 myfunc()
   echo "value=$1"
-
+        </code>
+        <code>
 echo -e "foo\nbar\n" | mappipe myfunc
-
+        </code>
+        <code>
 # outputs: 'value=foo' and 'value=bar'
         </code>
       </pre>
@@ -289,7 +294,6 @@ echo -e "foo\nbar\n" | mappipe myfunc
     <td>
       <pre>
         <code>
-
         </code>
       </pre>
     </td>
@@ -311,7 +315,6 @@ math '9 / 2' 4
     <td>
       <pre>
         <code>
-
         </code>
       </pre>
     </td>
@@ -325,10 +328,10 @@ math '9 / 2' 4
 myfunc()
   sleep 1s
   echo "one"
-
+        </code>
+        <code>
 await myfunc 123 then
   echo "async done"
-
         </code>
       </pre>
     </td>
@@ -350,13 +353,14 @@ await myfunc 123 then
 myfunc()
   sleep 1s
   echo "one"
-
+        </code>
+        <code>
 await myfunc 123 then |
   cat -
-
+        </code>
+        <code>
 when done
   echo "async done"
-
         </code>
       </pre>
     </td>
@@ -379,7 +383,8 @@ myfunc()
   sleep 1s
   echo "one"
   echo "two"
-
+        </code>
+        <code>
 await myfunc 123 then for line
   echo "line: $*"
 when done
@@ -406,7 +411,8 @@ when done
 json={}
 cat package.json | json_decode json
 echo $json['repository.url']
-
+        </code>
+        <code>
 # outputs: git+https://coderofsalvation@github.com/coderofsalvation/powscript.git
         </code>
       </pre>
@@ -414,7 +420,6 @@ echo $json['repository.url']
     <td>
       <pre>
         <code>
-
         </code>
       </pre>
     </td>
@@ -427,10 +432,12 @@ echo $json['repository.url']
         <code>
 myfunc()
   echo "1=$1 2=$2"
-
+        </code>
+        <code>
 curry curriedfunc abc
 echo -e "foo\nbar\n" | mappipe curriedfunc
-
+        </code>
+        <code>
 # outputs: '1=abc 2=foo' and '1=abc 2=bar'
         </code>
       </pre>
@@ -438,7 +445,6 @@ echo -e "foo\nbar\n" | mappipe curriedfunc
     <td>
       <pre>
         <code>
-
         </code>
       </pre>
     </td>
@@ -454,14 +460,12 @@ foo["one"]="foo"
 foo["two"]="bar"
 map foo keys   # prints key per line
 map foo values # prints value per line
-
         </code>
       </pre>
     </td>
     <td>
       <pre>
         <code>
-
         </code>
       </pre>
     </td>
@@ -474,7 +478,8 @@ map foo values # prints value per line
         <code>
 printitem()
   echo "key=$1 value=$2"
-
+        </code>
+        <code>
 foo={}
 foo["one"]="foo"
 foo["two"]="bar"
@@ -485,7 +490,6 @@ map foo printitem
     <td>
       <pre>
         <code>
-
         </code>
       </pre>
     </td>
@@ -508,7 +512,6 @@ map foo values | unpipe pick bar
     <td>
       <pre>
         <code>
-
         </code>
       </pre>
     </td>
@@ -521,13 +524,16 @@ map foo values | unpipe pick bar
         <code>
 funcA()
   echo "($1)"
-
+        </code>
+        <code>
 funcB()
   echo "|$1|"
-
+        </code>
+        <code>
 compose decorate_string funcA funcB
 decorate_string "foo"
-
+        </code>
+        <code>
 # outputs: '(|foo|)'
         </code>
       </pre>
@@ -535,7 +541,6 @@ decorate_string "foo"
     <td>
       <pre>
         <code>
-
         </code>
       </pre>
     </td>
