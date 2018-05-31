@@ -10,7 +10,7 @@
   </thead>
   <tbody>
   <tr>
-    <td><b>functions</b></td>
+    <td align="center"><b>Functions</b></td>
     <td>
       <pre>
         <code>
@@ -39,7 +39,7 @@ foo one two
   </tr>
 
   <tr>
-    <td><b>switch statement</b></td>
+    <td align="center"><b>Switch statement</b></td>
     <td>
       <pre>
         <code>
@@ -68,7 +68,7 @@ esac
   </tr>
 
   <tr>
-    <td><b>easy if statements</b></td>
+    <td align="center"><b>Easy if statements</b></td>
     <td>
       <pre>
         <code>
@@ -117,7 +117,7 @@ fi
   </tr>
 
   <tr>
-    <td><b>associative array</b></td>
+    <td align="center"><b>Associative arrays</b></td>
     <td>
       <pre>
         <code>
@@ -155,7 +155,7 @@ echo "${foo["bar"]}"
   </tr>
 
   <tr>
-    <td><b>indexed array</b></td>
+    <td align="center"><b>Indexed array</b></td>
     <td>
       <pre>
         <code>
@@ -192,7 +192,7 @@ echo "${bla[0]}"
   </tr>
 
   <tr>
-    <td><b>read file line by line (shared scope)</b></td>
+    <td align="center"><b>Read file line by line (shared scope)</b></td>
     <td>
       <pre>
         <code>
@@ -213,7 +213,7 @@ for line from $selfpath/foo.txt
   </tr>
 
   <tr>
-    <td><b>regex</b></td>
+    <td align="center"><b>Regex</b></td>
     <td>
       <pre>
         <code>
@@ -226,7 +226,7 @@ if $f match ^([f]oo)
       <pre>
         <code>
 # extended pattern matching
-# (google 'extglob' for more
+# (google 'extglob' for more info)
         </code>
         <code>
 if [[ "$f" =~ ^([f]oo) ]]; then
@@ -238,7 +238,7 @@ fi
   </tr>
 
   <tr>
-    <td><b>require module</b></td>
+    <td align="center"><b>Requiring modules</b></td>
     <td>
       <pre>
         <code>
@@ -262,7 +262,7 @@ source foo.bash
   </tr>
 
   <tr>
-    <td><b>empty / isset checks</b></td>
+    <td align="center"><b>empty / isset checks</b></td>
     <td>
       <pre>
         <code>
@@ -297,7 +297,7 @@ foo "$@"
   </tr>
 
   <tr>
-    <td><b>mappipe unwraps a pipe</b></td>
+    <td align="center"><b>mappipe unwraps a pipe</b></td>
     <td>
       <pre>
         <code>
@@ -320,7 +320,7 @@ echo -e "a\nb\n" | mappipe fn
   </tr>
 
   <tr>
-    <td><b>easy math</b></td>
+    <td align="center"><b>Easy math</b></td>
     <td>
       <pre>
         <code>
@@ -341,7 +341,7 @@ math '9 / 2' 4
   </tr>
 
   <tr>
-    <td><b>Easy async</b></td>
+    <td align="center"><b>Easy async</b></td>
     <td>
       <pre>
         <code>
@@ -366,7 +366,7 @@ await fn 123 then
   </tr>
 
   <tr>
-    <td><b>Easy async pipe</b></td>
+    <td align="center"><b>Easy async pipe</b></td>
     <td>
       <pre>
         <code>
@@ -393,7 +393,7 @@ when done
   </tr>
 
   <tr>
-    <td><b>Easy async pipe (per line)</b></td>
+    <td align="center"><b>Easy async pipe (per line)</b></td>
     <td>
       <pre>
         <code>
@@ -422,7 +422,7 @@ when done
   </tr>
 
   <tr>
-    <td><b>JSON decode</b></td>
+    <td align="center"><b>JSON decode</b></td>
     <td>
       <pre>
         <code>
@@ -445,7 +445,7 @@ echo $obj['a-b']
   </tr>
 
   <tr>
-    <td><b>FP: curry</b></td>
+    <td align="center"><b>FP: curry</b></td>
     <td>
       <pre>
         <code>
@@ -469,7 +469,7 @@ echo -e "b\nc\n" | mappipe fnc
   </tr>
 
   <tr>
-    <td><b>FP: array values, keys</b></td>
+    <td align="center"><b>FP: array values, keys</b></td>
     <td>
       <pre>
         <code>
@@ -494,7 +494,7 @@ map foo values
   </tr>
 
   <tr>
-    <td><b>FP: map</b></td>
+    <td align="center"><b>FP: map</b></td>
     <td>
       <pre>
         <code>
@@ -541,7 +541,7 @@ map foo values |
   </tr>
 
   <tr>
-    <td><b>FP: compose</b></td>
+    <td align="center"><b>FP: compose</b></td>
     <td>
       <pre>
         <code>
