@@ -349,6 +349,17 @@ sh:compile() { #<<NOSHADOW>>
           ;;
       esac
       ;;
+    expand)
+      local block_ast block quoted_block
+      ast:from $expr children block_ast
+      backend:compile $block_ast block
+
+      setvar quoted_block "${block//\\/\\\\}"
+      setvar quoted_block "${block//\"/\\\"}"
+      setvar quoted_block "${quoted_block//\$/\\\$}"
+      setvar quoted_block "${quoted_block//\~/\$}"
+      setvar "$out" "eval \"$quoted_block\""
+      ;;
     newline|eof|'')
       ;;
     *)

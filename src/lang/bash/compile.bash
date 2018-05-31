@@ -7,10 +7,11 @@ bash:compile() { #<<NOSHADOW>>
   ast:from $expr head expr_head
 
   case "$expr_head" in
-    name|string|assign|cat|if|elif|else|end_if|call|for|while|\
-    command-substitution|switch|case|pattern|and|pipe|elements|\
-    simple-substitution|function-def|local|block|math|math-top|\
-    math-float|math-assigned|assign-sequence|readline|file-input)
+    name|string|assign|cat|if|elif|else|end_if|call|for|\
+    while|expand|command-substitution|switch|case|\
+    pattern|and|pipe|elements|simple-substitution|\
+    function-def|local|block|math|math-top|math-float|\
+    math-assigned|assign-sequence|readline|file-input)
 
       sh:compile $expr "$out"
       ;;

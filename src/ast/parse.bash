@@ -1,4 +1,5 @@
 powscript_source ast/helper.bash       #<<EXPAND>>
+powscript_source ast/expand.bash       #<<EXPAND>>
 powscript_source ast/sequence.bash     #<<EXPAND>>
 powscript_source ast/expressions.bash  #<<EXPAND>>
 powscript_source ast/math.bash         #<<EXPAND>>
@@ -91,6 +92,7 @@ ast:parse:top() { #<<NOSHADOW>>
         'switch')  ast:parse:switch  "$out" ;;
         'await')   ast:parse:await   "$out" ;;
         'require') ast:parse:require "$out" ;;
+        'expand')  ast:parse:expand  "$out" ;;
         'declare')
           local type_ast type
 
