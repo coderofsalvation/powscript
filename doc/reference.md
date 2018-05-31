@@ -301,19 +301,19 @@ foo "$@"
     <td>
       <pre>
         <code>
-myfunc()
+fn()
   echo "value=$1"
         </code>
         <code>
-echo -e "foo\nbar\n" | mappipe myfunc
+echo -e "a\nb\n" | mappipe fn
         </code>
       </pre>
     </td>
     <td>
       <pre>
         <code>
-# outputs: value=foo
-#          value=bar
+# outputs: value=a
+#          value=b
         </code>
       </pre>
     </td>
@@ -345,12 +345,12 @@ math '9 / 2' 4
     <td>
       <pre>
         <code>
-myfunc()
+fn()
   sleep 1s
   echo "one"
         </code>
         <code>
-await myfunc 123 then
+await fn 123 then
   echo "async done"
         </code>
       </pre>
@@ -370,15 +370,13 @@ await myfunc 123 then
     <td>
       <pre>
         <code>
-myfunc()
+fn()
   sleep 1s
   echo "one"
         </code>
         <code>
-await myfunc 123 then |
+await fn 123 then |
   cat -
-        </code>
-        <code>
 when done
   echo "async done"
         </code>
@@ -399,13 +397,13 @@ when done
     <td>
       <pre>
         <code>
-myfunc()
+fn()
   sleep 1s
   echo "one"
   echo "two"
         </code>
         <code>
-await myfunc 123 then for line
+await fn 123 then for line
   echo "line: $*"
 when done
   echo "async done"
@@ -428,12 +426,12 @@ when done
     <td>
       <pre>
         <code>
-json_obj={}
+obj={}
 json='{"a": {"b": "c"}}'
         </code>
         <code>
-echo "$json" | json_decode json_obj
-echo $json['a-b']
+echo "$json" | json_decode obj
+echo $obj['a-b']
         </code>
       </pre>
     </td>
@@ -455,16 +453,16 @@ fn()
   echo "1=$1 2=$2"
         </code>
         <code>
-curry fnc abc
-echo -e "foo\nbar\n" | mappipe fnc
+curry fnc a
+echo -e "b\nc\n" | mappipe fnc
         </code>
       </pre>
     </td>
     <td>
       <pre>
         <code>
-# outputs: 1=abc 2=foo
-#          1=abc 2=bar
+# outputs: 1=a 2=b
+#          1=a 2=c
         </code>
       </pre>
     </td>
@@ -478,14 +476,18 @@ echo -e "foo\nbar\n" | mappipe fnc
 foo={}
 foo["one"]="foo"
 foo["two"]="bar"
-map foo keys   # prints key per line
-map foo values # prints value per line
+map foo keys
+map foo values
         </code>
       </pre>
     </td>
     <td>
       <pre>
         <code>
+# outputs: one
+#          two
+#          foo
+#          bar
         </code>
       </pre>
     </td>
@@ -524,7 +526,8 @@ foo={}
 bar={}
 foo["one"]="foo"
 bar["foo"]="123"
-map foo values | unpipe pick bar
+map foo values |
+  mappipe pick bar
         </code>
       </pre>
     </td>
@@ -542,16 +545,16 @@ map foo values | unpipe pick bar
     <td>
       <pre>
         <code>
-funcA()
+fnA()
   echo "($1)"
         </code>
         <code>
-funcB()
+fnB()
   echo "|$1|"
         </code>
         <code>
-compose decorate_string funcA funcB
-decorate_string "foo"
+compose decorate fnA fnB
+decorate "foo"
         </code>
       </pre>
     </td>
