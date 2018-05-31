@@ -78,10 +78,14 @@ else
   echo "bar"
 </code>
 <code>
-if not $j is "foo" and $x is "bar"
-  if $j is "foo" or $j is "xfoo"
-    if $j > $y and $j != $y or $j >= $y
-      echo "foo"
+if not false and true
+  if true or false
+    echo "foo"
+        </code>
+        <code>
+if $x > $y
+  if $a < $b
+    echo "bar"
 </code>
       </pre>
     </td>
@@ -95,11 +99,16 @@ else
 fi
         </code>
         <code>
-if [[ ! "$j" == "foo" && "$x" == "bar" ]]; then
-  if [[ "$j" == "foo" || "$j" == "xfoo" ]]; then
-    if [[ "$j" -gt "$y" && "$j" -ne "$y" || "$j" -ge "$y" ]]; then
-      echo "foo"
-    fi
+if ! false && true; then
+  if true || false; then
+    echo 10
+  fi
+fi
+        </code>
+        <code>
+if [[ "$x" -gt "$y" ]]; then
+  if [[ "$a" -lt "$b" ]]; then
+    echo "bar"
   fi
 fi
         </code>
@@ -303,7 +312,8 @@ echo -e "foo\nbar\n" | mappipe myfunc
     <td>
       <pre>
         <code>
-# outputs: 'value=foo' and 'value=bar'
+# outputs: value=foo
+#          value=bar
         </code>
       </pre>
     </td>
@@ -323,8 +333,8 @@ math '9 / 2' 4
       <pre>
         <code>
 # outputs: '4' and '4.5000'
-# NOTE: the second requires bc
-# to be installed for floatingpoint math
+# NOTE: the second requires bc to be
+# installed for floatingpoint math
         </code>
       </pre>
     </td>
@@ -418,8 +428,11 @@ when done
     <td>
       <pre>
         <code>
-json={}
-echo '{"a": {"b": "c"}}' | json_decode json
+json_obj={}
+json='{"a": {"b": "c"}}'
+        </code>
+        <code>
+echo "$json" | json_decode json_obj
 echo $json['a-b']
         </code>
       </pre>
@@ -450,7 +463,8 @@ echo -e "foo\nbar\n" | mappipe curriedfunc
     <td>
       <pre>
         <code>
-# outputs: '1=abc 2=foo' and '1=abc 2=bar'
+# outputs: 1=abc 2=foo
+#          1=abc 2=bar
         </code>
       </pre>
     </td>
@@ -517,7 +531,7 @@ map foo values | unpipe pick bar
     <td>
       <pre>
         <code>
-# outputs: '123'
+# outputs: 123
         </code>
       </pre>
     </td>
@@ -544,7 +558,7 @@ decorate_string "foo"
     <td>
       <pre>
         <code>
-# outputs: '(|foo|)'
+# outputs: (|foo|)
         </code>
       </pre>
     </td>
