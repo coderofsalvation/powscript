@@ -16,7 +16,8 @@
         <code>
 foo( a, b )
   echo a=$a b=$b
-
+        </code>
+        <code>
 foo one two
         </code>
       </pre>
@@ -29,7 +30,8 @@ foo(){
   local b="$2"
   echo a="$a" b="$b"
 }
-
+        </code>
+        <code>
 foo one two
         </code>
       </pre>
@@ -91,7 +93,8 @@ if [[ "$i" == "foo" ]]; then
 else
   echo "bar"
 fi
-
+        </code>
+        <code>
 if [[ ! "$j" == "foo" && "$x" == "bar" ]]; then
   if [[ "$j" == "foo" || "$j" == "xfoo" ]]; then
     if [[ "$j" -gt "$y" && "$j" -ne "$y" || "$j" -ge "$y" ]]; then
@@ -111,11 +114,13 @@ fi
         <code>
 foo={}
 foo["bar"]="a value"
-
+        </code>
+        <code>
 for k,v in foo
   echo k=$k
   echo v=$v
-
+        </code>
+        <code>
 echo $foo["bar"]
         </code>
       </pre>
@@ -125,13 +130,15 @@ echo $foo["bar"]
         <code>
 declare -A foo
 foo["bar"]="a value"
-
+        </code>
+        <code>
 for k in "${!foo[@]}"; do
   v="${foo[$k]}"
   echo k="$k"
   echo v="$v"
 done
-
+        </code>
+        <code>
 echo "${foo["bar"]}"
         </code>
       </pre>
@@ -146,10 +153,12 @@ echo "${foo["bar"]}"
 bla=[]
 bla[0]="foo"
 bla+="push value"
-
+        </code>
+        <code>
 for i in bla
   echo bla=$i
-
+        </code>
+        <code>
 echo $bla[0]
         </code>
       </pre>
@@ -160,11 +169,13 @@ echo $bla[0]
 declare -a bla
 bla[0]="foo"
 bla+=("push value")
-
+        </code>
+        <code>
 for i in "${bla[@]}"; do
   echo bla="$i"
 done
-
+        </code>
+        <code>
 echo "${bla[0]}"
         </code>
       </pre>
@@ -207,7 +218,8 @@ if $f match ^([f]oo)
         <code>
 # extended pattern matching
 # (google 'extglob' for more
-
+        </code>
+        <code>
 if [[ "$f" =~ ^([f]oo) ]]; then
   echo "foo found!"
 fi
@@ -250,8 +262,8 @@ bar()
     echo "no argument given"
   if not empty $1
     echo "string given"
-        <code>
         </code>
+        <code>
 foo "$@"
         </code>
       </pre>
@@ -286,14 +298,12 @@ myfunc()
         <code>
 echo -e "foo\nbar\n" | mappipe myfunc
         </code>
-        <code>
-# outputs: 'value=foo' and 'value=bar'
-        </code>
       </pre>
     </td>
     <td>
       <pre>
         <code>
+# outputs: 'value=foo' and 'value=bar'
         </code>
       </pre>
     </td>
@@ -306,15 +316,15 @@ echo -e "foo\nbar\n" | mappipe myfunc
         <code>
 math '9 / 2'
 math '9 / 2' 4
-# outputs: '4' and '4.5000'
-# NOTE: the second requires bc
-# to be installed for floatingpoint math
         </code>
       </pre>
     </td>
     <td>
       <pre>
         <code>
+# outputs: '4' and '4.5000'
+# NOTE: the second requires bc
+# to be installed for floatingpoint math
         </code>
       </pre>
     </td>
@@ -409,15 +419,15 @@ when done
       <pre>
         <code>
 json={}
-cat package.json | json_decode json
-echo $json['repository.url']
+echo '{"a": {"b": "c"}}' | json_decode json
+echo $json['a-b']
         </code>
       </pre>
     </td>
     <td>
       <pre>
         <code>
-# outputs: git+https://coderofsalvation@github.com/coderofsalvation/powscript.git
+# outputs: c
         </code>
       </pre>
     </td>
