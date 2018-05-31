@@ -451,12 +451,12 @@ echo $json['a-b']
     <td>
       <pre>
         <code>
-myfunc()
+fn()
   echo "1=$1 2=$2"
         </code>
         <code>
-curry curriedfunc abc
-echo -e "foo\nbar\n" | mappipe curriedfunc
+curry fnc abc
+echo -e "foo\nbar\n" | mappipe fnc
         </code>
       </pre>
     </td>
