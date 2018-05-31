@@ -518,7 +518,7 @@ map foo printitem
   </tr>
 
   <tr>
-    <td><b>FP: pick</b></td>
+    <td align="center"><b>FP: pick</b></td>
     <td>
       <pre>
         <code>
