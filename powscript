@@ -4465,6 +4465,10 @@ interactive:start() {
 
   files:compile-file "$wfifo" <<<"${PowscriptLib[std]}"$'\n\n'
 
+  if [ -f "$HOME/.powrc" ]; then
+    files:compile-file "$wfifo" <"$HOME/.powrc"
+  fi
+
   while ps -p $proc >/dev/null; do
     result=
 
