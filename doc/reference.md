@@ -10,7 +10,7 @@
   </thead>
   <tbody>
   <tr>
-    <td><b>functions</b></td>
+    <td align="center"><b>Functions</b></td>
     <td>
       <pre>
         <code>
@@ -39,7 +39,7 @@ foo one two
   </tr>
 
   <tr>
-    <td><b>switch statement</b></td>
+    <td align="center"><b>Switch statement</b></td>
     <td>
       <pre>
         <code>
@@ -68,7 +68,7 @@ esac
   </tr>
 
   <tr>
-    <td><b>easy if statements</b></td>
+    <td align="center"><b>Easy if statements</b></td>
     <td>
       <pre>
         <code>
@@ -78,10 +78,14 @@ else
   echo "bar"
 </code>
 <code>
-if not $j is "foo" and $x is "bar"
-  if $j is "foo" or $j is "xfoo"
-    if $j > $y and $j != $y or $j >= $y
-      echo "foo"
+if not false and true
+  if true or false
+    echo "foo"
+        </code>
+        <code>
+if $x > $y
+  if $a < $b
+    echo "bar"
 </code>
       </pre>
     </td>
@@ -95,11 +99,16 @@ else
 fi
         </code>
         <code>
-if [[ ! "$j" == "foo" && "$x" == "bar" ]]; then
-  if [[ "$j" == "foo" || "$j" == "xfoo" ]]; then
-    if [[ "$j" -gt "$y" && "$j" -ne "$y" || "$j" -ge "$y" ]]; then
-      echo "foo"
-    fi
+if ! false && true; then
+  if true || false; then
+    echo 10
+  fi
+fi
+        </code>
+        <code>
+if [[ "$x" -gt "$y" ]]; then
+  if [[ "$a" -lt "$b" ]]; then
+    echo "bar"
   fi
 fi
         </code>
@@ -108,7 +117,7 @@ fi
   </tr>
 
   <tr>
-    <td><b>associative array</b></td>
+    <td align="center"><b>Associative arrays</b></td>
     <td>
       <pre>
         <code>
@@ -146,7 +155,7 @@ echo "${foo["bar"]}"
   </tr>
 
   <tr>
-    <td><b>indexed array</b></td>
+    <td align="center"><b>Indexed array</b></td>
     <td>
       <pre>
         <code>
@@ -183,7 +192,7 @@ echo "${bla[0]}"
   </tr>
 
   <tr>
-    <td><b>read file line by line (shared scope)</b></td>
+    <td align="center"><b>Read file line by line (shared scope)</b></td>
     <td>
       <pre>
         <code>
@@ -204,7 +213,7 @@ for line from $selfpath/foo.txt
   </tr>
 
   <tr>
-    <td><b>regex</b></td>
+    <td align="center"><b>Regex</b></td>
     <td>
       <pre>
         <code>
@@ -217,7 +226,7 @@ if $f match ^([f]oo)
       <pre>
         <code>
 # extended pattern matching
-# (google 'extglob' for more
+# (google 'extglob' for more)
         </code>
         <code>
 if [[ "$f" =~ ^([f]oo) ]]; then
@@ -229,7 +238,7 @@ fi
   </tr>
 
   <tr>
-    <td><b>require module</b></td>
+    <td align="center"><b>Requiring modules</b></td>
     <td>
       <pre>
         <code>
@@ -253,7 +262,7 @@ source foo.bash
   </tr>
 
   <tr>
-    <td><b>empty / isset checks</b></td>
+    <td align="center"><b>empty / isset checks</b></td>
     <td>
       <pre>
         <code>
@@ -288,29 +297,30 @@ foo "$@"
   </tr>
 
   <tr>
-    <td><b>mappipe unwraps a pipe</b></td>
+    <td align="center"><b>mappipe unwraps a pipe</b></td>
     <td>
       <pre>
         <code>
-myfunc()
+fn()
   echo "value=$1"
         </code>
         <code>
-echo -e "foo\nbar\n" | mappipe myfunc
+echo -e "a\nb\n" | mappipe fn
         </code>
       </pre>
     </td>
     <td>
       <pre>
         <code>
-# outputs: 'value=foo' and 'value=bar'
+# outputs: value=a
+#          value=b
         </code>
       </pre>
     </td>
   </tr>
 
   <tr>
-    <td><b>easy math</b></td>
+    <td align="center"><b>Easy math</b></td>
     <td>
       <pre>
         <code>
@@ -323,24 +333,24 @@ math '9 / 2' 4
       <pre>
         <code>
 # outputs: '4' and '4.5000'
-# NOTE: the second requires bc
-# to be installed for floatingpoint math
+# NOTE: floating point math
+#       requires bc
         </code>
       </pre>
     </td>
   </tr>
 
   <tr>
-    <td><b>Easy async</b></td>
+    <td align="center"><b>Easy async</b></td>
     <td>
       <pre>
         <code>
-myfunc()
+fn()
   sleep 1s
   echo "one"
         </code>
         <code>
-await myfunc 123 then
+await fn 123 then
   echo "async done"
         </code>
       </pre>
@@ -356,19 +366,17 @@ await myfunc 123 then
   </tr>
 
   <tr>
-    <td><b>Easy async pipe</b></td>
+    <td align="center"><b>Easy async pipe</b></td>
     <td>
       <pre>
         <code>
-myfunc()
+fn()
   sleep 1s
   echo "one"
         </code>
         <code>
-await myfunc 123 then |
+await fn 123 then |
   cat -
-        </code>
-        <code>
 when done
   echo "async done"
         </code>
@@ -385,17 +393,17 @@ when done
   </tr>
 
   <tr>
-    <td><b>Easy async pipe (per line)</b></td>
+    <td align="center"><b>Easy async pipe (per line)</b></td>
     <td>
       <pre>
         <code>
-myfunc()
+fn()
   sleep 1s
   echo "one"
   echo "two"
         </code>
         <code>
-await myfunc 123 then for line
+await fn 123 then for line
   echo "line: $*"
 when done
   echo "async done"
@@ -414,13 +422,16 @@ when done
   </tr>
 
   <tr>
-    <td><b>JSON decode</b></td>
+    <td align="center"><b>JSON decode</b></td>
     <td>
       <pre>
         <code>
-json={}
-echo '{"a": {"b": "c"}}' | json_decode json
-echo $json['a-b']
+obj={}
+json='{"a": {"b": "c"}}'
+        </code>
+        <code>
+echo "$json" | json_decode obj
+echo $obj['a-b']
         </code>
       </pre>
     </td>
@@ -434,51 +445,56 @@ echo $json['a-b']
   </tr>
 
   <tr>
-    <td><b>FP: curry</b></td>
+    <td align="center"><b>FP: curry</b></td>
     <td>
       <pre>
         <code>
-myfunc()
+fn()
   echo "1=$1 2=$2"
         </code>
         <code>
-curry curriedfunc abc
-echo -e "foo\nbar\n" | mappipe curriedfunc
+curry fnc a
+echo -e "b\nc\n" | mappipe fnc
         </code>
       </pre>
     </td>
     <td>
       <pre>
         <code>
-# outputs: '1=abc 2=foo' and '1=abc 2=bar'
+# outputs: 1=a 2=b
+#          1=a 2=c
         </code>
       </pre>
     </td>
   </tr>
 
   <tr>
-    <td><b>FP: array values, keys</b></td>
+    <td align="center"><b>FP: array values, keys</b></td>
     <td>
       <pre>
         <code>
 foo={}
 foo["one"]="foo"
 foo["two"]="bar"
-map foo keys   # prints key per line
-map foo values # prints value per line
+map foo keys
+map foo values
         </code>
       </pre>
     </td>
     <td>
       <pre>
         <code>
+# outputs: one
+#          two
+#          foo
+#          bar
         </code>
       </pre>
     </td>
   </tr>
 
   <tr>
-    <td><b>FP: map</b></td>
+    <td align="center"><b>FP: map</b></td>
     <td>
       <pre>
         <code>
@@ -502,7 +518,7 @@ map foo printitem
   </tr>
 
   <tr>
-    <td><b>FP: pick</b></td>
+    <td align="center"><b>FP: pick</b></td>
     <td>
       <pre>
         <code>
@@ -510,41 +526,42 @@ foo={}
 bar={}
 foo["one"]="foo"
 bar["foo"]="123"
-map foo values | unpipe pick bar
+map foo values |
+  mappipe pick bar
         </code>
       </pre>
     </td>
     <td>
       <pre>
         <code>
-# outputs: '123'
+# outputs: 123
         </code>
       </pre>
     </td>
   </tr>
 
   <tr>
-    <td><b>FP: compose</b></td>
+    <td align="center"><b>FP: compose</b></td>
     <td>
       <pre>
         <code>
-funcA()
+fnA()
   echo "($1)"
         </code>
         <code>
-funcB()
+fnB()
   echo "|$1|"
         </code>
         <code>
-compose decorate_string funcA funcB
-decorate_string "foo"
+compose decorate fnA fnB
+decorate "foo"
         </code>
       </pre>
     </td>
     <td>
       <pre>
         <code>
-# outputs: '(|foo|)'
+# outputs: (|foo|)
         </code>
       </pre>
     </td>
