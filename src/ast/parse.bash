@@ -1,5 +1,6 @@
 powscript_source ast/helper.bash       #<<EXPAND>>
 powscript_source ast/expand.bash       #<<EXPAND>>
+powscript_source ast/require.bash      #<<EXPAND>>
 powscript_source ast/sequence.bash     #<<EXPAND>>
 powscript_source ast/expressions.bash  #<<EXPAND>>
 powscript_source ast/math.bash         #<<EXPAND>>

@@ -8,7 +8,7 @@ bash:compile() { #<<NOSHADOW>>
 
   case "$expr_head" in
     name|string|assign|cat|if|elif|else|end_if|call|for|\
-    while|expand|command-substitution|switch|case|\
+    while|expand|command-substitution|switch|case|require|\
     pattern|and|pipe|elements|simple-substitution|\
     function-def|local|block|math|math-top|math-float|\
     math-assigned|assign-sequence|readline|file-input)

@@ -27,6 +27,16 @@ sh:compile() { #<<NOSHADOW>>
       setvar "$out" "$result"
       ;;
 
+    require)
+      local file_ast file compiled_file
+      ast:from $expr children file_ast
+
+      bash:compile $file_ast file
+      compiled_file="$(files:compile-file <"$(eval "echo $file")")"
+
+      setvar "$out" "$compiled_file"$'\n'
+      ;;
+
     and|pipe|file-input)
       local left_ast right_ast
       local left right op
