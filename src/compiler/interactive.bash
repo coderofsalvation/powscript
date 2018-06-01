@@ -58,6 +58,9 @@ interactive:start() {
       '.tokens '*)
         interactive:show-tokens "${code//.tokens /}"
         ;;
+      '.help'*)
+        interactive:help
+        ;;
       *)
         state=none
         while [ ! "$state" = top ]; do
@@ -125,6 +128,27 @@ interactive:start() {
 
   [ -p "$wfifo" ] && rm $wfifo
   [ -p "$rfifo" ] && rm $rfifo
+}
+
+interactive:help() {
+  echo '
+  Special Commands:
+    .help        Display this message
+
+    .ast         Toggle the display of the abstract syntax tree
+
+    .lower       Toggle the display of the lowered ast
+
+    .compile     Toggle the display of compilated code
+
+    .tokens t*   Display information about the given tokens
+
+    .echo        Toggle echoing the code
+
+    .incomplete  Toggle allowing incomplete code
+
+    .show ast    Display information about the ast with the given ID
+  '
 }
 
 interactive:get-remaining-input() { #<<NOSHADOW>>

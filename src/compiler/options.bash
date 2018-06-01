@@ -9,6 +9,10 @@ PowscriptFileNumber=0
 powscript:parse-options() {
   while [ "$#" -gt 0 ]; do
     case "$1" in
+      '-h'|'--help')
+        powscript:help
+        exit
+        ;;
       '-o'|'--output')
         PowscriptOutput="$2"
         shift 2
