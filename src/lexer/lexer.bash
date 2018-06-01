@@ -142,7 +142,7 @@ token:parse() { #<<NOSHADOW>>
             move=true
             ;;
 
-          [0-9a-zA-Z_])
+          [0-9a-zA-Z_~])
             next_state=variable
             ;;
 

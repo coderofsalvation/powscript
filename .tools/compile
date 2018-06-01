@@ -4,6 +4,7 @@ set -E
 
 Dir="$(readlink -m "$(dirname "${BASH_SOURCE[0]}")/..")"
 PowscriptSourceDirectory="$Dir/src"
+PowscriptLibDirectory="$Dir/lib"
 
 if [ -f ./powscript ]; then
   mv "$Dir/powscript" "$Dir/.powscript.backup"
@@ -16,6 +17,7 @@ printf '' >"$Dir/powscript"
 add() {
   echo "$1" >>"$Dir/powscript"
 }
+
 
 if ${POWSCRIPT_CDEBUG-false}; then
   LineNum=0
@@ -103,10 +105,11 @@ else
 fi
 
 read_file() {
-  local line file noshadow_mode=false noshadow_func=""
-  export ShadowingOp=trimming_echo
+  local line file lib noshadow_mode=false noshadow_func=""
+  export RequireOp=add
+  export ShadowingOp=trimming_add
   export ShadowingGetFunc=get_noshadow_func
-  trimming_echo() {
+  trimming_add() {
     local line
     while IFS='' read -r line || [ -n "$line" ]; do
       line="${line% }"
@@ -137,6 +140,15 @@ read_file() {
       source "$(eval echo "$file")"
       add "# FILE: $file"
 
+    elif [[ "$line" =~ .*'#<<REQUIRE>>' ]]; then
+      lib=${line//*powscript_require/}
+      lib=${lib//#*/}
+      lib=${lib// /}
+      powscript_require "$lib"
+
+    elif [[ "$line" =~ .*'#<<IGNORE>>' ]]; then
+      :
+
     elif [[ "$line" =~ .*'#<<NOSHADOW>>' ]]; then
       noshadow_func="dummy()"$'\n'"{"
       noshadow_mode=true
@@ -157,6 +169,7 @@ read_file() {
 }
 
 read_file "$Dir/src/powscript.bash"
+
 chmod +x "$Dir/powscript"
 
 

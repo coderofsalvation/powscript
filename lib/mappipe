@@ -1,4 +1,0 @@
-mappipe(){
-  func="$1"; shift
-  ( while read -r line; do $func "$@" "$line"; done )
-}

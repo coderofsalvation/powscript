@@ -1,7 +1,15 @@
 #!/bin/bash
 
-PowscriptSourceDirectory="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
+declare -A PowscriptLib
+
+powscript_require() {
+  local lib="$1"
+  local req="PowscriptLib[$lib]=$(printf '%q\n' "$(cat "$PowscriptLibDirectory/$lib.pow")")"
+
+  ${RequireOp-eval} "$req"
+}
+# FILE: "$PowscriptLibDirectory/require.bash"
 # powscript_source
 #
 # include source relatively from the powscript source code directory
@@ -515,7 +523,7 @@ __shadowing_token:parse() {
             move=true
             ;;
 
-          [0-9a-zA-Z_])
+          [0-9a-zA-Z_~])
             next_state=variable
             ;;
 
@@ -1651,22 +1659,17 @@ ast:parse:curly-substitution() {
 
 __shadowing_ast:parse:command-substitution() {
   local out="$1"
-  local cmd call
+  local subst cmd call assigns
 
-  ast:make "$out" command-substitution ''
+  ast:make subst command-substitution ''
 
   ast:push-state '('
 
-  ast:parse:expr cmd
-  if ast:is $cmd name math; then
-    ast:parse:math call
-    token:require special ')'
-  else
-    ast:parse:commandcall $cmd call
-  fi
+  ast:parse:command-call '' call
   ast:pop-state
 
-  ast:push-child "${!out}" $call
+  ast:push-child $subst $call
+  setvar "$out" $subst
 }
 
 ast:parse:command-substitution() {
@@ -2059,7 +2062,7 @@ ast:parse:validate-math-operand() {
 }
 
 # FILE: ast/math.bash
-# ast:parse:commandcall $command_ast $out
+# ast:parse:command-call $command_ast $out
 #
 # parse an AST of the form: command expr1 expr2...
 #
@@ -3695,6 +3698,8 @@ __shadowing_bash:compile() {
       ;;
 
     indirect-indexing-substitution)
+      local name expr_children
+
       ast:from $expr children expr_children
       expr_children=( $expr_children )
 
@@ -3996,7 +4001,7 @@ __shadowing_sh:compile() {
       ;;
 
     command-substitution)
-      local call_ast call dollar
+      local call_ast call
 
       ast:from $expr children call_ast
 
@@ -4074,7 +4079,7 @@ __shadowing_sh:compile() {
       ;;
 
     simple-substitution)
-      local name dollar
+      local name
       ast:from $expr value name
 
       if ${NO_QUOTING-false}; then
@@ -4094,7 +4099,7 @@ __shadowing_sh:compile() {
       setvar "$out" "echo \"{scale=$precision; $child}\" | bc"
       ;;
     math-top)
-      local child_ast child dollar
+      local child_ast child
 
       ast:from $expr children child_ast
       NO_QUOTING=true backend:compile $child_ast child
@@ -4384,6 +4389,7 @@ files:compile() {
 }
 
 files:compile-file() {
+  local output="${1-/dev/stdout}"
   local ast ast_lowered
 
   stream:init
@@ -4397,6 +4403,7 @@ files:compile-file() {
 
 files:start-code() {
   files:compile-file "$1" <<<"$PowscriptFileStart"
+  files:compile-file "$1" <<<"$PowscriptStdLib"
 }
 
 files:end-code() {
@@ -4412,7 +4419,7 @@ interactive:start() {
   local proc rfifo wfifo end_token result
   local powhistory="${POWSCRIPT_HISTORY_FILE-$HOME/.powscript_history}"
   local extra_line=''
-  local compile_flag=false ast_flag=false echo_flag=false incomplete_flag=false
+  local compile_flag=false ast_flag=false echo_flag=false incomplete_flag=false lower_flag=false
 
   [ ! -f "$powhistory" ] && echo >"$powhistory"
   history -c
@@ -4428,6 +4435,8 @@ interactive:start() {
 
   exec 3<>"$wfifo"
   exec 4<>"$rfifo"
+
+  files:compile-file "$wfifo" <<<"${PowscriptLib[std]}"$'\n\n'
 
   while ps -p $proc >/dev/null; do
     result=
@@ -4446,6 +4455,9 @@ interactive:start() {
         ;;
       '.ast')
         interactive:toggle-flag ast_flag
+        ;;
+      '.lower')
+        interactive:toggle-flag lower_flag
         ;;
       '.echo')
         interactive:toggle-flag echo_flag
@@ -4502,6 +4514,11 @@ interactive:start() {
           echo "---------------------"
         fi
         ast:lower $ast ast
+        if $lower_flag; then
+          echo "---- LOWERED TREE ---"
+          interactive:show-ast $ast
+          echo "---------------------"
+        fi
         backend:compile $ast compiled_code
         if $compile_flag; then
           echo "--- COMPILED CODE ---"
@@ -4607,6 +4624,8 @@ interactive:format-powscript-prompt() {
 
 # FILE: compiler/interactive.bash
 # FILE: compiler/compiler.bash
+
+PowscriptLib[std]=$'map(A f)\n  shift 2\n  expand\n    for k,v of ~A\n      ~f $@ $k $v\n\nmappipe(f)\n  shift\n  while read -r line\n    $f $@ $line\n\ncurry(out f x)\n  expand\n    ~out()\n      ~f \'~x\' $@\n\nkeys(x y)\n  echo $x\n\nvalues(x y)\n  echo $y\n\nisset(s)\n  if -n $s\n    return 1\n  else\n    return 0\n\nempty(s)\n  if -z $s\n    return 1\n  else\n    return 0\n\nfilter(A p)\n  shift 2\n  expand\n    for k,v of ~A\n      if ~p $@ $k $v\n        echo $v\n\ncompose(fg f g)\n  expand\n    ~fg()\n      ~f $(~g $@)\n\npick(A k)\n  if -z $k\n    return 1\n  expand\n    local output=${~A[~k]}\n  if -n $output\n    echo $output\n\nfirst(A)\n  if -z $A\n    return 1\n  expand\n    echo ${~A[0]}\n\nlast(A)\n  if -z $A\n    return 1\n  expand\n    echo ${~A[-1]}\n\nrequire_env(var)\n  if not -v $var\n    echo "The variable $var is unset. Exitting." >&2\n    exit 1'
 
 powscript:parse-options "$@"
 backend:select $PowscriptBackend

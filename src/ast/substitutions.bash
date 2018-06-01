@@ -73,22 +73,17 @@ noshadow ast:parse:curly-substitution
 
 ast:parse:command-substitution() { #<<NOSHADOW>>
   local out="$1"
-  local cmd call
+  local subst cmd call assigns
 
-  ast:make "$out" command-substitution ''
+  ast:make subst command-substitution ''
 
   ast:push-state '('
 
-  ast:parse:expr cmd
-  if ast:is $cmd name math; then
-    ast:parse:math call
-    token:require special ')'
-  else
-    ast:parse:commandcall $cmd call
-  fi
+  ast:parse:command-call '' call
   ast:pop-state
 
-  ast:push-child "${!out}" $call
+  ast:push-child $subst $call
+  setvar "$out" $subst
 }
 noshadow ast:parse:command-substitution
 

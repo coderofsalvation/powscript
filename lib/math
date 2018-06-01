@@ -1,5 +1,0 @@
-math(){
-  if [[ -n "$2" ]]; then
-    which bc &>/dev/null && { echo "scale=$2;$1" | bc; } || echo "bc is not installed";
-  else echo $(($1)); fi
-}

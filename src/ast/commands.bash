@@ -1,4 +1,4 @@
-# ast:parse:commandcall $command_ast $out
+# ast:parse:command-call $command_ast $out
 #
 # parse an AST of the form: command expr1 expr2...
 #

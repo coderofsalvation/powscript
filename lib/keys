@@ -1,4 +1,0 @@
-# example: foreach foo keys
-keys(){
-  echo "$1"
-}

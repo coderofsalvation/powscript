@@ -10,6 +10,7 @@ files:compile() {
 }
 
 files:compile-file() {
+  local output="${1-/dev/stdout}"
   local ast ast_lowered
 
   stream:init
@@ -23,6 +24,7 @@ files:compile-file() {
 
 files:start-code() {
   files:compile-file "$1" <<<"$PowscriptFileStart"
+  files:compile-file "$1" <<<"$PowscriptStdLib"
 }
 
 files:end-code() {

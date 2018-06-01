@@ -1,7 +1,0 @@
-# maps a pipe stream to individual calls
-# example:
-#  map foo somefunction
-map(){
-  local arr="$1"; shift; local func="$1"; shift;
-  eval "for i in \"\${!$arr[@]}\"; do $func \"\$@\" \"\$i\" \"\${$arr[\$i]}\"; done"
-}

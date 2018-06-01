@@ -1,13 +1,17 @@
 #!/bin/bash
 
-PowscriptSourceDirectory="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+PowscriptSourceDirectory="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)" #<<IGNORE>>
+PowscriptLibDirectory="$(cd "$PowscriptSourceDirectory/../lib" && pwd)"  #<<IGNORE>>
 
+source "$PowscriptLibDirectory/require.bash"   #<<INCLUDE>>
 source "$PowscriptSourceDirectory/helper.bash" #<<INCLUDE>>
 
 powscript_source lexer/lexer.bash        #<<EXPAND>>
 powscript_source ast/ast.bash            #<<EXPAND>>
 powscript_source lang/backends.bash      #<<EXPAND>>
 powscript_source compiler/compiler.bash  #<<EXPAND>>
+
+powscript_require std #<<REQUIRE>>
 
 powscript:parse-options "$@"
 backend:select $PowscriptBackend

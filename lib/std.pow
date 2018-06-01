@@ -1,0 +1,72 @@
+map(A f)
+  shift 2
+  expand
+    for k,v of ~A
+      ~f $@ $k $v
+
+mappipe(f)
+  shift
+  while read -r line
+    $f $@ $line
+
+curry(out f x)
+  expand
+    ~out()
+      ~f '~x' $@
+
+keys(x y)
+  echo $x
+
+values(x y)
+  echo $y
+
+isset(s)
+  if -n $s
+    return 1
+  else
+    return 0
+
+empty(s)
+  if -z $s
+    return 1
+  else
+    return 0
+
+filter(A p)
+  shift 2
+  expand
+    for k,v of ~A
+      if ~p $@ $k $v
+        echo $v
+
+compose(fg f g)
+  expand
+    ~fg()
+      ~f $(~g $@)
+
+pick(A k)
+  if -z $k
+    return 1
+  expand
+    local output=${~A[~k]}
+  if -n $output
+    echo $output
+
+first(A)
+  if -z $A
+    return 1
+  expand
+    echo ${~A[0]}
+
+last(A)
+  if -z $A
+    return 1
+  expand
+    echo ${~A[-1]}
+
+require_env(var)
+  if not -v $var
+    echo "The variable $var is unset. Exitting." >&2
+    exit 1
+
+

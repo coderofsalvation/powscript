@@ -50,6 +50,8 @@ bash:compile() { #<<NOSHADOW>>
       ;;
 
     indirect-indexing-substitution)
+      local name expr_children
+
       ast:from $expr children expr_children
       expr_children=( $expr_children )
 

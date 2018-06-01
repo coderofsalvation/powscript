@@ -5,7 +5,7 @@ interactive:start() {
   local proc rfifo wfifo end_token result
   local powhistory="${POWSCRIPT_HISTORY_FILE-$HOME/.powscript_history}"
   local extra_line=''
-  local compile_flag=false ast_flag=false echo_flag=false incomplete_flag=false
+  local compile_flag=false ast_flag=false echo_flag=false incomplete_flag=false lower_flag=false
 
   [ ! -f "$powhistory" ] && echo >"$powhistory"
   history -c
@@ -21,6 +21,8 @@ interactive:start() {
 
   exec 3<>"$wfifo"
   exec 4<>"$rfifo"
+
+  files:compile-file "$wfifo" <<<"${PowscriptLib[std]}"$'\n\n'
 
   while ps -p $proc >/dev/null; do
     result=
@@ -39,6 +41,9 @@ interactive:start() {
         ;;
       '.ast')
         interactive:toggle-flag ast_flag
+        ;;
+      '.lower')
+        interactive:toggle-flag lower_flag
         ;;
       '.echo')
         interactive:toggle-flag echo_flag
@@ -95,6 +100,11 @@ interactive:start() {
           echo "---------------------"
         fi
         ast:lower $ast ast
+        if $lower_flag; then
+          echo "---- LOWERED TREE ---"
+          interactive:show-ast $ast
+          echo "---------------------"
+        fi
         backend:compile $ast compiled_code
         if $compile_flag; then
           echo "--- COMPILED CODE ---"
