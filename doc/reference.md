@@ -53,7 +53,7 @@ switch $foo
     <td>
       <pre>
         <code>
-case $foo in
+case "${foo}" in
   [0-9]*)
     echo "bar"
     ;;
@@ -177,7 +177,7 @@ echo $bla[0]
         <code>
 declare -a bla
 bla[0]="foo"
-bla+=("push value")
+bla[${#bla}]="push value"
         </code>
         <code>
 for i in "${bla[@]}"; do
@@ -242,13 +242,12 @@ fi
     <td>
       <pre>
         <code>
-# include bash- or powscript
-# at compiletime (=portable)
+# compile and include
+# powscript file
 require 'mymodule.pow'
         </code>
         <code>
-# include remote bashscript
-# at runtime
+# source works at runtime
 source foo.bash
         </code>
       </pre>
@@ -267,9 +266,9 @@ source foo.bash
       <pre>
         <code>
 bar()
-  if isset $1
+  if empty $1
     echo "no argument given"
-  if not empty $1
+  if isset $1
     echo "string given"
         </code>
         <code>
@@ -281,10 +280,10 @@ foo "$@"
       <pre>
         <code>
 foo(){
-  if [[ "${#1}" == 0 ]]; then
+  if [ -z "${1}" ]; then
     echo "no argument given"
   fi
-  if [[ ! "${#1}" == 0 ]]; then
+  if [ -n "${#1}" ]; then
     echo "string given"
   fi
 }
@@ -449,8 +448,8 @@ echo $obj['a-b']
     <td>
       <pre>
         <code>
-fn()
-  echo "1=$1 2=$2"
+fn(a b)
+  echo "1=$a 2=$b"
         </code>
         <code>
 curry fnc a
@@ -498,8 +497,8 @@ map foo values
     <td>
       <pre>
         <code>
-printitem()
-  echo "key=$1 value=$2"
+printitem(k v)
+  echo "key=$k value=$v"
         </code>
         <code>
 foo={}
@@ -545,12 +544,12 @@ map foo values |\
     <td>
       <pre>
         <code>
-fnA()
-  echo "($1)"
+fnA(x)
+  echo "($x)"
         </code>
         <code>
-fnB()
-  echo "|$1|"
+fnB(x)
+  echo "|$x|"
         </code>
         <code>
 compose decorate fnA fnB
