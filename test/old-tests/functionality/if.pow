@@ -1,5 +1,0 @@
-if -x $(command -v python)
-  echo "python exists"
-else
-  echo "python doesn't exist"
-

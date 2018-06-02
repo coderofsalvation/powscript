@@ -23,6 +23,6 @@ sleep 4s
 
 await myfunc 789 then for line
   if $line match (two|one)
-    echo "line: $*"
+    echo "line: $line"
 when done
   echo "'await ... then for line' done"

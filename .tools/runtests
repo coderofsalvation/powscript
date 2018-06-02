@@ -75,13 +75,19 @@ header "Parser tests:"
 testdirectory "test/parser" './${file}' 'file'
 
 header "Compilation tests:"
-testdirectory "test/compilation" './${file}' 'file'
+testdirectory "test/test-files" './powscript --no-std -c ${file} >/dev/null' '.*\.pow'
 
-#header "Evaluation tests:"
-#testdirectory "test" './powscript ${file}' 'file' '.*\.pow$'
+header "String tests:"
+testdirectory "test/strings" './powscript --no-std ${file}' 'file' '.*\.pow'
 
-#header "Interactive mode tests:"
-#testdirectory "test/interactive" './powscript --interactive < ${file}' 'file'
+header "Control flow tests:"
+testdirectory "test/control-flow" './powscript --no-std ${file}' 'file' '.*\.pow'
+
+header "Evaluation tests:"
+testdirectory "test/test-files" './powscript ${file}' 'file' '.*\.pow'
+
+header "Interactive mode tests:"
+testdirectory "test/interactive" './powscript --interactive < ${file}' 'file'
 
 header "Repository maintainance tests:"
 testdirectory "test/repo" './${file}' 'file' '.*\.sh'

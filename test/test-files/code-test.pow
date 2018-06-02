@@ -21,9 +21,9 @@ foo()
     echo -1
 
 webserver:onrequest(request)
-  if $request =~ (POST .*\/pull)
-    appname="${request/POST \/}"
-    appname="${appname/\/pull*/}"
+  if $request match (POST .*\/pull)
+    appname=${request/POST\/}
+    appname=${appname/\/pull*/}
     deffile=$(process:gettmpfile $appname).def
     if -f $deffile
       workdir=$(apps:getworkdir $deffile)
@@ -66,7 +66,7 @@ for k,v of foo
 simple_arrays()
   bla=[]
   bla[0]="foo"
-  bla+="push value"
+  bla@="push value"
   for i in bla
     echo bla=$i
   echo $bla[0]
@@ -82,7 +82,7 @@ associative_arrays()
   rm /tmp/foo
 
 
-switch()
+switch_test()
   switch $foo
     case 0-9
       echo "i want to switch an if for two years"
@@ -109,8 +109,8 @@ foo["two"]="bar"
 map foo printitem
 
 
-myfunc()
-  if $1 > 1
+myfunc(a)
+  if $a > 1
     echo "$1"
 
 simple_arrays
@@ -121,10 +121,12 @@ abar={}
 afoo["one"]="foo"
 abar["foo"]="123"
 map afoo values | mappipe pick abar
-echo last="$(last afoo)"
 
-math '9 / 2'
-math '9 / 2' 4
+vfoo=(1 2 3 4)
+echo last="$(last vfoo)"
+
+math 9 / 2
+math 9 / 2  4
 
 funcA()
   echo "($1)"
@@ -154,4 +156,4 @@ foo='
     this should not be parsed as powscript
 '
 
-#filter foo myfunc
+

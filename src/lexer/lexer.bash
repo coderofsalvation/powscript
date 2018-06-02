@@ -98,6 +98,14 @@ token:parse() { #<<NOSHADOW>>
             class=string
             state_end=true
             ;;
+          "'")
+            if [ -z "$token" ]; then
+              token="'"
+            else
+              move=false
+            fi
+            class=string
+            ;;
           *)
             token+="$c"
             ;;
@@ -146,13 +154,20 @@ token:parse() { #<<NOSHADOW>>
             next_state=variable
             ;;
 
-          @)
+          @|\*)
+            next_state=special-substitution
             ;;
 
           *)
             class=name
             ;;
         esac
+        ;;
+
+      special-substitution)
+        token="$c"
+        class=special
+        state_end=true
         ;;
 
       variable)

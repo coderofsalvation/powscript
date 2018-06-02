@@ -2,6 +2,7 @@ PowscriptBackend=bash
 PowscriptInteractiveMode=nofile
 PowscriptCompileFile=false
 PowscriptOutput='/dev/stdout'
+PowscriptIncludeStd=true
 
 declare -gA PowscriptFiles
 PowscriptFileNumber=0
@@ -39,8 +40,22 @@ powscript:parse-options() {
             ;;
         esac
         ;;
+      '--no-std')
+        shift
+        PowscriptIncludeStd=false
+        ;;
       '-c'|'--compile')
         PowscriptCompileFile=true
+        shift
+        ;;
+
+      '-e'|'--evaluate')
+        shift
+        backend:select bash
+        backend:run "$(files:compile-file '/dev/stdout' <<<"$1"$'\n\n')"
+        if [ ! $PowscriptInteractiveMode = yes ]; then
+          PowscriptInteractiveMode=no
+        fi
         shift
         ;;
 
@@ -76,4 +91,8 @@ powscript:parse-options() {
 
 powscript:is-interactive() {
   $PowscriptInteractiveMode
+}
+
+powscript:in-compile-mode() {
+  $PowscriptCompileFile
 }

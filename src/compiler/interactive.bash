@@ -22,7 +22,9 @@ interactive:start() {
   exec 3<>"$wfifo"
   exec 4<>"$rfifo"
 
-  files:compile-file "$wfifo" <<<"${PowscriptLib[std]}"$'\n\n'
+  if ${PowscriptIncludeStd-true}; then
+    files:compile-file "$wfifo" <<<"${PowscriptLib[std]}"$'\n\n'
+  fi
 
   if [ -f "$HOME/.powrc" ]; then
     files:compile-file "$wfifo" <"$HOME/.powrc"

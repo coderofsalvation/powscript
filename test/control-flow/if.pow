@@ -1,0 +1,14 @@
+if true
+  if_true=true
+else
+  if_true=false
+
+assert $if_true
+
+if false
+  elif_true=false
+elif true
+  elif_true=true
+
+assert $elif_true
+

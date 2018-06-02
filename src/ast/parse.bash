@@ -92,6 +92,7 @@ ast:parse:top() { #<<NOSHADOW>>
         'while')   ast:parse:while   "$out" ;;
         'switch')  ast:parse:switch  "$out" ;;
         'await')   ast:parse:await   "$out" ;;
+        'assert')  ast:parse:assert  "$out" ;;
         'require') ast:parse:require "$out" ;;
         'expand')  ast:parse:expand  "$out" ;;
         'declare')
@@ -120,6 +121,14 @@ ast:parse:top() { #<<NOSHADOW>>
     newline)
       setvar "$out" -1
       ;;
+    cat)
+      if token:next-is special '('; then
+         ast:parse:function-definition $expr "$out"
+      else
+         ast:make assigns assign-sequence
+         ast:parse:command-call-with-cmd $assigns $expr "$out"
+       fi
+       ;;
     *)
       ast:make assigns assign-sequence
       ast:parse:command-call-with-cmd $assigns $expr "$out"

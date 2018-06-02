@@ -23,10 +23,12 @@ ast:lower-scanned() { #<<NOSHADOW>>
 
   case $expr_head in
     for-of)
-      local var array block
+      local var array block lowblock
       local array_name at elements
 
       ast:children $expr var array block
+
+      ast:lower-scanned $block lowblock
 
       if ! ast:is $array name; then
         ast:error "for-of expression expected an array's name, got a $(ast:from $array head)"
@@ -36,15 +38,17 @@ ast:lower-scanned() { #<<NOSHADOW>>
       ast:make at name '@'
       ast:make elements indexing-substitution "$array_name" $at
 
-      ast:make result 'for' '' $var $elements $block
+      ast:make result 'for' '' $var $elements $lowblock
       ;;
     for-of-map)
-      local key val array block
+      local key val array block lowblock
       local array_name at elements
       local val_assign val_get key_name key_subst
       local newblock block_value block_children
 
       ast:children $expr key val array block
+
+      ast:lower-scanned $block lowblock
 
       if ! ast:is $array name; then
         ast:error "for-of expression expected an array's name, got a $(ast:from $array head)"
@@ -59,25 +63,27 @@ ast:lower-scanned() { #<<NOSHADOW>>
       ast:make val_get indexing-substitution "$array_name" $key_subst
       ast:make val_assign assign '' $val $val_get
 
-      ast:all-from $block -v block_value -c block_children
+      ast:all-from $lowblock -v block_value -c block_children
       ast:make newblock block "$block_value" $val_assign $block_children
 
       ast:make result 'for' '' $key $elements $newblock
       ;;
     for-from)
-      local var file block
+      local var file block lowblock
       local while_block readline
 
       ast:children $expr var file block
 
+      ast:lower-scanned $block lowblock
+
       ast:make readline 'readline' '' $var
-      ast:make while_block 'while' '' $readline $block
+      ast:make while_block 'while' '' $readline $lowblock
       ast:make result 'file-input' '' $while_block $file
       ;;
     await-then)
       local cmd then
       local set_async var t block
-      local block_lowered
+      local lowblock
 
       ast:children $expr cmd then
 
@@ -86,14 +92,14 @@ ast:lower-scanned() { #<<NOSHADOW>>
       ast:make set_async 'assign' '' $var $t
 
       ast:make block 'block' '' $cmd $then
-      ast:lower-scanned $block block_lowered
+      ast:lower-scanned $block lowblock
 
-      ast:make result 'and' '' $block_lowered $set_async
+      ast:make result 'and' '' $lowblock $set_async
       ;;
     await-pipe)
       local cmd then done_block
       local set_async var t block pipe
-      local block_lowered
+      local lowblock
 
       ast:children $expr cmd then done_block
 
@@ -103,15 +109,15 @@ ast:lower-scanned() { #<<NOSHADOW>>
 
       ast:make pipe  'pipe'  '' $cmd  $then
       ast:make block 'block' '' $pipe $done_block
-      ast:lower-scanned $block block_lowered
+      ast:lower-scanned $block lowblock
 
-      ast:make result 'and' '' $block_lowered $set_async
+      ast:make result 'and' '' $lowblock $set_async
       ;;
     await-for)
       local cmd var then done_block
       local set_async avar t block
       local while_block readline pipe
-      local block_lowered
+      local lowblock
 
       ast:children $expr cmd var then done_block
 
@@ -125,9 +131,9 @@ ast:lower-scanned() { #<<NOSHADOW>>
 
       ast:make pipe  'pipe'  '' $cmd  $while_block
       ast:make block 'block' '' $pipe $done_block
-      ast:lower-scanned $block block_lowered
+      ast:lower-scanned $block lowblock
 
-      ast:make result 'and' '' $block_lowered $set_async
+      ast:make result 'and' '' $lowblock $set_async
       ;;
     math-assign)
       local var varname value op type

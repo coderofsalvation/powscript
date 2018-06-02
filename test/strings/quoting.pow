@@ -1,0 +1,11 @@
+id(a)
+  printf $a
+
+x=1
+y=2
+z="3 4"
+
+assert $z is "3 4"
+assert "$x $y" is "1 2"
+assert "$x ${x} $x" is "1 1 1"
+assert $(id $z) is $z

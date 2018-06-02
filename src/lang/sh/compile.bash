@@ -1,5 +1,9 @@
 powscript_source lang/sh/interactive.bash #<<EXPAND>>
 
+sh:run() {
+  sh -c "$1"
+}
+
 sh:compile() { #<<NOSHADOW>>
   local expr="$1" out="$2"
   local expr_head
@@ -14,7 +18,11 @@ sh:compile() { #<<NOSHADOW>>
     string)
       local string
       ast:from $expr value string
-      setvar "$out" "'$string'"
+      if [ "$string" = "'" ]; then
+        setvar "$out" "\"'\""
+      else
+        setvar "$out" "'$string'"
+      fi
       ;;
 
     cat)
@@ -32,11 +40,33 @@ sh:compile() { #<<NOSHADOW>>
       ast:from $expr children file_ast
 
       bash:compile $file_ast file
-      compiled_file="$(files:compile-file <"$(eval "echo $file")")"
+      file="$(eval "echo $file")"
+
+      case "$file" in
+        /*) ;;
+        *)  file="${POWCOMP_DIR-$PWD}/$file" ;;
+      esac
+
+      compiled_file="$(POWCOMP_DIR="$(dirname "$file")" files:compile-file <"$file")"
 
       setvar "$out" "$compiled_file"$'\n'
       ;;
 
+    assert)
+      local condition_ast message_ast condition message
+
+      ast:children $expr condition_ast message_ast
+
+      backend:compile $condition_ast condition
+
+      if ast:is $message_ast print_condition; then
+        message="'Assertation failed: $condition'"
+      else
+        backend:compile $message_ast message
+      fi
+
+      setvar "$out" "if $condition; then :; else >&2 echo $message; exit 1; fi"
+      ;;
     and|pipe|file-input)
       local left_ast right_ast
       local left right op

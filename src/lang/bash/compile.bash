@@ -1,5 +1,9 @@
 powscript_source lang/bash/interactive.bash #<<EXPAND>>
 
+bash:run() {
+  bash -c "$1"
+}
+
 bash:compile() { #<<NOSHADOW>>
   local expr=$1 out="$2"
   local expr_head expr_value expr_children
@@ -9,7 +13,7 @@ bash:compile() { #<<NOSHADOW>>
   case "$expr_head" in
     name|string|assign|cat|if|elif|else|end_if|call|for|\
     while|expand|command-substitution|switch|case|require|\
-    pattern|and|pipe|elements|simple-substitution|\
+    pattern|and|pipe|elements|simple-substitution|assert|\
     function-def|local|block|math|math-top|math-float|\
     math-assigned|assign-sequence|readline|file-input)
 

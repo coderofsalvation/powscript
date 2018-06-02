@@ -233,7 +233,7 @@ ast:parse:switch() { #<<NOSHADOW>>
 noshadow ast:parse:switch
 
 
-# ast:parse:case
+# ast:parse:case $out
 #
 # Parses the case blocks from switch statements
 #
@@ -254,6 +254,32 @@ ast:parse:case() { #<<NOSHADOW>>
 }
 noshadow ast:parse:case
 
+# ast:parse:assert $out
+#
+# Parses an assert expression of the form:
+#
+# assert <condition> "<message>"
+#
+# which does nothing if the condition is true
+# and exits with an error if the condition is
+# false.
+
+ast:parse:assert() { #<<NOSHADOW>>
+  local out="$1"
+  local condition message
+
+  ast:parse:conditional condition
+
+  if token:next-is newline || token:next-is eof; then
+    ast:make message print_condition '' $condition
+  else
+    ast:parse:expr message
+  fi
+
+  ast:parse:require-newline "assert"
+  ast:make "$out" assert '' $condition $message
+}
+noshadow ast:parse:assert
 
 # ast:parse:conditional $out
 #

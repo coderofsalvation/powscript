@@ -1,5 +1,0 @@
-require_cmd 'awk'
-require_cmd 'ps'
-require_cmd 'sdlkjsf'
-
-echo hello world

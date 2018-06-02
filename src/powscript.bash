@@ -16,12 +16,17 @@ powscript_require std #<<REQUIRE>>
 powscript:parse-options "$@"
 backend:select $PowscriptBackend
 
+powscript:compile() {
+  printf '' >"$PowscriptOutput"
+  files:compile "$PowscriptOutput" "${PowscriptFiles[@]}"
+}
+
 if powscript:is-interactive; then
   interactive:start
+elif powscript:in-compile-mode; then
+  powscript:compile
 else
-  for file in "${PowscriptFiles[@]}"; do
-    files:compile "$PowscriptOutput" <"$file"
-  done
+  backend:run "$(powscript:compile)"
 fi
 
 ${POWSCRIPT_DEBUG-false} || powscript:clean-up

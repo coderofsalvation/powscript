@@ -479,6 +479,14 @@ __shadowing_token:parse() {
             class=string
             state_end=true
             ;;
+          "'")
+            if [ -z "$token" ]; then
+              token="'"
+            else
+              move=false
+            fi
+            class=string
+            ;;
           *)
             token+="$c"
             ;;
@@ -527,13 +535,20 @@ __shadowing_token:parse() {
             next_state=variable
             ;;
 
-          @)
+          @|\*)
+            next_state=special-substitution
             ;;
 
           *)
             class=name
             ;;
         esac
+        ;;
+
+      special-substitution)
+        token="$c"
+        class=special
+        state_end=true
         ;;
 
       variable)
@@ -1785,7 +1800,9 @@ __shadowing_ast:parse:expr() {
               if [ $exprnum -gt 0 ] && { ast:state-is $opener || ${AST_MATH_MODE-false}; }; then
                 root_head=determinable
               else
-                ast:make expression name "$value"
+                root_head=name
+                ast:clear $root
+                ast:make root name "$value"
               fi
               ;;
 
@@ -2240,23 +2257,22 @@ __shadowing_ast:parse:pattern() {
   while $unfinished; do
     token:get -v value -c class -g glued
 
-    if $glued || [ -z "$pattern" ]; then
-      case "$class" in
-        newline|eof)
-          unfinished=false
-          token:backtrack
-          ;;
-        name|special)
-          pattern="$pattern$value"
-          ;;
-        string)
-          pattern="$pattern'$value'"
-          ;;
-      esac
-    else
-      unfinished=false
-      token:backtrack
+    if ! $glued; then
+      pattern+=" "
     fi
+
+    case "$class" in
+      newline|eof)
+        unfinished=false
+        token:backtrack
+        ;;
+      name|special)
+        pattern+="$value"
+        ;;
+      string)
+        pattern+="'$value'"
+        ;;
+    esac
   done
 
   ast:make "$out" pattern "$pattern"
@@ -2548,7 +2564,7 @@ ast:parse:switch() {
 
 
 
-# ast:parse:case
+# ast:parse:case $out
 #
 # Parses the case blocks from switch statements
 #
@@ -2578,6 +2594,42 @@ ast:parse:case() {
   setvar "$1" "$__noshadow_27_1"
 }
 
+
+# ast:parse:assert $out
+#
+# Parses an assert expression of the form:
+#
+# assert <condition> "<message>"
+#
+# which does nothing if the condition is true
+# and exits with an error if the condition is
+# false.
+
+
+__shadowing_ast:parse:assert() {
+  local out="$1"
+  local condition message
+
+  ast:parse:conditional condition
+
+  if token:next-is newline || token:next-is eof; then
+    ast:make message print_condition '' $condition
+  else
+    ast:parse:expr message
+  fi
+
+  ast:parse:require-newline "assert"
+  ast:make "$out" assert '' $condition $message
+}
+
+ast:parse:assert() {
+  if [ -z ${__noshadow_28_+x} ]; then
+    local __noshadow_28_
+    local __noshadow_28_1
+  fi
+  __shadowing_ast:parse:assert  __noshadow_28_1
+  setvar "$1" "$__noshadow_28_1"
+}
 
 
 # ast:parse:conditional $out
@@ -2638,12 +2690,12 @@ __shadowing_ast:parse:conditional() {
 }
 
 ast:parse:conditional() {
-  if [ -z ${__noshadow_28_+x} ]; then
-    local __noshadow_28_
-    local __noshadow_28_1
+  if [ -z ${__noshadow_29_+x} ]; then
+    local __noshadow_29_
+    local __noshadow_29_1
   fi
-  __shadowing_ast:parse:conditional  __noshadow_28_1
-  setvar "$1" "$__noshadow_28_1"
+  __shadowing_ast:parse:conditional  __noshadow_29_1
+  setvar "$1" "$__noshadow_29_1"
 }
 
 
@@ -2665,12 +2717,12 @@ __shadowing_ast:parse:negated-conditional() {
 }
 
 ast:parse:negated-conditional() {
-  if [ -z ${__noshadow_29_+x} ]; then
-    local __noshadow_29_
-    local __noshadow_29_1
+  if [ -z ${__noshadow_30_+x} ]; then
+    local __noshadow_30_
+    local __noshadow_30_1
   fi
-  __shadowing_ast:parse:negated-conditional  __noshadow_29_1
-  setvar "$1" "$__noshadow_29_1"
+  __shadowing_ast:parse:negated-conditional  __noshadow_30_1
+  setvar "$1" "$__noshadow_30_1"
 }
 
 
@@ -2694,12 +2746,12 @@ __shadowing_ast:parse:flag-conditional() {
 }
 
 ast:parse:flag-conditional() {
-  if [ -z ${__noshadow_30_+x} ]; then
-    local __noshadow_30_
-    local __noshadow_30_2
+  if [ -z ${__noshadow_31_+x} ]; then
+    local __noshadow_31_
+    local __noshadow_31_2
   fi
-  __shadowing_ast:parse:flag-conditional "$1"  __noshadow_30_2
-  setvar "$2" "$__noshadow_30_2"
+  __shadowing_ast:parse:flag-conditional "$1"  __noshadow_31_2
+  setvar "$2" "$__noshadow_31_2"
 }
 
 
@@ -2733,12 +2785,12 @@ __shadowing_ast:parse:command-conditional() {
 }
 
 ast:parse:command-conditional() {
-  if [ -z ${__noshadow_31_+x} ]; then
-    local __noshadow_31_
-    local __noshadow_31_2
+  if [ -z ${__noshadow_32_+x} ]; then
+    local __noshadow_32_
+    local __noshadow_32_2
   fi
-  __shadowing_ast:parse:command-conditional "$1"  __noshadow_31_2
-  setvar "$2" "$__noshadow_31_2"
+  __shadowing_ast:parse:command-conditional "$1"  __noshadow_32_2
+  setvar "$2" "$__noshadow_32_2"
 }
 
 
@@ -2778,12 +2830,12 @@ __shadowing_ast:parse:composite-conditional() {
 }
 
 ast:parse:composite-conditional() {
-  if [ -z ${__noshadow_32_+x} ]; then
-    local __noshadow_32_
-    local __noshadow_32_2
+  if [ -z ${__noshadow_33_+x} ]; then
+    local __noshadow_33_
+    local __noshadow_33_2
   fi
-  __shadowing_ast:parse:composite-conditional "$1"  __noshadow_32_2
-  setvar "$2" "$__noshadow_32_2"
+  __shadowing_ast:parse:composite-conditional "$1"  __noshadow_33_2
+  setvar "$2" "$__noshadow_33_2"
 }
 
 
@@ -2814,12 +2866,12 @@ __shadowing_ast:parse:function-definition() {
 }
 
 ast:parse:function-definition() {
-  if [ -z ${__noshadow_33_+x} ]; then
-    local __noshadow_33_
-    local __noshadow_33_2
+  if [ -z ${__noshadow_34_+x} ]; then
+    local __noshadow_34_
+    local __noshadow_34_2
   fi
-  __shadowing_ast:parse:function-definition "$1"  __noshadow_33_2
-  setvar "$2" "$__noshadow_33_2"
+  __shadowing_ast:parse:function-definition "$1"  __noshadow_34_2
+  setvar "$2" "$__noshadow_34_2"
 }
 
 
@@ -2863,12 +2915,12 @@ __shadowing_ast:parse:await() {
 }
 
 ast:parse:await() {
-  if [ -z ${__noshadow_34_+x} ]; then
-    local __noshadow_34_
-    local __noshadow_34_1
+  if [ -z ${__noshadow_35_+x} ]; then
+    local __noshadow_35_
+    local __noshadow_35_1
   fi
-  __shadowing_ast:parse:await  __noshadow_34_1
-  setvar "$1" "$__noshadow_34_1"
+  __shadowing_ast:parse:await  __noshadow_35_1
+  setvar "$1" "$__noshadow_35_1"
 }
 
 
@@ -2897,12 +2949,12 @@ __shadowing_ast:lower() {
 }
 
 ast:lower() {
-  if [ -z ${__noshadow_35_+x} ]; then
-    local __noshadow_35_
-    local __noshadow_35_2
+  if [ -z ${__noshadow_36_+x} ]; then
+    local __noshadow_36_
+    local __noshadow_36_2
   fi
-  __shadowing_ast:lower "$1"  __noshadow_35_2
-  setvar "$2" "$__noshadow_35_2"
+  __shadowing_ast:lower "$1"  __noshadow_36_2
+  setvar "$2" "$__noshadow_36_2"
 }
 
 
@@ -2916,10 +2968,12 @@ __shadowing_ast:lower-scanned() {
 
   case $expr_head in
     for-of)
-      local var array block
+      local var array block lowblock
       local array_name at elements
 
       ast:children $expr var array block
+
+      ast:lower-scanned $block lowblock
 
       if ! ast:is $array name; then
         ast:error "for-of expression expected an array's name, got a $(ast:from $array head)"
@@ -2929,15 +2983,17 @@ __shadowing_ast:lower-scanned() {
       ast:make at name '@'
       ast:make elements indexing-substitution "$array_name" $at
 
-      ast:make result 'for' '' $var $elements $block
+      ast:make result 'for' '' $var $elements $lowblock
       ;;
     for-of-map)
-      local key val array block
+      local key val array block lowblock
       local array_name at elements
       local val_assign val_get key_name key_subst
       local newblock block_value block_children
 
       ast:children $expr key val array block
+
+      ast:lower-scanned $block lowblock
 
       if ! ast:is $array name; then
         ast:error "for-of expression expected an array's name, got a $(ast:from $array head)"
@@ -2952,25 +3008,27 @@ __shadowing_ast:lower-scanned() {
       ast:make val_get indexing-substitution "$array_name" $key_subst
       ast:make val_assign assign '' $val $val_get
 
-      ast:all-from $block -v block_value -c block_children
+      ast:all-from $lowblock -v block_value -c block_children
       ast:make newblock block "$block_value" $val_assign $block_children
 
       ast:make result 'for' '' $key $elements $newblock
       ;;
     for-from)
-      local var file block
+      local var file block lowblock
       local while_block readline
 
       ast:children $expr var file block
 
+      ast:lower-scanned $block lowblock
+
       ast:make readline 'readline' '' $var
-      ast:make while_block 'while' '' $readline $block
+      ast:make while_block 'while' '' $readline $lowblock
       ast:make result 'file-input' '' $while_block $file
       ;;
     await-then)
       local cmd then
       local set_async var t block
-      local block_lowered
+      local lowblock
 
       ast:children $expr cmd then
 
@@ -2979,14 +3037,14 @@ __shadowing_ast:lower-scanned() {
       ast:make set_async 'assign' '' $var $t
 
       ast:make block 'block' '' $cmd $then
-      ast:lower-scanned $block block_lowered
+      ast:lower-scanned $block lowblock
 
-      ast:make result 'and' '' $block_lowered $set_async
+      ast:make result 'and' '' $lowblock $set_async
       ;;
     await-pipe)
       local cmd then done_block
       local set_async var t block pipe
-      local block_lowered
+      local lowblock
 
       ast:children $expr cmd then done_block
 
@@ -2996,15 +3054,15 @@ __shadowing_ast:lower-scanned() {
 
       ast:make pipe  'pipe'  '' $cmd  $then
       ast:make block 'block' '' $pipe $done_block
-      ast:lower-scanned $block block_lowered
+      ast:lower-scanned $block lowblock
 
-      ast:make result 'and' '' $block_lowered $set_async
+      ast:make result 'and' '' $lowblock $set_async
       ;;
     await-for)
       local cmd var then done_block
       local set_async avar t block
       local while_block readline pipe
-      local block_lowered
+      local lowblock
 
       ast:children $expr cmd var then done_block
 
@@ -3018,9 +3076,9 @@ __shadowing_ast:lower-scanned() {
 
       ast:make pipe  'pipe'  '' $cmd  $while_block
       ast:make block 'block' '' $pipe $done_block
-      ast:lower-scanned $block block_lowered
+      ast:lower-scanned $block lowblock
 
-      ast:make result 'and' '' $block_lowered $set_async
+      ast:make result 'and' '' $lowblock $set_async
       ;;
     math-assign)
       local var varname value op type
@@ -3099,12 +3157,12 @@ __shadowing_ast:lower-scanned() {
 }
 
 ast:lower-scanned() {
-  if [ -z ${__noshadow_36_+x} ]; then
-    local __noshadow_36_
-    local __noshadow_36_2
+  if [ -z ${__noshadow_37_+x} ]; then
+    local __noshadow_37_
+    local __noshadow_37_2
   fi
-  __shadowing_ast:lower-scanned "$1"  __noshadow_36_2
-  setvar "$2" "$__noshadow_36_2"
+  __shadowing_ast:lower-scanned "$1"  __noshadow_37_2
+  setvar "$2" "$__noshadow_37_2"
 }
 
 
@@ -3130,12 +3188,12 @@ __shadowing_ast:make-argument-locals() {
 }
 
 ast:make-argument-locals() {
-  if [ -z ${__noshadow_37_+x} ]; then
-    local __noshadow_37_
-    local __noshadow_37_2
+  if [ -z ${__noshadow_38_+x} ]; then
+    local __noshadow_38_
+    local __noshadow_38_2
   fi
-  __shadowing_ast:make-argument-locals "$1"  __noshadow_37_2
-  setvar "$2" "$__noshadow_37_2"
+  __shadowing_ast:make-argument-locals "$1"  __noshadow_38_2
+  setvar "$2" "$__noshadow_38_2"
 }
 
 
@@ -3191,12 +3249,12 @@ __shadowing_typing:declared-name() {
 }
 
 typing:declared-name() {
-  if [ -z ${__noshadow_38_+x} ]; then
-    local __noshadow_38_
-    local __noshadow_38_2
+  if [ -z ${__noshadow_39_+x} ]; then
+    local __noshadow_39_
+    local __noshadow_39_2
   fi
-  __shadowing_typing:declared-name "$1"  __noshadow_38_2
-  setvar "$2" "$__noshadow_38_2"
+  __shadowing_typing:declared-name "$1"  __noshadow_39_2
+  setvar "$2" "$__noshadow_39_2"
 }
 
 
@@ -3535,12 +3593,12 @@ __shadowing_ast:parse:linestart() {
 }
 
 ast:parse:linestart() {
-  if [ -z ${__noshadow_39_+x} ]; then
-    local __noshadow_39_
-    local __noshadow_39_1
+  if [ -z ${__noshadow_40_+x} ]; then
+    local __noshadow_40_
+    local __noshadow_40_1
   fi
-  __shadowing_ast:parse:linestart  __noshadow_39_1
-  setvar "$1" "$__noshadow_39_1"
+  __shadowing_ast:parse:linestart  __noshadow_40_1
+  setvar "$1" "$__noshadow_40_1"
 }
 
 
@@ -3570,6 +3628,7 @@ __shadowing_ast:parse:top() {
         'while')   ast:parse:while   "$out" ;;
         'switch')  ast:parse:switch  "$out" ;;
         'await')   ast:parse:await   "$out" ;;
+        'assert')  ast:parse:assert  "$out" ;;
         'require') ast:parse:require "$out" ;;
         'expand')  ast:parse:expand  "$out" ;;
         'declare')
@@ -3598,6 +3657,14 @@ __shadowing_ast:parse:top() {
     newline)
       setvar "$out" -1
       ;;
+    cat)
+      if token:next-is special '('; then
+         ast:parse:function-definition $expr "$out"
+      else
+         ast:make assigns assign-sequence
+         ast:parse:command-call-with-cmd $assigns $expr "$out"
+       fi
+       ;;
     *)
       ast:make assigns assign-sequence
       ast:parse:command-call-with-cmd $assigns $expr "$out"
@@ -3606,12 +3673,12 @@ __shadowing_ast:parse:top() {
 }
 
 ast:parse:top() {
-  if [ -z ${__noshadow_40_+x} ]; then
-    local __noshadow_40_
-    local __noshadow_40_1
+  if [ -z ${__noshadow_41_+x} ]; then
+    local __noshadow_41_
+    local __noshadow_41_1
   fi
-  __shadowing_ast:parse:top  __noshadow_40_1
-  setvar "$1" "$__noshadow_40_1"
+  __shadowing_ast:parse:top  __noshadow_41_1
+  setvar "$1" "$__noshadow_41_1"
 }
 
 
@@ -3668,6 +3735,10 @@ bash:interactive() {
 
 # FILE: lang/bash/interactive.bash
 
+bash:run() {
+  bash -c "$1"
+}
+
 
 __shadowing_bash:compile() {
   local expr=$1 out="$2"
@@ -3678,7 +3749,7 @@ __shadowing_bash:compile() {
   case "$expr_head" in
     name|string|assign|cat|if|elif|else|end_if|call|for|\
     while|expand|command-substitution|switch|case|require|\
-    pattern|and|pipe|elements|simple-substitution|\
+    pattern|and|pipe|elements|simple-substitution|assert|\
     function-def|local|block|math|math-top|math-float|\
     math-assigned|assign-sequence|readline|file-input)
 
@@ -3864,12 +3935,12 @@ __shadowing_bash:compile() {
 }
 
 bash:compile() {
-  if [ -z ${__noshadow_41_+x} ]; then
-    local __noshadow_41_
-    local __noshadow_41_2
+  if [ -z ${__noshadow_42_+x} ]; then
+    local __noshadow_42_
+    local __noshadow_42_2
   fi
-  __shadowing_bash:compile "$1"  __noshadow_41_2
-  setvar "$2" "$__noshadow_41_2"
+  __shadowing_bash:compile "$1"  __noshadow_42_2
+  setvar "$2" "$__noshadow_42_2"
 }
 
 # FILE: lang/bash/compile.bash
@@ -3900,6 +3971,10 @@ sh:interactive() {
 }
 # FILE: lang/sh/interactive.bash
 
+sh:run() {
+  sh -c "$1"
+}
+
 
 __shadowing_sh:compile() {
   local expr="$1" out="$2"
@@ -3915,7 +3990,11 @@ __shadowing_sh:compile() {
     string)
       local string
       ast:from $expr value string
-      setvar "$out" "'$string'"
+      if [ "$string" = "'" ]; then
+        setvar "$out" "\"'\""
+      else
+        setvar "$out" "'$string'"
+      fi
       ;;
 
     cat)
@@ -3933,11 +4012,33 @@ __shadowing_sh:compile() {
       ast:from $expr children file_ast
 
       bash:compile $file_ast file
-      compiled_file="$(files:compile-file <"$(eval "echo $file")")"
+      file="$(eval "echo $file")"
+
+      case "$file" in
+        /*) ;;
+        *)  file="${POWCOMP_DIR-$PWD}/$file" ;;
+      esac
+
+      compiled_file="$(POWCOMP_DIR="$(dirname "$file")" files:compile-file <"$file")"
 
       setvar "$out" "$compiled_file"$'\n'
       ;;
 
+    assert)
+      local condition_ast message_ast condition message
+
+      ast:children $expr condition_ast message_ast
+
+      backend:compile $condition_ast condition
+
+      if ast:is $message_ast print_condition; then
+        message="'Assertation failed: $condition'"
+      else
+        backend:compile $message_ast message
+      fi
+
+      setvar "$out" "if $condition; then :; else >&2 echo $message; exit 1; fi"
+      ;;
     and|pipe|file-input)
       local left_ast right_ast
       local left right op
@@ -4280,12 +4381,12 @@ __shadowing_sh:compile() {
 }
 
 sh:compile() {
-  if [ -z ${__noshadow_42_+x} ]; then
-    local __noshadow_42_
-    local __noshadow_42_2
+  if [ -z ${__noshadow_43_+x} ]; then
+    local __noshadow_43_
+    local __noshadow_43_2
   fi
-  __shadowing_sh:compile "$1"  __noshadow_42_2
-  setvar "$2" "$__noshadow_42_2"
+  __shadowing_sh:compile "$1"  __noshadow_43_2
+  setvar "$2" "$__noshadow_43_2"
 }
 
 # FILE: lang/sh/compile.bash
@@ -4294,6 +4395,7 @@ backend:select() {
   eval "
     backend:compile     () { ${1}:compile     \"\$@\"; }
     backend:interactive () { ${1}:interactive \"\$@\"; }
+    backend:run         () { ${1}:run         \"\$@\"; }
   "
 }
 
@@ -4352,6 +4454,7 @@ PowscriptBackend=bash
 PowscriptInteractiveMode=nofile
 PowscriptCompileFile=false
 PowscriptOutput='/dev/stdout'
+PowscriptIncludeStd=true
 
 declare -gA PowscriptFiles
 PowscriptFileNumber=0
@@ -4389,8 +4492,22 @@ powscript:parse-options() {
             ;;
         esac
         ;;
+      '--no-std')
+        shift
+        PowscriptIncludeStd=false
+        ;;
       '-c'|'--compile')
         PowscriptCompileFile=true
+        shift
+        ;;
+
+      '-e'|'--evaluate')
+        shift
+        backend:select bash
+        backend:run "$(files:compile-file '/dev/stdout' <<<"$1"$'\n\n')"
+        if [ ! $PowscriptInteractiveMode = yes ]; then
+          PowscriptInteractiveMode=no
+        fi
         shift
         ;;
 
@@ -4427,6 +4544,10 @@ powscript:parse-options() {
 powscript:is-interactive() {
   $PowscriptInteractiveMode
 }
+
+powscript:in-compile-mode() {
+  $PowscriptCompileFile
+}
 # FILE: compiler/options.bash
 PowscriptStartFile='
 '
@@ -4440,11 +4561,24 @@ if $ASYNC is 1
 
 files:compile() {
   local output="${1-/dev/stdout}"
+  export POWSCRIPT_ALLOW_INCOMPLETE=true
+  shift
 
-  files:start-code   "$output"
-  files:compile-file "$output"
-  files:end-code     "$output"
+  files:start-code    "$output"
+  files:compile-files "$output" "$@"
+  files:end-code      "$output"
 }
+
+files:compile-files() {
+  local output="$1"
+  shift
+
+  for file in "$@"; do
+    POWCOMP_DIR="$(dirname "$file")"
+    (files:compile-file "$output" <<<"$(cat "$file")"$'\n\n')
+  done
+}
+
 
 files:compile-file() {
   local output="${1-/dev/stdout}"
@@ -4455,17 +4589,20 @@ files:compile-file() {
   while ! stream:end; do
     ast:parse ast
     ast:lower $ast ast_lowered
-    backend:compile $ast_lowered >"$output"
+    backend:compile $ast_lowered >>"$output"
   done
 }
 
 files:start-code() {
-  files:compile-file "$1" <<<"$PowscriptFileStart"
-  files:compile-file "$1" <<<"$PowscriptStdLib"
+  (files:compile-file "$1" <<<"$PowscriptFileStart")
+
+  if ${PowscriptIncludeStd-true}; then
+    (files:compile-file "$1" <<<"${PowscriptLib[std]}")
+  fi
 }
 
 files:end-code() {
-  files:compile-file "$1" <<<"$PowscriptEndFile"
+  (files:compile-file "$1" <<<"$PowscriptEndFile")
 }
 
 
@@ -4494,7 +4631,9 @@ interactive:start() {
   exec 3<>"$wfifo"
   exec 4<>"$rfifo"
 
-  files:compile-file "$wfifo" <<<"${PowscriptLib[std]}"$'\n\n'
+  if ${PowscriptIncludeStd-true}; then
+    files:compile-file "$wfifo" <<<"${PowscriptLib[std]}"$'\n\n'
+  fi
 
   if [ -f "$HOME/.powrc" ]; then
     files:compile-file "$wfifo" <"$HOME/.powrc"
@@ -4636,12 +4775,12 @@ __shadowing_interactive:get-remaining-input() {
 }
 
 interactive:get-remaining-input() {
-  if [ -z ${__noshadow_43_+x} ]; then
-    local __noshadow_43_
-    local __noshadow_43_1
+  if [ -z ${__noshadow_44_+x} ]; then
+    local __noshadow_44_
+    local __noshadow_44_1
   fi
-  __shadowing_interactive:get-remaining-input  __noshadow_43_1
-  setvar "$1" "$__noshadow_43_1"
+  __shadowing_interactive:get-remaining-input  __noshadow_44_1
+  setvar "$1" "$__noshadow_44_1"
 }
 
 
@@ -4716,12 +4855,17 @@ PowscriptLib[std]=$'map(A f)\n  shift 2\n  expand\n    for k,v of ~A\n      ~f $
 powscript:parse-options "$@"
 backend:select $PowscriptBackend
 
+powscript:compile() {
+  printf '' >"$PowscriptOutput"
+  files:compile "$PowscriptOutput" "${PowscriptFiles[@]}"
+}
+
 if powscript:is-interactive; then
   interactive:start
+elif powscript:in-compile-mode; then
+  powscript:compile
 else
-  for file in "${PowscriptFiles[@]}"; do
-    files:compile "$PowscriptOutput" <"$file"
-  done
+  backend:run "$(powscript:compile)"
 fi
 
 ${POWSCRIPT_DEBUG-false} || powscript:clean-up

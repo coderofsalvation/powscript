@@ -80,7 +80,9 @@ ast:parse:expr() { #<<NOSHADOW>>
               if [ $exprnum -gt 0 ] && { ast:state-is $opener || ${AST_MATH_MODE-false}; }; then
                 root_head=determinable
               else
-                ast:make expression name "$value"
+                root_head=name
+                ast:clear $root
+                ast:make root name "$value"
               fi
               ;;
 

@@ -8,6 +8,7 @@ backend:select() {
   eval "
     backend:compile     () { ${1}:compile     \"\$@\"; }
     backend:interactive () { ${1}:interactive \"\$@\"; }
+    backend:run         () { ${1}:run         \"\$@\"; }
   "
 }
 

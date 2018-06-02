@@ -12,23 +12,22 @@ ast:parse:pattern() { #<<NOSHADOW>>
   while $unfinished; do
     token:get -v value -c class -g glued
 
-    if $glued || [ -z "$pattern" ]; then
-      case "$class" in
-        newline|eof)
-          unfinished=false
-          token:backtrack
-          ;;
-        name|special)
-          pattern="$pattern$value"
-          ;;
-        string)
-          pattern="$pattern'$value'"
-          ;;
-      esac
-    else
-      unfinished=false
-      token:backtrack
+    if ! $glued; then
+      pattern+=" "
     fi
+
+    case "$class" in
+      newline|eof)
+        unfinished=false
+        token:backtrack
+        ;;
+      name|special)
+        pattern+="$value"
+        ;;
+      string)
+        pattern+="'$value'"
+        ;;
+    esac
   done
 
   ast:make "$out" pattern "$pattern"
