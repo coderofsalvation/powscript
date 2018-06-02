@@ -24,10 +24,16 @@ ast:parse:substitution() { #<<NOSHADOW>>
             if ${AST_MATH_MODE-false}; then
               ast:error "invalid math expression: $(ast:print $expr)"
             fi
-            ast:from $expr children cat_children
-            cat_array=( $cat_children )
-            ast:make subst cat $subst "${cat_array[@:4]}"
+            if ast:state-is "{"; then
+              ast:error "unimplemented variable substitution"
+            else
+              ast:from $expr children cat_children
+              cat_array=( $cat_children )
+              ast:make subst cat $subst "${cat_array[@:4]}"
+            fi
           fi
+        elif ast:state-is "{"; then
+          ast:error "unimplemented variable substitution"
         else
           ast:set $varname head simple-substitution
           subst=$expr
