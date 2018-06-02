@@ -304,7 +304,6 @@ token:parse() { #<<NOSHADOW>>
               next_state=whitespace
             elif [ -n "$token" ]; then
               belongs=false
-              glued=false
             else
               glued=false
             fi
