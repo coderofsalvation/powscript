@@ -14,7 +14,7 @@
     <td>
       <pre>
         <code>
-foo( a, b )
+foo(a b)
   echo a=$a b=$b
         </code>
         <code>
@@ -25,10 +25,9 @@ foo one two
     <td>
       <pre>
         <code>
-foo(){
-  local a="$1"
-  local b="$2"
-  echo a="$a" b="$b"
+f() {
+local a="${1}" b="${2}"
+echo a="${a}" b="${b}"
 }
         </code>
         <code>
@@ -84,8 +83,9 @@ if not false and true
         </code>
         <code>
 if $x > $y
-  if $a < $b
-    echo "bar"
+  echo "bar"
+elif $a < $b
+  echo "baz"
 </code>
       </pre>
     </td>
@@ -107,9 +107,9 @@ fi
         </code>
         <code>
 if [[ "$x" -gt "$y" ]]; then
-  if [[ "$a" -lt "$b" ]]; then
-    echo "bar"
-  fi
+  echo "bar"
+elif [[ "$a" -lt "$b" ]]; then
+  echo "baz"
 fi
         </code>
       </pre>
@@ -125,7 +125,7 @@ foo={}
 foo["bar"]="a value"
         </code>
         <code>
-for k,v in foo
+for k,v of foo
   echo k=$k
   echo v=$v
         </code>
@@ -161,10 +161,10 @@ echo "${foo["bar"]}"
         <code>
 bla=[]
 bla[0]="foo"
-bla+="push value"
+bla@="push value"
         </code>
         <code>
-for i in bla
+for i of bla
   echo bla=$i
         </code>
         <code>
@@ -324,8 +324,8 @@ echo -e "a\nb\n" | mappipe fn
     <td>
       <pre>
         <code>
-math '9 / 2'
-math '9 / 2' 4
+math (9 / 2)
+math (9 / 2) 4
         </code>
       </pre>
     </td>
@@ -526,7 +526,7 @@ foo={}
 bar={}
 foo["one"]="foo"
 bar["foo"]="123"
-map foo values |
+map foo values |\
   mappipe pick bar
         </code>
       </pre>

@@ -35,6 +35,11 @@ stream:next-character() {
   fi
 }
 
+stream:register-escaped-newline() {
+  Stream[line]=" ${Stream[line]}"
+  Stream[index]=$((${Stream[index]}+1))
+}
+
 stream:get-rest-of-line() { #<<NOSHADOW>>
   local line collumn out="$1"
   line="${Stream[line]}"

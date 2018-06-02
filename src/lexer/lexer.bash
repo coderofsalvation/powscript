@@ -36,7 +36,7 @@ token:parse() { #<<NOSHADOW>>
   local belongs=true        # if false, the current character does not belong to the current token and the latter is finished
   local next_state=none     # if not none, the values of state and next_state are pushed to the stack, in that order
   local next_class=none     # if not none, after finishing the current token, the next one will be given this class
-  local state_end=false     # if true, the current state will be not be pushed in the stack at the end of parsing.
+  local state_end=false     # if true, the current state will be not be pushed in the stack at the end of parsing
 
   local glued=true          # true if the token is glued to the previous one
 
@@ -50,6 +50,7 @@ token:parse() { #<<NOSHADOW>>
 
   # the token is done when its class is identified
   while [ $class = undefined ] && ! stream:end; do
+    move=true
     stream:get-character c
 
     case $state in
@@ -66,10 +67,20 @@ token:parse() { #<<NOSHADOW>>
       unquoted-escape)
         # for escaped spaces and newlines
         case "$c" in
-          $'\n') ;;
-          *) token+="$c" ;;
+          $'\n')
+            state=esc-newline
+            ;;
+          *)
+            token+="$c"
+            token:pop-state state
+            ;;
         esac
+        ;;
+
+      esc-newline)
         token:pop-state state
+        stream:register-escaped-newline
+        move=false
         ;;
 
       single-quotes)
@@ -269,6 +280,7 @@ token:parse() { #<<NOSHADOW>>
             fi
             ;;
           '\')
+            token:push-state "$state"
             state='unquoted-escape'
             ;;
 
@@ -292,6 +304,7 @@ token:parse() { #<<NOSHADOW>>
               next_state=whitespace
             elif [ -n "$token" ]; then
               belongs=false
+              glued=false
             else
               glued=false
             fi
@@ -367,14 +380,13 @@ token:parse() { #<<NOSHADOW>>
     else
       if ${POWSCRIPT_ALLOW_INCOMPLETE-false}; then
         case "$state" in
-          parentheses)  state='('; ;;
-          brackets)     state='['; ;;
-          curly-braces) state='{'; ;;
+          parentheses)   state='('; ;;
+          brackets)      state='['; ;;
+          curly-braces)  state='{'; ;;
+          esc-newline)   state='\'; ;;
         esac
         POWSCRIPT_INCOMPLETE_STATE="$state"
-        token=eof
-        class=eof
-        glued=false
+        exit
       else
         token:unfinished-input-error "$state" "$linenumber_start" "$collumn_start"
       fi

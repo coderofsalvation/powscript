@@ -1,0 +1,18 @@
+if true
+  echo "1"
+
+f(x)
+  while $x < 10
+    echo "2"
+
+echo '
+3
+'
+
+echo \
+4
+
+echo 5\
+ 6
+
+exit

@@ -160,6 +160,11 @@ stream:next-character() {
   fi
 }
 
+stream:register-escaped-newline() {
+  Stream[line]=" ${Stream[line]}"
+  Stream[index]=$((${Stream[index]}+1))
+}
+
 
 __shadowing_stream:get-rest-of-line() {
   local line collumn out="$1"
@@ -417,7 +422,7 @@ __shadowing_token:parse() {
   local belongs=true        # if false, the current character does not belong to the current token and the latter is finished
   local next_state=none     # if not none, the values of state and next_state are pushed to the stack, in that order
   local next_class=none     # if not none, after finishing the current token, the next one will be given this class
-  local state_end=false     # if true, the current state will be not be pushed in the stack at the end of parsing.
+  local state_end=false     # if true, the current state will be not be pushed in the stack at the end of parsing
 
   local glued=true          # true if the token is glued to the previous one
 
@@ -431,6 +436,7 @@ __shadowing_token:parse() {
 
   # the token is done when its class is identified
   while [ $class = undefined ] && ! stream:end; do
+    move=true
     stream:get-character c
 
     case $state in
@@ -447,10 +453,20 @@ __shadowing_token:parse() {
       unquoted-escape)
         # for escaped spaces and newlines
         case "$c" in
-          $'\n') ;;
-          *) token+="$c" ;;
+          $'\n')
+            state=esc-newline
+            ;;
+          *)
+            token+="$c"
+            token:pop-state state
+            ;;
         esac
+        ;;
+
+      esc-newline)
         token:pop-state state
+        stream:register-escaped-newline
+        move=false
         ;;
 
       single-quotes)
@@ -650,6 +666,7 @@ __shadowing_token:parse() {
             fi
             ;;
           '\')
+            token:push-state "$state"
             state='unquoted-escape'
             ;;
 
@@ -673,6 +690,7 @@ __shadowing_token:parse() {
               next_state=whitespace
             elif [ -n "$token" ]; then
               belongs=false
+              glued=false
             else
               glued=false
             fi
@@ -748,14 +766,13 @@ __shadowing_token:parse() {
     else
       if ${POWSCRIPT_ALLOW_INCOMPLETE-false}; then
         case "$state" in
-          parentheses)  state='('; ;;
-          brackets)     state='['; ;;
-          curly-braces) state='{'; ;;
+          parentheses)   state='('; ;;
+          brackets)      state='['; ;;
+          curly-braces)  state='{'; ;;
+          esc-newline)   state='\'; ;;
         esac
         POWSCRIPT_INCOMPLETE_STATE="$state"
-        token=eof
-        class=eof
-        glued=false
+        exit
       else
         token:unfinished-input-error "$state" "$linenumber_start" "$collumn_start"
       fi

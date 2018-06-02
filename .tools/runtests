@@ -87,7 +87,7 @@ header "Evaluation tests:"
 testdirectory "test/test-files" './powscript ${file}' 'file' '.*\.pow'
 
 header "Interactive mode tests:"
-testdirectory "test/interactive" './powscript --interactive < ${file}' 'file'
+testdirectory "test/interactive" './powscript --no-std --interactive < ${file}' 'file'
 
 header "Repository maintainance tests:"
 testdirectory "test/repo" './${file}' 'file' '.*\.sh'
