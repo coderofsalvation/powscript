@@ -74,6 +74,11 @@ ast:print-child() {
       ast:print-child ${child_array[0]}
       printf ']}'
       ;;
+    indirect-indexing-substitution)
+      printf '${!%s[' "$ast_value"
+      ast:print-child ${child_array[0]}
+      printf ']}'
+      ;;
     command-substitution)
       printf '$('
       ast:print-child ${child_array[0]}
@@ -153,11 +158,95 @@ ast:print-child() {
       echo
       ast:print-child ${child_array[2]}
       ;;
-    switch|case|while)
+    for-of-map)
+      printf 'for '
+      ast:print-child ${child_array[0]}
+      printf ','
+      ast:print-child ${child_array[1]}
+      printf ' of '
+      ast:print-child ${child_array[2]}
+      echo
+      ast:print-child ${child_array[3]}
+      ;;
+    switch|case|while|expand)
       printf '%s' "$ast_head"
       ast:print-child ${child_array[0]}
       echo
       ast:print-child ${child_array[1]}
+      ;;
+    string-length)
+      printf '%s' "\${$ast_value:length}"
+      ;;
+    string-indirect)
+      printf '%s' "\${$ast_value:indirect}"
+      ;;
+    string-removal|string-case|string-default)
+      local op
+      printf '%s' "\${$ast_value:"
+      ast:from ${child_array[1]} value op
+      case "$op" in
+        '#')  printf "prefix "      ;;
+        '%')  printf "suffix "      ;;
+        '##') printf "prefix* "     ;;
+        '%%') printf "suffix* "     ;;
+        '^')  printf "uppercase "   ;;
+        ',')  printf "lowercase "   ;;
+        '^^') printf "uppercase* "  ;;
+        ',,') printf "lowercase* "  ;;
+        '-')  printf "unset "       ;;
+        '=')  printf "unset= "      ;;
+        ':-') printf "empty "       ;;
+        ':=') printf "empty= "      ;;
+        '+')  printf "set "         ;;
+        ':+') printf "nonempty "    ;;
+        '?')  printf "set! "        ;;
+        ':?') printf "nonempty! "   ;;
+      esac
+      ast:print-child ${child_array[0]}
+      printf "}"
+      ;;
+    string-replace)
+      printf "\${$ast_value:"
+      printf 'replace '
+      ast:print-child ${child_array[0]}
+      printf ' by '
+      ast:print-child ${child_array[1]}
+      printf '}'
+      ;;
+    string-from)
+      printf "\${$ast_value:"
+      printf 'from $('
+      ast:print-child ${child_array[0]}
+      printf ') to $('
+      ast:print-child ${child_array[1]}
+      printf ')}'
+      ;;
+    string-slice)
+      printf "\${$ast_value:"
+      printf 'slice $('
+      ast:print-child ${child_array[0]}
+      printf ') length $('
+      ast:print-child ${child_array[1]}
+      printf ')}'
+      ;;
+    string-index)
+      printf "\${$ast_value:"
+      printf 'index $('
+      ast:print-child ${child_array[0]}
+      printf ')}'
+      ;;
+    array-operation)
+      local var index subst
+      ast:from ${child_array[0]} value var
+      ast:children ${child_array[0]} index
+      index="$(ast:print-child $index)"
+      subst="$(ast:print-child ${child_array[1]})"
+
+      printf '%s' "${subst/@/$var[$index]}"
+      ;;
+    pattern)
+      local op
+      printf '%s' "$ast_value"
       ;;
     await*)
       local then

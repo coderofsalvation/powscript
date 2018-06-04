@@ -19,10 +19,10 @@ ast:parse:substitution() { #<<NOSHADOW>>
         if token:next-is special ':'; then
           token:require special ':'
           ast:make postcat cat ''
-          ast:parse:parameter-substitution "$value" $postcat subst
+          ast:parse:parameter-substitution $postcat "$value" subst
         elif [ "$value" = "@:" ]; then
           ast:make postcat cat ''
-          ast:parse:parameter-substitution "@" $postcat subst
+          ast:parse:parameter-substitution $postcat "@" subst
         else
           local sym class
           token:peek -v sym -c class
@@ -50,7 +50,12 @@ ast:parse:substitution() { #<<NOSHADOW>>
                 cat_array=( $cat_children )
                 ast:make postcat cat '' "${cat_array[@]:5}"
                 ast:parse:parameter-substitution $postcat "@" param
-                ast:make subst array-operation '' $subst $param
+
+                if ast:is $param indirect-indexing-substitution; then
+                  ast:error "unimplemented variable substitution (keys used after indexing)"
+                else
+                  ast:make subst array-operation '' $subst $param
+                fi
 
               else
                 ast:error "unimplemented variable substitution (found $(ast:print $aft) while looking for } or :)"
@@ -66,7 +71,12 @@ ast:parse:substitution() { #<<NOSHADOW>>
             token:skip
             ast:make postcat cat ''
             ast:parse:parameter-substitution $postcat "@" param
-            ast:make subst array-operation '' $subst $param
+
+            if ast:is $param indirect-indexing-substitution; then
+              ast:error "unimplemented variable substitution (keys used after indexing)"
+            else
+              ast:make subst array-operation '' $subst $param
+            fi
 
           fi
         elif ast:state-is "{"; then
@@ -148,6 +158,8 @@ noshadow ast:parse:curly-substitution
 # lowercase <pattern>
 # uppercase* <pattern>
 # lowercase* <pattern>
+# indirect
+# keys
 #
 
 ast:parse:parameter-substitution() { #<<NOSHADOW>>
@@ -212,8 +224,13 @@ ast:parse:parameter-substitution() { #<<NOSHADOW>>
   esac
 
   case "$opname" in
-    length)
-      ast:make "$out" string-length "$varname"
+    length|indirect)
+      ast:make "$out" "string-$opname" "$varname"
+      ;;
+    keys)
+      local at
+      ast:make at name '@'
+      ast:make "$out" indirect-indexing-substitution "$varname" $at
       ;;
     slice)
       local start len

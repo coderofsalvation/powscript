@@ -63,19 +63,20 @@ sh:compile() { #<<NOSHADOW>>
 
     assert)
       local condition_ast message_ast condition message
+      local NL=$'\n'
 
       ast:children $expr condition_ast message_ast
 
       backend:compile $condition_ast condition
 
       if ast:is $message_ast print_condition; then
-        ast:make message_ast string "Assertation failed: $condition"
-        backend:compile $message_ast message
+        message="Assertation failed: $(ast:print $condition_ast)"
       else
         backend:compile $message_ast message
       fi
+      message="<<'ASSERT_EOF'$NL$message${NL}ASSERT_EOF$NL"
 
-      setvar "$out" "if $condition; then :; else >&2 echo $message; exit 1; fi"
+      setvar "$out" "if $condition; then :; else >&2 cat $message$NL exit 1; fi"
       ;;
     and|pipe|file-input)
       local left_ast right_ast
@@ -254,6 +255,12 @@ sh:compile() { #<<NOSHADOW>>
       local name
       ast:from $expr value name
       set_substitution "\${#$name}"
+      ;;
+
+    string-indirect)
+      local name
+      ast:from $expr value name
+      set_substitution "\${!$name}"
       ;;
 
     string-removal)

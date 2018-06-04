@@ -24,7 +24,7 @@ bash:compile() { #<<NOSHADOW>>
     pattern|and|pipe|elements|simple-substitution|assert|\
     function-def|local|block|math|math-top|math-float|\
     math-assigned|assign-sequence|readline|file-input|\
-    string-length|string-removal|string-default)
+    string-length|string-removal|string-default|string-indirect)
 
       sh:compile $expr "$out"
       ;;

@@ -17,3 +17,8 @@ assert ${Z:unset 2}    is 1
 assert ${Z:unset= 2}   is 1
 assert ${Z:empty 2}    is 2
 assert ${Z:empty= 2}   is 2
+
+X=3
+Y=X
+
+assert ${Y:indirect} is 3

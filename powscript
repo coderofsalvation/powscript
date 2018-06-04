@@ -1637,10 +1637,10 @@ __shadowing_ast:parse:substitution() {
         if token:next-is special ':'; then
           token:require special ':'
           ast:make postcat cat ''
-          ast:parse:parameter-substitution "$value" $postcat subst
+          ast:parse:parameter-substitution $postcat "$value" subst
         elif [ "$value" = "@:" ]; then
           ast:make postcat cat ''
-          ast:parse:parameter-substitution "@" $postcat subst
+          ast:parse:parameter-substitution $postcat "@" subst
         else
           local sym class
           token:peek -v sym -c class
@@ -1668,7 +1668,12 @@ __shadowing_ast:parse:substitution() {
                 cat_array=( $cat_children )
                 ast:make postcat cat '' "${cat_array[@]:5}"
                 ast:parse:parameter-substitution $postcat "@" param
-                ast:make subst array-operation '' $subst $param
+
+                if ast:is $param indirect-indexing-substitution; then
+                  ast:error "unimplemented variable substitution (keys used after indexing)"
+                else
+                  ast:make subst array-operation '' $subst $param
+                fi
 
               else
                 ast:error "unimplemented variable substitution (found $(ast:print $aft) while looking for } or :)"
@@ -1684,7 +1689,12 @@ __shadowing_ast:parse:substitution() {
             token:skip
             ast:make postcat cat ''
             ast:parse:parameter-substitution $postcat "@" param
-            ast:make subst array-operation '' $subst $param
+
+            if ast:is $param indirect-indexing-substitution; then
+              ast:error "unimplemented variable substitution (keys used after indexing)"
+            else
+              ast:make subst array-operation '' $subst $param
+            fi
 
           fi
         elif ast:state-is "{"; then
@@ -1785,6 +1795,8 @@ ast:parse:curly-substitution() {
 # lowercase <pattern>
 # uppercase* <pattern>
 # lowercase* <pattern>
+# indirect
+# keys
 #
 
 
@@ -1850,8 +1862,13 @@ __shadowing_ast:parse:parameter-substitution() {
   esac
 
   case "$opname" in
-    length)
-      ast:make "$out" string-length "$varname"
+    length|indirect)
+      ast:make "$out" "string-$opname" "$varname"
+      ;;
+    keys)
+      local at
+      ast:make at name '@'
+      ast:make "$out" indirect-indexing-substitution "$varname" $at
       ;;
     slice)
       local start len
@@ -3683,6 +3700,11 @@ ast:print-child() {
       ast:print-child ${child_array[0]}
       printf ']}'
       ;;
+    indirect-indexing-substitution)
+      printf '${!%s[' "$ast_value"
+      ast:print-child ${child_array[0]}
+      printf ']}'
+      ;;
     command-substitution)
       printf '$('
       ast:print-child ${child_array[0]}
@@ -3762,11 +3784,95 @@ ast:print-child() {
       echo
       ast:print-child ${child_array[2]}
       ;;
-    switch|case|while)
+    for-of-map)
+      printf 'for '
+      ast:print-child ${child_array[0]}
+      printf ','
+      ast:print-child ${child_array[1]}
+      printf ' of '
+      ast:print-child ${child_array[2]}
+      echo
+      ast:print-child ${child_array[3]}
+      ;;
+    switch|case|while|expand)
       printf '%s' "$ast_head"
       ast:print-child ${child_array[0]}
       echo
       ast:print-child ${child_array[1]}
+      ;;
+    string-length)
+      printf '%s' "\${$ast_value:length}"
+      ;;
+    string-indirect)
+      printf '%s' "\${$ast_value:indirect}"
+      ;;
+    string-removal|string-case|string-default)
+      local op
+      printf '%s' "\${$ast_value:"
+      ast:from ${child_array[1]} value op
+      case "$op" in
+        '#')  printf "prefix "      ;;
+        '%')  printf "suffix "      ;;
+        '##') printf "prefix* "     ;;
+        '%%') printf "suffix* "     ;;
+        '^')  printf "uppercase "   ;;
+        ',')  printf "lowercase "   ;;
+        '^^') printf "uppercase* "  ;;
+        ',,') printf "lowercase* "  ;;
+        '-')  printf "unset "       ;;
+        '=')  printf "unset= "      ;;
+        ':-') printf "empty "       ;;
+        ':=') printf "empty= "      ;;
+        '+')  printf "set "         ;;
+        ':+') printf "nonempty "    ;;
+        '?')  printf "set! "        ;;
+        ':?') printf "nonempty! "   ;;
+      esac
+      ast:print-child ${child_array[0]}
+      printf "}"
+      ;;
+    string-replace)
+      printf "\${$ast_value:"
+      printf 'replace '
+      ast:print-child ${child_array[0]}
+      printf ' by '
+      ast:print-child ${child_array[1]}
+      printf '}'
+      ;;
+    string-from)
+      printf "\${$ast_value:"
+      printf 'from $('
+      ast:print-child ${child_array[0]}
+      printf ') to $('
+      ast:print-child ${child_array[1]}
+      printf ')}'
+      ;;
+    string-slice)
+      printf "\${$ast_value:"
+      printf 'slice $('
+      ast:print-child ${child_array[0]}
+      printf ') length $('
+      ast:print-child ${child_array[1]}
+      printf ')}'
+      ;;
+    string-index)
+      printf "\${$ast_value:"
+      printf 'index $('
+      ast:print-child ${child_array[0]}
+      printf ')}'
+      ;;
+    array-operation)
+      local var index subst
+      ast:from ${child_array[0]} value var
+      ast:children ${child_array[0]} index
+      index="$(ast:print-child $index)"
+      subst="$(ast:print-child ${child_array[1]})"
+
+      printf '%s' "${subst/@/$var[$index]}"
+      ;;
+    pattern)
+      local op
+      printf '%s' "$ast_value"
       ;;
     await*)
       local then
@@ -4059,7 +4165,7 @@ __shadowing_bash:compile() {
     pattern|and|pipe|elements|simple-substitution|assert|\
     function-def|local|block|math|math-top|math-float|\
     math-assigned|assign-sequence|readline|file-input|\
-    string-length|string-removal|string-default)
+    string-length|string-removal|string-default|string-indirect)
 
       sh:compile $expr "$out"
       ;;
@@ -4449,19 +4555,20 @@ __shadowing_sh:compile() {
 
     assert)
       local condition_ast message_ast condition message
+      local NL=$'\n'
 
       ast:children $expr condition_ast message_ast
 
       backend:compile $condition_ast condition
 
       if ast:is $message_ast print_condition; then
-        ast:make message_ast string "Assertation failed: $condition"
-        backend:compile $message_ast message
+        message="Assertation failed: $(ast:print $condition_ast)"
       else
         backend:compile $message_ast message
       fi
+      message="<<'ASSERT_EOF'$NL$message${NL}ASSERT_EOF$NL"
 
-      setvar "$out" "if $condition; then :; else >&2 echo $message; exit 1; fi"
+      setvar "$out" "if $condition; then :; else >&2 cat $message$NL exit 1; fi"
       ;;
     and|pipe|file-input)
       local left_ast right_ast
@@ -4640,6 +4747,12 @@ __shadowing_sh:compile() {
       local name
       ast:from $expr value name
       set_substitution "\${#$name}"
+      ;;
+
+    string-indirect)
+      local name
+      ast:from $expr value name
+      set_substitution "\${!$name}"
       ;;
 
     string-removal)

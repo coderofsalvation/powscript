@@ -28,3 +28,21 @@ assert ${A[a]:length} is 3
 assert ${A[a]:index 1} is b
 assert ${A[a]:from 1 to 2} is bc
 assert ${A[a]:uppercase a} is Abc
+
+KA=${A:keys}
+KV=${V:keys}
+
+assert $KA is "a b"
+assert $KV is "0 1 2"
+
+KA=${A : keys}
+KV=${V : keys}
+
+assert $KA is "a b"
+assert $KV is "0 1 2"
+
+assert ${A[*]:indirect} is "a b"
+assert ${V[*]:indirect} is "0 1 2"
+
+assert ${A[*] : indirect} is "a b"
+assert ${V[*] : indirect} is "0 1 2"
