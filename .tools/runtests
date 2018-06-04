@@ -80,6 +80,9 @@ testdirectory "test/test-files" './powscript --no-std -c ${file} >/dev/null' '.*
 header "String tests:"
 testdirectory "test/strings" './powscript --no-std ${file}' 'file' '.*\.pow'
 
+header "Collections tests:"
+testdirectory "test/collections" './powscript --no-std ${file}' 'file' '.*\.pow'
+
 header "Control flow tests:"
 testdirectory "test/control-flow" './powscript --no-std ${file}' 'file' '.*\.pow'
 

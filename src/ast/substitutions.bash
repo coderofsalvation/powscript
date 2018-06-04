@@ -44,13 +44,30 @@ ast:parse:substitution() { #<<NOSHADOW>>
               ast:error "invalid math expression: $(ast:print $expr)"
 
             elif ast:state-is "{"; then
-              ast:error "unimplemented variable substitution (expressions after index)"
+              if ast:is $aft name ':'; then
+                local param
+                ast:from $expr children cat_children
+                cat_array=( $cat_children )
+                ast:make postcat cat '' "${cat_array[@]:5}"
+                ast:parse:parameter-substitution $postcat "@" param
+                ast:make subst array-operation '' $subst $param
+
+              else
+                ast:error "unimplemented variable substitution (found $(ast:print $aft) while looking for } or :)"
+              fi
 
             else
               ast:from $expr children cat_children
               cat_array=( $cat_children )
               ast:make subst cat '' $subst "${cat_array[@]:4}"
             fi
+          elif token:next-is special ':'; then
+            local param
+            token:skip
+            ast:make postcat cat ''
+            ast:parse:parameter-substitution $postcat "@" param
+            ast:make subst array-operation '' $subst $param
+
           fi
         elif ast:state-is "{"; then
            ast:from $expr children cat_children
@@ -113,6 +130,10 @@ noshadow ast:parse:curly-substitution
 # unset= <expr>
 # empty <expr>
 # empty= <expr>
+# set <expr>
+# set! <expr>
+# nonempty <expr>
+# nonempty! <expr>
 # length
 # index <math expression>
 # from <math expression> to <math expression>
@@ -123,6 +144,10 @@ noshadow ast:parse:curly-substitution
 # prefix* <pattern>
 # replace <pattern> by <expr>
 # replace* <pattern> by <expr>
+# uppercase <pattern>
+# lowercase <pattern>
+# uppercase* <pattern>
+# lowercase* <pattern>
 #
 
 ast:parse:parameter-substitution() { #<<NOSHADOW>>
@@ -143,13 +168,15 @@ ast:parse:parameter-substitution() { #<<NOSHADOW>>
   fi
 
   case "$opname" in
-    unset|empty)  modifier='='; mclass='string' ;;
-    *fix|replace) modifier='*'  mclass='name'   ;;
+    unset|empty)   modifier='='; mclass='string' ;;
+    set|nonempty)  modifier='!'; mclass='name'   ;;
+    *fix|replace)  modifier='*'  mclass='name'   ;;
+    *case)         modifier='*'  mclass='name'   ;;
   esac
 
 
   case "$opname" in
-    unset|empty|*fix|replace)
+    unset|empty|*fix|*case|replace)
       if [ -n "$child_b" ]; then
         if ast:is $child_b "$mclass" "$modifier"; then
           opname="$opname$modifier"
@@ -207,20 +234,24 @@ ast:parse:parameter-substitution() { #<<NOSHADOW>>
       NOBC=true ast:parse:math index
       ast:make "$out" string-index "$varname" $index
       ;;
-    *fix*)
-      local pattern op opval
+    *fix*|*case*)
+      local pattern op opval optype
       case "$opname" in
-        suffix)   opval='%'  ;;
-        prefix)   opval='#'  ;;
-        suffix\*) opval='%%' ;;
-        prefix\*) opval='##' ;;
+        suffix)      opval='%'  optype='removal';;
+        prefix)      opval='#'  optype='removal';;
+        suffix\*)    opval='%%' optype='removal';;
+        prefix\*)    opval='##' optype='removal';;
+        lowercase)   opval=','  optype='case'   ;;
+        uppercase)   opval='^'  optype='case'   ;;
+        lowercase\*) opval=',,' optype='case'   ;;
+        uppercase\*) opval='^^' optype='case'   ;;
         *)
           ast:error "Invalid string operation: $opname"
           ;;
       esac
       ast:make op name "$opval"
       ast:parse:pattern 'string-op' pattern
-      ast:make "$out" string-removal "$varname" $pattern $op
+      ast:make "$out" "string-$optype" "$varname" $pattern $op
       ;;
     replace*)
       local pattern by op opval
@@ -237,15 +268,17 @@ ast:parse:parameter-substitution() { #<<NOSHADOW>>
       ast:parse:pattern 'string-op' by
       ast:make "$out" string-replace "$varname" $pattern $by $op
       ;;
-    unset*|empty*|set|nonempty)
+    unset*|empty*|set*|nonempty*)
       local expr op opval
       case "$opname" in
-        unset)    opval='-'  ;;
-        unset=)   opval='='  ;;
-        empty)    opval=':-' ;;
-        empty=)   opval=':=' ;;
-        set)      opval='+'  ;;
-        nonempty) opval=':+' ;;
+        unset)     opval='-'  ;;
+        unset=)    opval='='  ;;
+        empty)     opval=':-' ;;
+        empty=)    opval=':=' ;;
+        set)       opval='+'  ;;
+        nonempty)  opval=':+' ;;
+        set!)      opval='?'  ;;
+        nonempty!) opval=':?' ;;
         *)
           ast:error "Invalid string operation: $opname"
           ;;

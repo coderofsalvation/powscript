@@ -1,0 +1,30 @@
+A={}
+V=(ab bc cd)
+
+A[a]=abc
+A[b]=def
+
+assert ${V[@]:length} is 3
+assert ${A[@]:length} is 2
+
+assert ${V[@] : length} is 3
+assert ${A[@] : length} is 2
+
+assert ${V[*]:index 0} is ab
+assert ${V[*]:index 1} is bc
+
+assert ${V[*] : index 1} is bc
+
+assert ${V[*]:from 0 to 1} is "ab bc"
+assert ${V[*] : from 1 to 2} is "bc cd"
+
+assert ${V[*]:slice 0 length 2} is "ab bc"
+assert ${V[*] : slice 1 length 1} is "bc"
+
+assert ${V[*]:uppercase  [ac]} is "Ab bc Cd"
+assert ${V[*]:uppercase* [ab]} is "AB Bc cd"
+
+assert ${A[a]:length} is 3
+assert ${A[a]:index 1} is b
+assert ${A[a]:from 1 to 2} is bc
+assert ${A[a]:uppercase a} is Abc

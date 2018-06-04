@@ -31,6 +31,7 @@ ast:parse:pattern() { #<<NOSHADOW>>
           ==:or)       finish ;;
           ==:and)      finish ;;
           replace:by)  finish ;;
+          *:\\)        pattern+='\\' ;;
           *)           pattern+="$value" ;;
         esac
         ;;

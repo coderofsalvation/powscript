@@ -1,0 +1,24 @@
+x=aabb
+y=AABB
+
+assert ${X:uppercase a} is Aabb
+assert ${X:uppercase b} is aaBb
+assert ${y:lowercase A} is aABB
+assert ${y:lowercase B} is AAbB
+
+assert ${X:uppercase* a} is AAbb
+assert ${X:uppercase* b} is aaBB
+assert ${y:lowercase* A} is aaBB
+assert ${y:lowercase* B} is AAbb
+
+assert ${X:uppercase* *} is AABB
+assert ${y:lowercase* *} is aabb
+
+assert ${X:uppercase* *} is AABB
+assert ${y:lowercase* *} is aabb
+
+assert ${X:uppercase* [ab]} is AABB
+assert ${y:lowercase* [AB]} is aabb
+
+assert ${X:uppercase [ab]} is Aabb
+assert ${y:lowercase [AB]} is aABB

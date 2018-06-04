@@ -69,7 +69,8 @@ sh:compile() { #<<NOSHADOW>>
       backend:compile $condition_ast condition
 
       if ast:is $message_ast print_condition; then
-        message="'Assertation failed: $condition'"
+        ast:make message_ast string "Assertation failed: $condition"
+        backend:compile $message_ast message
       else
         backend:compile $message_ast message
       fi
@@ -253,63 +254,6 @@ sh:compile() { #<<NOSHADOW>>
       local name
       ast:from $expr value name
       set_substitution "\${#$name}"
-      ;;
-
-    string-slice)
-      local name start_ast len_ast
-      local start len
-
-      ast:from $expr value name
-      ast:children $expr start_ast len_ast
-
-      backend:compile $start_ast start
-      backend:compile $len_ast   len
-
-      start="${start#echo \$(( }"
-      start="${start% ))}"
-
-      len="${len#echo \$(( }"
-      len="${len% ))}"
-
-      set_substitution "\${$name:$start:$len}"
-      ;;
-
-    string-from)
-      local name from_ast to_ast
-      local from to from_cond to_cond len
-
-      ast:from $expr value name
-      ast:children $expr from_ast to_ast
-
-      backend:compile $from_ast from
-      backend:compile $to_ast   to
-
-      from="${from#echo \$(( }"
-      from="${from% ))}"
-
-      to="${to#echo \$(( }"
-      to="${to% ))}"
-
-      from="\$(($from < 0 ? 0 : $from))"
-      to="\$(($to < 0 ? -1 : $to))"
-      len="\$(($to < $from ? 0 : $to-$from+1))"
-
-      set_substitution "\${$name:$from:$len}"
-      ;;
-
-    string-index)
-      local name index_ast
-      local index
-
-      ast:from $expr value name
-      ast:children $expr index_ast
-
-      backend:compile $index_ast index
-
-      index="${index#echo \$(( }"
-      index="${index% ))}"
-
-      set_substitution "\${$name:$index:1}"
       ;;
 
     string-removal)
