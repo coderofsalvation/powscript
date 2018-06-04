@@ -43,7 +43,7 @@ ast:lower-scanned() { #<<NOSHADOW>>
     for-of-map)
       local key val array block lowblock
       local array_name at elements
-      local val_assign val_get key_name key_subst
+      local val_assign val_local val_get key_name key_subst
       local newblock block_value block_children
 
       ast:children $expr key val array block
@@ -62,9 +62,10 @@ ast:lower-scanned() { #<<NOSHADOW>>
       ast:make key_subst simple-substitution "$key_name"
       ast:make val_get indexing-substitution "$array_name" $key_subst
       ast:make val_assign assign '' $val $val_get
+      ast:make val_local local '' $val_assign
 
       ast:all-from $lowblock -v block_value -c block_children
-      ast:make newblock block "$block_value" $val_assign $block_children
+      ast:make newblock block "$block_value" $val_local $block_children
 
       ast:make result 'for' '' $key $elements $newblock
       ;;

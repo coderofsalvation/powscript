@@ -51,7 +51,8 @@ ast:parse:require-newline() {
 #
 
 ast:is-flag() {
-  local expr="$1" minus name extra
+  local expr="$1"
+  local minus name extra
 
   if ast:is $expr cat; then
     ast:children $expr minus name extra
@@ -64,3 +65,30 @@ ast:is-flag() {
     return 1
   fi
 }
+
+# ast:to-double-string
+#
+# Change a normal string to a double quoted string.
+#
+
+ast:to-double-string() {
+  local str="$1"
+  local str_value cat_child kittens
+
+  if ast:is $str string; then
+    ast:from $str value str_value
+    str_value="${str_value/\\/\\\\}"
+    str_value="${str_value/\"/\\\"}"
+    str_value="${str_value/\$/\\\$}"
+    ast:set $str head  double-string
+    ast:set $str value "$str_value"
+
+  elif ast:is $str cat; then
+    ast:from $str children kittens
+
+    for cat_child in $kittens; do
+      ast:to-double-string $cat_child
+    done
+  fi
+}
+

@@ -22,8 +22,8 @@ foo()
 
 webserver:onrequest(request)
   if $request match (POST .*\/pull)
-    appname=${request} #/POST\/}
-    appname=${appname} #/\/pull*/}
+    appname=${request: replace POST by  ''}
+    appname=${appname: replace pull* by ''}
     deffile=$(process:gettmpfile $appname).def
     if -f $deffile
       workdir=$(apps:getworkdir $deffile)

@@ -4,7 +4,7 @@
 #
 
 ast:parse:substitution() { #<<NOSHADOW>>
-  local subst out="$1"
+  local subst curly="$1" out="$2"
   local expr value head varname aftervar
   local index lb rb aft
   local postcat
@@ -43,7 +43,7 @@ ast:parse:substitution() { #<<NOSHADOW>>
             if ${AST_MATH_MODE-false}; then
               ast:error "invalid math expression: $(ast:print $expr)"
 
-            elif ast:state-is "{"; then
+            elif $curly; then
               if ast:is $aft name ':'; then
                 local param
                 ast:from $expr children cat_children
@@ -79,7 +79,7 @@ ast:parse:substitution() { #<<NOSHADOW>>
             fi
 
           fi
-        elif ast:state-is "{"; then
+        elif $curly; then
            ast:from $expr children cat_children
            cat_array=( $cat_children )
 
@@ -93,7 +93,7 @@ ast:parse:substitution() { #<<NOSHADOW>>
             ast:parse:parameter-substitution $postcat "@" subst
 
           else
-            ast:error "unimplemented variable substitution (name directly followed by something other than : or [)"
+            ast:error "unimplemented variable substitution ($(ast:print $varname) directly followed by $(ast:print $aftervar) instead of : or [)"
           fi
         else
           ast:set $varname head simple-substitution
@@ -111,23 +111,27 @@ ast:parse:substitution() { #<<NOSHADOW>>
   esac
   setvar "$out" $subst
 }
-noshadow ast:parse:substitution
+noshadow ast:parse:substitution 1
 
 
 # ast:parse:curly-substitution
 #
-# Parse expressions of the form ${variable} or ${array[index]}
+# Parse expressions of the form ${}, ${variable} or ${array[index]}
 #
 
 ast:parse:curly-substitution() { #<<NOSHADOW>>
   local out="$1"
   local subst
 
-  ast:push-state '{'
-  ast:parse:substitution subst
-  token:require special '}'
-  ast:pop-state
+  if token:next-is special '}'; then
+    ast:make subst empty-substitution ''
+  else
+    ast:push-state '{'
+    ast:parse:substitution true subst
+    ast:pop-state
+  fi
 
+  token:require special '}'
   setvar "$out" $subst
 }
 noshadow ast:parse:curly-substitution
@@ -280,7 +284,7 @@ ast:parse:parameter-substitution() { #<<NOSHADOW>>
           ;;
       esac
       ast:make op name "$opval"
-      ast:parse:pattern 'replace'   pattern
+      ast:parse:pattern 'replace' pattern
       token:require name by
       ast:parse:pattern 'string-op' by
       ast:make "$out" string-replace "$varname" $pattern $by $op
@@ -306,6 +310,7 @@ ast:parse:parameter-substitution() { #<<NOSHADOW>>
       else
         ast:parse:expr expr
       fi
+      ast:to-double-string $expr
       ast:make "$out" string-default "$varname" $expr $op
       ;;
 

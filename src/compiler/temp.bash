@@ -17,10 +17,12 @@ powscript:make-fifo() {
 }
 
 powscript:clean-up() {
+  local exit_code=$?
+  POWSCRIPT_CDEBUG_STOP=false
   [ -d "$PowscriptTempDirectory" ] && rm -r "$PowscriptTempDirectory"
   [ -n "$PowscriptGuestProcess"  ] && ps -p "$PowscriptGuestProcess" >/dev/null && kill -QUIT "$PowscriptGuestProcess"
-  exit 0
+  exit $exit_code
 }
 
-trap '{ POWSCRIPT_CDEBUG_STOP=false; powscript:clean-up; }' TERM INT QUIT ABRT EXIT
+trap 'powscript:clean-up' TERM INT QUIT ABRT EXIT
 

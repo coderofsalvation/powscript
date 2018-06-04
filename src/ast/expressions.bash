@@ -31,7 +31,7 @@ ast:parse:expr() { #<<NOSHADOW>>
         special)
           case "$value" in
             '$')
-              ast:parse:substitution expression
+              ast:parse:substitution false expression
               ;;
 
             '${')

@@ -25,8 +25,10 @@ if powscript:is-interactive; then
   interactive:start
 elif powscript:in-compile-mode; then
   powscript:compile
-else
-  backend:run "$(powscript:compile)"
+elif ! ${POWSCRIPT_DEBUG-false}; then
+  backend:run "$(powscript:compile)" || exit 1
 fi
 
-${POWSCRIPT_DEBUG-false} || powscript:clean-up
+if ! ${POWSCRIPT_DEBUG-false}; then
+  powscript:clean-up
+fi

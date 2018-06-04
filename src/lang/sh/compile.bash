@@ -34,6 +34,12 @@ sh:compile() { #<<NOSHADOW>>
       fi
       ;;
 
+    double-string)
+      local string
+      ast:from $expr value string
+      setvar "$out" "\"$string\""
+      ;;
+
     cat)
       local child compiled result=""
       ast:from $expr children expr_children
@@ -45,7 +51,7 @@ sh:compile() { #<<NOSHADOW>>
       ;;
 
     require)
-      local file_ast file compiled_file
+      local file_ast file code compiled_file
       ast:from $expr children file_ast
 
       bash:compile $file_ast file
@@ -56,7 +62,8 @@ sh:compile() { #<<NOSHADOW>>
         *)  file="${POWCOMP_DIR-$PWD}/$file" ;;
       esac
 
-      compiled_file="$(POWCOMP_DIR="$(dirname "$file")" files:compile-file <"$file")"
+      code="$(cat "$file")"$'\n\n'
+      compiled_file="$(POWCOMP_DIR="$(dirname "$file")" files:compile-file <<<"$code")"
 
       setvar "$out" "$compiled_file"$'\n'
       ;;
@@ -78,6 +85,7 @@ sh:compile() { #<<NOSHADOW>>
 
       setvar "$out" "if $condition; then :; else >&2 cat $message$NL exit 1; fi"
       ;;
+
     and|pipe|file-input)
       local left_ast right_ast
       local left right op
@@ -171,6 +179,10 @@ sh:compile() { #<<NOSHADOW>>
       setvar "$out" "$result"
       ;;
 
+    empty-substitution)
+      set_substitution "\${NOTHING:+}"
+      ;;
+
     command-substitution)
       local call_ast call
 
@@ -204,12 +216,14 @@ sh:compile() { #<<NOSHADOW>>
       ;;
 
     for)
-      local varname
+      local varname loc=''
       local elements block
 
       backend:compile-children $expr varname elements block
 
-      setvar "$out" "for $varname in $elements; do"$'\n'"${block:2:-2}"$'\ndone'
+      ${INSIDE_FUNCTION-false} && loc="local $varname; "
+
+      setvar "$out" "${loc}for $varname in $elements; do"$'\n'"${block:2:-2}"$'\ndone'
       ;;
 
     while)
@@ -342,18 +356,28 @@ sh:compile() { #<<NOSHADOW>>
       ast:children $expr name_ast args_ast block_ast
 
       backend:compile $name_ast name
-      backend:compile $block_ast block
+      INSIDE_FUNCTION=true backend:compile $block_ast block
 
       setvar "$out" "$name() $block"
       ;;
 
     local)
-      local result="local" child_ast child
+      local result child_ast child
       ast:from $expr children expr_children
+
+      if ${INSIDE_FUNCTION-false}; then
+        result="local"
+      else
+        result=":"
+      fi
 
       for child_ast in $expr_children; do
         sh:compile $child_ast child
-        result="$result $child"
+        if ${INSIDE_FUNCTION-false}; then
+          result+=" $child"
+        else
+          result+="; $child"
+        fi
       done
 
       setvar "$out" "$result"

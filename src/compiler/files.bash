@@ -3,7 +3,6 @@ powscript_source extra/end.bash    #<<EXPAND>>
 
 files:compile() {
   local output="${1-/dev/stdout}"
-  export POWSCRIPT_ALLOW_INCOMPLETE=true
   shift
 
   files:start-code    "$output"
@@ -17,7 +16,7 @@ files:compile-files() {
 
   for file in "$@"; do
     POWCOMP_DIR="$(dirname "$file")"
-    (files:compile-file "$output" <<<"$(cat "$file")"$'\n\n')
+    files:compile-file "$output" <<<"$(cat "$file")"$'\n\n'
   done
 }
 
@@ -31,20 +30,20 @@ files:compile-file() {
   while ! stream:end; do
     ast:parse ast
     ast:lower $ast ast_lowered
-    backend:compile $ast_lowered >>"$output"
+    backend:compile $ast_lowered 1>>"$output"
   done
 }
 
 files:start-code() {
-  (files:compile-file "$1" <<<"$PowscriptFileStart")
+  files:compile-file "$1" <<<"$PowscriptFileStart"$'\n\n'
 
   if ${PowscriptIncludeStd-true}; then
-    (files:compile-file "$1" <<<"${PowscriptLib[std]}")
+    files:compile-file "$1" <<<"${PowscriptLib[std]}"$'\n\n'
   fi
 }
 
 files:end-code() {
-  (files:compile-file "$1" <<<"$PowscriptEndFile")
+  files:compile-file "$1" <<<"$PowscriptEndFile"$'\n\n'
 }
 
 

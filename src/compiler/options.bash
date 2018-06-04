@@ -25,6 +25,7 @@ powscript:parse-options() {
       '-d'|'--debug')
         PowscriptInteractiveMode=false
         PowscriptCompileFile=false
+        POWSCRIPT_DEBUG=true
         shift $#
         ;;
       '--to')

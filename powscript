@@ -1329,7 +1329,8 @@ ast:parse:require-newline() {
 #
 
 ast:is-flag() {
-  local expr="$1" minus name extra
+  local expr="$1"
+  local minus name extra
 
   if ast:is $expr cat; then
     ast:children $expr minus name extra
@@ -1342,6 +1343,33 @@ ast:is-flag() {
     return 1
   fi
 }
+
+# ast:to-double-string
+#
+# Change a normal string to a double quoted string.
+#
+
+ast:to-double-string() {
+  local str="$1"
+  local str_value cat_child kittens
+
+  if ast:is $str string; then
+    ast:from $str value str_value
+    str_value="${str_value/\\/\\\\}"
+    str_value="${str_value/\"/\\\"}"
+    str_value="${str_value/\$/\\\$}"
+    ast:set $str head  double-string
+    ast:set $str value "$str_value"
+
+  elif ast:is $str cat; then
+    ast:from $str children kittens
+
+    for cat_child in $kittens; do
+      ast:to-double-string $cat_child
+    done
+  fi
+}
+
 # FILE: ast/helper.bash
 
 __shadowing_ast:parse:expand() {
@@ -1622,7 +1650,7 @@ ast:is-assign() {
 
 
 __shadowing_ast:parse:substitution() {
-  local subst out="$1"
+  local subst curly="$1" out="$2"
   local expr value head varname aftervar
   local index lb rb aft
   local postcat
@@ -1661,7 +1689,7 @@ __shadowing_ast:parse:substitution() {
             if ${AST_MATH_MODE-false}; then
               ast:error "invalid math expression: $(ast:print $expr)"
 
-            elif ast:state-is "{"; then
+            elif $curly; then
               if ast:is $aft name ':'; then
                 local param
                 ast:from $expr children cat_children
@@ -1697,7 +1725,7 @@ __shadowing_ast:parse:substitution() {
             fi
 
           fi
-        elif ast:state-is "{"; then
+        elif $curly; then
            ast:from $expr children cat_children
            cat_array=( $cat_children )
 
@@ -1711,7 +1739,7 @@ __shadowing_ast:parse:substitution() {
             ast:parse:parameter-substitution $postcat "@" subst
 
           else
-            ast:error "unimplemented variable substitution (name directly followed by something other than : or [)"
+            ast:error "unimplemented variable substitution ($(ast:print $varname) directly followed by $(ast:print $aftervar) instead of : or [)"
           fi
         else
           ast:set $varname head simple-substitution
@@ -1733,17 +1761,17 @@ __shadowing_ast:parse:substitution() {
 ast:parse:substitution() {
   if [ -z ${__noshadow_13_+x} ]; then
     local __noshadow_13_
-    local __noshadow_13_1
+    local __noshadow_13_2
   fi
-  __shadowing_ast:parse:substitution  __noshadow_13_1
-  setvar "$1" "$__noshadow_13_1"
+  __shadowing_ast:parse:substitution "$1"  __noshadow_13_2
+  setvar "$2" "$__noshadow_13_2"
 }
 
 
 
 # ast:parse:curly-substitution
 #
-# Parse expressions of the form ${variable} or ${array[index]}
+# Parse expressions of the form ${}, ${variable} or ${array[index]}
 #
 
 
@@ -1751,11 +1779,15 @@ __shadowing_ast:parse:curly-substitution() {
   local out="$1"
   local subst
 
-  ast:push-state '{'
-  ast:parse:substitution subst
-  token:require special '}'
-  ast:pop-state
+  if token:next-is special '}'; then
+    ast:make subst empty-substitution ''
+  else
+    ast:push-state '{'
+    ast:parse:substitution true subst
+    ast:pop-state
+  fi
 
+  token:require special '}'
   setvar "$out" $subst
 }
 
@@ -1918,7 +1950,7 @@ __shadowing_ast:parse:parameter-substitution() {
           ;;
       esac
       ast:make op name "$opval"
-      ast:parse:pattern 'replace'   pattern
+      ast:parse:pattern 'replace' pattern
       token:require name by
       ast:parse:pattern 'string-op' by
       ast:make "$out" string-replace "$varname" $pattern $by $op
@@ -1944,6 +1976,7 @@ __shadowing_ast:parse:parameter-substitution() {
       else
         ast:parse:expr expr
       fi
+      ast:to-double-string $expr
       ast:make "$out" string-default "$varname" $expr $op
       ;;
 
@@ -2025,7 +2058,7 @@ __shadowing_ast:parse:expr() {
         special)
           case "$value" in
             '$')
-              ast:parse:substitution expression
+              ast:parse:substitution false expression
               ;;
 
             '${')
@@ -3304,7 +3337,7 @@ __shadowing_ast:lower-scanned() {
     for-of-map)
       local key val array block lowblock
       local array_name at elements
-      local val_assign val_get key_name key_subst
+      local val_assign val_local val_get key_name key_subst
       local newblock block_value block_children
 
       ast:children $expr key val array block
@@ -3323,9 +3356,10 @@ __shadowing_ast:lower-scanned() {
       ast:make key_subst simple-substitution "$key_name"
       ast:make val_get indexing-substitution "$array_name" $key_subst
       ast:make val_assign assign '' $val $val_get
+      ast:make val_local local '' $val_assign
 
       ast:all-from $lowblock -v block_value -c block_children
-      ast:make newblock block "$block_value" $val_assign $block_children
+      ast:make newblock block "$block_value" $val_local $block_children
 
       ast:make result 'for' '' $key $elements $newblock
       ;;
@@ -4165,7 +4199,8 @@ __shadowing_bash:compile() {
     pattern|and|pipe|elements|simple-substitution|assert|\
     function-def|local|block|math|math-top|math-float|\
     math-assigned|assign-sequence|readline|file-input|\
-    string-length|string-removal|string-default|string-indirect)
+    string-length|string-removal|string-default|\
+    string-indirect|double-string|empty-substitution)
 
       sh:compile $expr "$out"
       ;;
@@ -4526,6 +4561,12 @@ __shadowing_sh:compile() {
       fi
       ;;
 
+    double-string)
+      local string
+      ast:from $expr value string
+      setvar "$out" "\"$string\""
+      ;;
+
     cat)
       local child compiled result=""
       ast:from $expr children expr_children
@@ -4537,7 +4578,7 @@ __shadowing_sh:compile() {
       ;;
 
     require)
-      local file_ast file compiled_file
+      local file_ast file code compiled_file
       ast:from $expr children file_ast
 
       bash:compile $file_ast file
@@ -4548,7 +4589,8 @@ __shadowing_sh:compile() {
         *)  file="${POWCOMP_DIR-$PWD}/$file" ;;
       esac
 
-      compiled_file="$(POWCOMP_DIR="$(dirname "$file")" files:compile-file <"$file")"
+      code="$(cat "$file")"$'\n\n'
+      compiled_file="$(POWCOMP_DIR="$(dirname "$file")" files:compile-file <<<"$code")"
 
       setvar "$out" "$compiled_file"$'\n'
       ;;
@@ -4570,6 +4612,7 @@ __shadowing_sh:compile() {
 
       setvar "$out" "if $condition; then :; else >&2 cat $message$NL exit 1; fi"
       ;;
+
     and|pipe|file-input)
       local left_ast right_ast
       local left right op
@@ -4663,6 +4706,10 @@ __shadowing_sh:compile() {
       setvar "$out" "$result"
       ;;
 
+    empty-substitution)
+      set_substitution "\${NOTHING:+}"
+      ;;
+
     command-substitution)
       local call_ast call
 
@@ -4696,12 +4743,14 @@ __shadowing_sh:compile() {
       ;;
 
     for)
-      local varname
+      local varname loc=''
       local elements block
 
       backend:compile-children $expr varname elements block
 
-      setvar "$out" "for $varname in $elements; do"$'\n'"${block:2:-2}"$'\ndone'
+      ${INSIDE_FUNCTION-false} && loc="local $varname; "
+
+      setvar "$out" "${loc}for $varname in $elements; do"$'\n'"${block:2:-2}"$'\ndone'
       ;;
 
     while)
@@ -4834,18 +4883,28 @@ __shadowing_sh:compile() {
       ast:children $expr name_ast args_ast block_ast
 
       backend:compile $name_ast name
-      backend:compile $block_ast block
+      INSIDE_FUNCTION=true backend:compile $block_ast block
 
       setvar "$out" "$name() $block"
       ;;
 
     local)
-      local result="local" child_ast child
+      local result child_ast child
       ast:from $expr children expr_children
+
+      if ${INSIDE_FUNCTION-false}; then
+        result="local"
+      else
+        result=":"
+      fi
 
       for child_ast in $expr_children; do
         sh:compile $child_ast child
-        result="$result $child"
+        if ${INSIDE_FUNCTION-false}; then
+          result+=" $child"
+        else
+          result+="; $child"
+        fi
       done
 
       setvar "$out" "$result"
@@ -4979,12 +5038,14 @@ powscript:make-fifo() {
 }
 
 powscript:clean-up() {
+  local exit_code=$?
+  POWSCRIPT_CDEBUG_STOP=false
   [ -d "$PowscriptTempDirectory" ] && rm -r "$PowscriptTempDirectory"
   [ -n "$PowscriptGuestProcess"  ] && ps -p "$PowscriptGuestProcess" >/dev/null && kill -QUIT "$PowscriptGuestProcess"
-  exit 0
+  exit $exit_code
 }
 
-trap '{ POWSCRIPT_CDEBUG_STOP=false; powscript:clean-up; }' TERM INT QUIT ABRT EXIT
+trap 'powscript:clean-up' TERM INT QUIT ABRT EXIT
 
 # FILE: compiler/temp.bash
 powscript:help() {
@@ -5042,6 +5103,7 @@ powscript:parse-options() {
       '-d'|'--debug')
         PowscriptInteractiveMode=false
         PowscriptCompileFile=false
+        POWSCRIPT_DEBUG=true
         shift $#
         ;;
       '--to')
@@ -5126,7 +5188,6 @@ if $ASYNC is 1
 
 files:compile() {
   local output="${1-/dev/stdout}"
-  export POWSCRIPT_ALLOW_INCOMPLETE=true
   shift
 
   files:start-code    "$output"
@@ -5140,7 +5201,7 @@ files:compile-files() {
 
   for file in "$@"; do
     POWCOMP_DIR="$(dirname "$file")"
-    (files:compile-file "$output" <<<"$(cat "$file")"$'\n\n')
+    files:compile-file "$output" <<<"$(cat "$file")"$'\n\n'
   done
 }
 
@@ -5154,20 +5215,20 @@ files:compile-file() {
   while ! stream:end; do
     ast:parse ast
     ast:lower $ast ast_lowered
-    backend:compile $ast_lowered >>"$output"
+    backend:compile $ast_lowered 1>>"$output"
   done
 }
 
 files:start-code() {
-  (files:compile-file "$1" <<<"$PowscriptFileStart")
+  files:compile-file "$1" <<<"$PowscriptFileStart"$'\n\n'
 
   if ${PowscriptIncludeStd-true}; then
-    (files:compile-file "$1" <<<"${PowscriptLib[std]}")
+    files:compile-file "$1" <<<"${PowscriptLib[std]}"$'\n\n'
   fi
 }
 
 files:end-code() {
-  (files:compile-file "$1" <<<"$PowscriptEndFile")
+  files:compile-file "$1" <<<"$PowscriptEndFile"$'\n\n'
 }
 
 
@@ -5415,7 +5476,7 @@ interactive:format-powscript-prompt() {
 # FILE: compiler/interactive.bash
 # FILE: compiler/compiler.bash
 
-PowscriptLib[std]=$'NL="\n"\n\npass()\n  true\n\nmap(A f)\n  shift 2\n  expand\n    for k,v of ~A\n      ~f $@ $k $v\n\nmappipe(f)\n  shift\n  while read -r line\n    $f $@ $line\n\ncurry(out f x)\n  expand\n    ~out()\n      ~f \'~x\' $@\n\nkeys(x y)\n  echo $x\n\nvalues(x y)\n  echo $y\n\nisset(s)\n  if -n $s\n    return 1\n  else\n    return 0\n\nempty(s)\n  if -z $s\n    return 1\n  else\n    return 0\n\nfilter(A p)\n  shift 2\n  expand\n    for k,v of ~A\n      if ~p $@ $k $v\n        echo $v\n\ncompose(fg f g)\n  expand\n    ~fg()\n      ~f $(~g $@)\n\npick(A k)\n  if -z $k\n    return 1\n  expand\n    local output=${~A[~k]}\n  if -n $output\n    echo $output\n\nfirst(A)\n  if -z $A\n    return 1\n  expand\n    echo ${~A[0]}\n\nlast(A)\n  if -z $A\n    return 1\n  expand\n    echo ${~A[-1]}\n\nrequire_env(var)\n  if not -v $var\n    echo "The variable $var is unset. Exitting." >&2\n    exit 1'
+PowscriptLib[std]=$'NL="\n"\n\npass()\n  true\n\nmap(A f)\n  shift 2\n  expand\n    for k,v of ~A\n      ~f $@ $k $v\n\nmappipe(f)\n  shift\n  while read -r line\n    $f $@ $line\n\ncurry(out f x)\n  expand\n    ~out()\n      ~f \'~x\' $@\n\nkeys(x y)\n  echo $x\n\nvalues(x y)\n  echo $y\n\nisset(s)\n  if -n $s\n    return 1\n  else\n    return 0\n\nempty(s)\n  if -z $s\n    return 1\n  else\n    return 0\n\nfilter(A p)\n  shift 2\n  expand\n    for k,v of ~A\n      if ~p $@ $k $v\n        echo $v\n\ncompose(fg f g)\n  expand\n    ~fg()\n      ~f $(~g $@)\n\npick(A k)\n  if -z $k\n    return 1\n  expand\n    local output=${~A[~k]}\n  if -n $output\n    echo $output\n\nfirst(A)\n  if -z $A\n    return 1\n  expand\n    echo ${~A[0]}\n\nlast(A)\n  if -z $A\n    return 1\n  expand\n    echo ${~A[-1]}\n\nrequire_env(var)\n  expand\n    pass ${~var:set! "The variable ~var is unset. Exitting."}'
 
 powscript:parse-options "$@"
 backend:select $PowscriptBackend
@@ -5429,8 +5490,10 @@ if powscript:is-interactive; then
   interactive:start
 elif powscript:in-compile-mode; then
   powscript:compile
-else
-  backend:run "$(powscript:compile)"
+elif ! ${POWSCRIPT_DEBUG-false}; then
+  backend:run "$(powscript:compile)" || exit 1
 fi
 
-${POWSCRIPT_DEBUG-false} || powscript:clean-up
+if ! ${POWSCRIPT_DEBUG-false}; then
+  powscript:clean-up
+fi
