@@ -22,3 +22,5 @@ X=3
 Y=X
 
 assert ${Y:indirect} is 3
+assert ${} is ''
+assert ${A:empty '\$\$""'} is '\$\$""'

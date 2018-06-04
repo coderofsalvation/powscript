@@ -77,9 +77,9 @@ ast:to-double-string() {
 
   if ast:is $str string; then
     ast:from $str value str_value
-    str_value="${str_value/\\/\\\\}"
-    str_value="${str_value/\"/\\\"}"
-    str_value="${str_value/\$/\\\$}"
+    str_value="${str_value//\\/\\\\}"
+    str_value="${str_value//\"/\\\"}"
+    str_value="${str_value//\$/\\\$}"
     ast:set $str head  double-string
     ast:set $str value "$str_value"
 
