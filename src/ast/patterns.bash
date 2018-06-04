@@ -4,25 +4,56 @@
 #
 
 ast:parse:pattern() { #<<NOSHADOW>>
-  local out="$1"
+  local pattern_type="$1" out="$2"
   local nclass class value glued
-  local pattern unfinished=true
+  local pattern unfinished=true nesting=0
+
+  finish() {
+    unfinished=false
+    token:backtrack
+  }
 
   pattern=""
+
   while $unfinished; do
     token:get -v value -c class -g glued
 
-    if ! $glued; then
+    if [ -n "$pattern" ] && ! $glued; then
       pattern+=" "
     fi
 
     case "$class" in
       newline|eof)
-        unfinished=false
-        token:backtrack
+        finish
         ;;
-      name|special)
-        pattern+="$value"
+      name)
+        case "$pattern_type:$value" in
+          ==:or)       finish ;;
+          ==:and)      finish ;;
+          replace:by)  finish ;;
+          *)           pattern+="$value" ;;
+        esac
+        ;;
+      special)
+        case "$pattern_type:$value:$nesting" in
+          string-op:[{]:*)
+            nesting=$((nesting+1))
+            pattern+="$value"
+            ;;
+
+          string-op:[}]:0)
+            finish
+            ;;
+
+          string-op:[}]:*)
+            pattern+="$value"
+            nesting=$((nesting-1))
+            ;;
+
+          *)
+            pattern+="$value"
+            ;;
+          esac
         ;;
       string)
         pattern+="'$value'"
@@ -32,5 +63,5 @@ ast:parse:pattern() { #<<NOSHADOW>>
 
   ast:make "$out" pattern "$pattern"
 }
-noshadow ast:parse:pattern
+noshadow ast:parse:pattern 1
 

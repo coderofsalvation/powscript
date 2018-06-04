@@ -246,7 +246,7 @@ ast:parse:case() { #<<NOSHADOW>>
     ast:error "case blocks must be inside switch blocks"
   fi
 
-  ast:parse:pattern pattern
+  ast:parse:pattern 'case' pattern
   ast:parse:require-newline "case statement"
   ast:parse:block cs block
 
@@ -325,7 +325,7 @@ ast:parse:conditional() { #<<NOSHADOW>>
     else
       local left=$initial right
       if [ "$value" = match ]; then
-        ast:parse:pattern right
+        ast:parse:pattern '==' right
       else
         ast:parse:expr right
       fi

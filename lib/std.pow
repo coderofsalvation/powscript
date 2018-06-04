@@ -1,3 +1,9 @@
+NL="
+"
+
+pass()
+  true
+
 map(A f)
   shift 2
   expand

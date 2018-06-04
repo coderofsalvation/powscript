@@ -18,19 +18,29 @@ noshadow ast:parse:command-call 1
 
 ast:parse:command-call-with-cmd() { #<<NOSHADOW>>
   local assigns=$1 command_ast=$2 out="$3"
-  local expression child predicate
 
-  ast:make expression call '' $assigns $command_ast
+  if ast:is $command_ast name math; then
+    local state
+    ast:parse:math "$out"
+    ast:last-state state
+    case "$state" in
+      '(') token:require special ')' ;;
+      '[') token:require special ']' ;;
+      '{') token:require special '}' ;;
+    esac
 
-  if ast:state-is ==; then
-    predicate='ast:parse:not-binary-conditional %'
   else
-    predicate='true'
+    local expression child predicate
+    ast:make expression call '' $assigns $command_ast
+
+    if ast:state-is ==; then
+      predicate='ast:parse:not-binary-conditional %'
+    else
+      predicate='true'
+    fi
+    ast:parse:sequence $expression "$predicate"
+    setvar "$out" $expression
   fi
-
-  ast:parse:sequence $expression "$predicate"
-
-  setvar "$out" $expression
 }
 noshadow ast:parse:command-call-with-cmd 2
 

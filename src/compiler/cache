@@ -1,0 +1,44 @@
+PowscriptDirectory="$HOME/.powscript"
+PowscriptCacheDirectory="$PowscriptDirectory/cache"
+
+declare -A PowscriptLibCache
+
+cache:library() {
+  cache:update
+  echo "${PowscriptLibCache[$1]}"
+}
+
+cache:update() {
+  if cache:init-directory || ! version:up-to-date "$(cache:version)"; then
+    cache:update-libraries
+    cache:update-version
+  fi
+}
+
+cache:update-version() {
+  echo "$(version:number)" >"$PowscriptCacheDirectory/version"
+}
+
+cache:version() {
+  cat "$PowscriptCacheDirectory/version"
+}
+
+cache:update-libraries() {
+  local lib code
+  for lib in "${!PowscriptLib[@]}"; do
+    code="${PowscriptLib[$lib]}"
+    PowscriptLibCache[$lib]="$(powscript:compile-file '/dev/stdout' <<<"$code")"
+  done
+}
+
+cache:init-directory() {
+  if [ ! -d "$PowscriptDirectory" ]; then
+    mkdir "$PowscriptDirectory"
+    mkdir "$PowscriptCacheDirectory"
+    cache:update-version
+    return 0
+  else
+    return 1
+  fi
+}
+

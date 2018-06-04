@@ -12,7 +12,7 @@ ast:parse:math() { #<<NOSHADOW>>
 
   ast:parse:validate-math-operand $expr
 
-  if token:next-is name; then
+  if token:next-is name && ! ${NOBC-false}; then
     token:get -v float_precision
     if [[ "$float_precision" =~ [0-9]+ ]]; then
       ast:make math_expr math-float "$float_precision" $expr

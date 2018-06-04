@@ -10,12 +10,22 @@ bash:compile() { #<<NOSHADOW>>
 
   ast:from $expr head expr_head
 
+  set_substitution() {
+    if ${NO_QUOTING-false}; then
+      setvar "$out" "$1"
+    else
+      setvar "$out" "\"$1\""
+    fi
+  }
+
   case "$expr_head" in
     name|string|assign|cat|if|elif|else|end_if|call|for|\
     while|expand|command-substitution|switch|case|require|\
     pattern|and|pipe|elements|simple-substitution|assert|\
     function-def|local|block|math|math-top|math-float|\
-    math-assigned|assign-sequence|readline|file-input)
+    math-assigned|assign-sequence|readline|file-input|\
+    string-length|string-index|string-from|string-slice|\
+    string-removal|string-default)
 
       sh:compile $expr "$out"
       ;;
@@ -144,6 +154,25 @@ bash:compile() { #<<NOSHADOW>>
       done
 
       setvar "$out" "$result)"
+      ;;
+
+    string-replace)
+      local name pattern_ast by_ast op_ast
+      local pattern by op
+
+      ast:from $expr value name
+      ast:children $expr pattern_ast by_ast op_ast
+
+      backend:compile $pattern_ast pattern
+      backend:compile $by_ast      by
+      backend:compile $op_ast      op
+
+      pattern="${pattern//\//\\\/}"
+      by="${by//\//\\\/}"
+
+      pattern="${pattern% }"
+
+      set_substitution "\${$name$op$pattern/$by}"
       ;;
 
     condition)

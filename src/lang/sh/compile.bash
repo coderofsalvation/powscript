@@ -10,6 +10,15 @@ sh:compile() { #<<NOSHADOW>>
 
   ast:from $expr head expr_head
 
+  set_substitution() {
+    if ${NO_QUOTING-false}; then
+      setvar "$out" "$1"
+    else
+      setvar "$out" "\"$1\""
+    fi
+  }
+
+
   case "$expr_head" in
     name)
       ast:from $expr value "$out"
@@ -170,11 +179,7 @@ sh:compile() { #<<NOSHADOW>>
       if ast:is $call_ast math-top; then
         setvar "$out" "${call:5}"
       else
-        if ${NO_QUOTING-false}; then
-          setvar "$out" "\$( $call )"
-        else
-          setvar "$out" "\"\$( $call )\""
-        fi
+        set_substitution "\$( $call )"
       fi
       ;;
 
@@ -241,12 +246,96 @@ sh:compile() { #<<NOSHADOW>>
     simple-substitution)
       local name
       ast:from $expr value name
+      set_substitution "\${$name}"
+      ;;
 
-      if ${NO_QUOTING-false}; then
-        setvar "$out" "\${$name}"
-      else
-        setvar "$out" "\"\${$name}\""
-      fi
+    string-length)
+      local name
+      ast:from $expr value name
+      set_substitution "\${#$name}"
+      ;;
+
+    string-slice)
+      local name start_ast len_ast
+      local start len
+
+      ast:from $expr value name
+      ast:children $expr start_ast len_ast
+
+      backend:compile $start_ast start
+      backend:compile $len_ast   len
+
+      start="${start#echo \$(( }"
+      start="${start% ))}"
+
+      len="${len#echo \$(( }"
+      len="${len% ))}"
+
+      set_substitution "\${$name:$start:$len}"
+      ;;
+
+    string-from)
+      local name from_ast to_ast
+      local from to from_cond to_cond len
+
+      ast:from $expr value name
+      ast:children $expr from_ast to_ast
+
+      backend:compile $from_ast from
+      backend:compile $to_ast   to
+
+      from="${from#echo \$(( }"
+      from="${from% ))}"
+
+      to="${to#echo \$(( }"
+      to="${to% ))}"
+
+      from="\$(($from < 0 ? 0 : $from))"
+      to="\$(($to < 0 ? -1 : $to))"
+      len="\$(($to < $from ? 0 : $to-$from+1))"
+
+      set_substitution "\${$name:$from:$len}"
+      ;;
+
+    string-index)
+      local name index_ast
+      local index
+
+      ast:from $expr value name
+      ast:children $expr index_ast
+
+      backend:compile $index_ast index
+
+      index="${index#echo \$(( }"
+      index="${index% ))}"
+
+      set_substitution "\${$name:$index:1}"
+      ;;
+
+    string-removal)
+      local name pattern_ast op_ast
+      local pattern op
+
+      ast:from $expr value name
+      ast:children $expr pattern_ast op_ast
+
+      backend:compile $pattern_ast pattern
+      backend:compile $op_ast op
+
+      set_substitution "\${$name$op$pattern}"
+      ;;
+
+    string-default)
+      local name default_ast op_ast
+      local default op
+
+      ast:from $expr value name
+      ast:children $expr default_ast op_ast
+
+      backend:compile $default_ast default
+      backend:compile $op_ast op
+
+      set_substitution "\${$name$op$default}"
       ;;
 
     math-float)

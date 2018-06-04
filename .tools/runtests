@@ -83,6 +83,9 @@ testdirectory "test/strings" './powscript --no-std ${file}' 'file' '.*\.pow'
 header "Control flow tests:"
 testdirectory "test/control-flow" './powscript --no-std ${file}' 'file' '.*\.pow'
 
+header "Math tests:"
+testdirectory "test/math" './powscript --no-std ${file}' 'file' '.*\.pow'
+
 header "Evaluation tests:"
 testdirectory "test/test-files" './powscript ${file}' 'file' '.*\.pow'
 

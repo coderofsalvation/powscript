@@ -1,0 +1,19 @@
+X=abcdef
+
+assert ${X:length} is 6
+assert ${X:index 0} is a
+assert ${X:index 2} is c
+assert ${X:from 1 to 3} is bcd
+assert ${X:from 0 to 3} is abcd
+assert ${X:from -1 to 3} is abcd
+assert ${X:from 0 to -1} is ''
+assert ${X:from 2 to 1} is ''
+assert ${X:from 2 to 2} is c
+assert ${X:slice 1 length 2} is bc
+assert ${X:slice 2 length 3} is cde
+assert ${X:slice 2 length 4} is cdef
+assert ${X:slice 2 length 5} is cdef
+assert ${X:slice 6 length 1} is ''
+assert ${X:slice 0 length 1} is a
+assert ${X:slice 0 length 0} is ''
+
