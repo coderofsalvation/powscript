@@ -281,6 +281,21 @@ ast:parse:assert() { #<<NOSHADOW>>
 }
 noshadow ast:parse:assert
 
+
+# ast:parse:test $out
+#
+# Parses an expression of the form:
+#   test <condition>
+#
+
+ast:parse:test() { #<<NOSHADOW>>
+  local out="$1"
+  ast:parse:conditional "$1"
+  ast:parse:require-newline "test"
+}
+noshadow ast:parse:test
+
+
 # ast:parse:conditional $out
 #
 # Parses an expression of the form:
@@ -292,51 +307,122 @@ noshadow ast:parse:assert
 
 ast:parse:conditional() { #<<NOSHADOW>>
   local out="$1"
-  local condition
-  local initial initial_head initial_value
+  local condition operator
 
-  ast:parse:expr initial
+  ast:parse:seek-conditional-operator operator
 
-  ast:from $initial head  initial_head
-  ast:from $initial value initial_value
-
-  if [ "$initial_head $initial_value" = "name not" ]; then
+  if [ "$operator" = "not" ]; then
+    token:skip
     ast:parse:negated-conditional condition
 
-  elif ast:is-flag $initial; then
-    ast:parse:flag-conditional $initial condition
+  elif [ "$operator" = '-' ]; then
+    local flag
+    ast:parse:expr flag
+    ast:parse:flag-conditional $flag condition
+
+  elif [ -n "$operator" ]; then
+    local left right
+    case "$operator" in
+      '>'|'<'|'<='|'>='|'==')
+        NOBC=true ast:parse:math left
+        token:skip
+        NOBC=true ast:parse:math right
+        ;;
+      match)
+        ast:parse:expr left
+        token:skip
+        ast:parse:pattern '==' right
+        ;;
+      is|isnt|'='|'!=')
+        ast:parse:expr left
+        token:skip
+        ast:parse:expr right
+        ;;
+    esac
+    ast:make condition condition "$operator" $left $right
 
   else
-    local value class is_command=true
+    local initial
+    ast:parse:expr initial
 
-    token:peek -v value -c class
-
-    if [ $class = name ] || [ $class = special ]; then
-      case "$value" in
-        is|isnt|'>'|'<'|'<='|'>='|'!='|'='|'=='|match)
-          is_command=false
-          token:skip
-          ;;
-      esac
-    fi
-
-    if $is_command; then
-      ast:parse:command-conditional $initial condition
+    if ast:is $initial string-test || ast:is $initial array-test; then
+      local zero
+      ast:make zero name '0'
+      ast:make condition condition 'is' $initial $zero
     else
-      local left=$initial right
-      if [ "$value" = match ]; then
-        ast:parse:pattern '==' right
-      else
-        ast:parse:expr right
-      fi
-      ast:make condition condition $value $left $right
+      ast:parse:command-conditional $initial condition
     fi
   fi
   ast:parse:composite-conditional $condition condition
-
   setvar "$out" $condition
 }
 noshadow ast:parse:conditional
+
+
+# ast:parse:seek-conditional-operator $out
+#
+# Look ahead and look for an conditional operator
+#
+
+ast:parse:seek-conditional-operator() { #<<NOSHADOW>>
+  local out="$1"
+  local value class glued stream_position discard_expr
+
+  token:mark-position stream_position
+
+  token:peek -v value -c class
+  case "$value:$class" in
+    "not:name")
+      setvar "$out" 'not'
+      ;;
+    "-:special")
+      token:skip
+      token:peek -v value -c class -g glued
+      case "$value:$class:$glued" in
+        [a-z]:name:true)
+          token:skip
+          token:peek -g glued
+          if ! $glued; then
+            setvar "$out" '-'
+          else
+            token:backtrack
+            token:backtrack
+          fi
+          ;;
+        *)
+          token:backtrack
+          ;;
+      esac
+      ;;
+  esac
+
+  while [ -z "${!out}" ]; do
+    token:get -v value -c class -g glued
+    case "$class" in
+      name|special)
+        case "$value" in
+          is|isnt|'>'|'<'|'<='|'>='|'!='|'='|'=='|match)
+            if ! $glued; then
+              setvar "$out" "$value"
+            fi
+            ;;
+          and|or|"&&"|"||")
+            break
+            ;;
+          \$)
+            token:backtrack
+            ast:parse:expr discard_expr
+            ;;
+        esac
+        ;;
+      newline|eof)
+        break
+        ;;
+    esac
+  done
+  token:return-to-mark $stream_position
+}
+noshadow ast:parse:seek-conditional-operator
 
 
 # ast:parse:negated-conditional $out
@@ -362,15 +448,13 @@ noshadow ast:parse:negated-conditional
 #
 
 ast:parse:flag-conditional() { #<<NOSHADOW>>
-  local initial="$1" out="$2"
-  local minus name flag expr
+  local flag="$1" out="$2"
+  local minus name flagname expr
 
-  ast:children $initial minus name
-  ast:from $name value flag
-  flag="-$flag"
+  ast:from $flag value flagname
 
   ast:parse:expr expr
-  ast:make "$out" condition "$flag" $expr
+  ast:make "$out" condition "-$flagname" $expr
 }
 noshadow ast:parse:flag-conditional 1
 

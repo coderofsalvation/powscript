@@ -4,7 +4,9 @@ powscript_source ast/require.bash      #<<EXPAND>>
 powscript_source ast/sequence.bash     #<<EXPAND>>
 powscript_source ast/expressions.bash  #<<EXPAND>>
 powscript_source ast/math.bash         #<<EXPAND>>
+powscript_source ast/flag.bash         #<<EXPAND>>
 powscript_source ast/commands.bash     #<<EXPAND>>
+powscript_source ast/declare.bash      #<<EXPAND>>
 powscript_source ast/blocks.bash       #<<EXPAND>>
 powscript_source ast/patterns.bash     #<<EXPAND>>
 powscript_source ast/conditionals.bash #<<EXPAND>>
@@ -84,29 +86,34 @@ ast:parse:top() { #<<NOSHADOW>>
     name)
       local expr_value
       ast:from $expr value expr_value
+      if token:next-is special '(' true; then
+        case "$expr_value" in
+          'if'|'for'|'math'|'case'|'while'|'switch'|\
+          'switch'|'await'|'assert'|'require'|'expand'|\
+          'declare'|'test')
+            ast:error "'(' not allowed after reserved name '$expr_value'"
+            ;;
+        esac
+      fi
       case "$expr_value" in
         'if')      ast:parse:if 'if' "$out" ;;
         'for')     ast:parse:for     "$out" ;;
         'case')    ast:parse:case    "$out" ;;
-        'math')    ast:parse:math    "$out" ;;
         'while')   ast:parse:while   "$out" ;;
         'switch')  ast:parse:switch  "$out" ;;
         'await')   ast:parse:await   "$out" ;;
         'assert')  ast:parse:assert  "$out" ;;
         'require') ast:parse:require "$out" ;;
         'expand')  ast:parse:expand  "$out" ;;
-        'declare')
-          local type_ast type
-
-          ast:parse:specific-expr name type_ast
-          ast:from $type_ast value type
-
-          ast:make "$out" declare
-          ast:set "${!out}" value $type
-          ast:parse:sequence "${!out}" 'ast:is % name'
+        'declare') ast:parse:declare "$out" ;;
+        'test')    ast:parse:test    "$out" ;;
+        'math')
+          ast:push-state 'topmath'
+          ast:parse:math "$out"
+          ast:pop-state
           ;;
         *)
-          if token:next-is special '('; then
+          if token:next-is special '(' true; then
             ast:parse:function-definition $expr "$out"
           else
             ast:make assigns assign-sequence
@@ -122,7 +129,7 @@ ast:parse:top() { #<<NOSHADOW>>
       setvar "$out" -1
       ;;
     cat)
-      if token:next-is special '('; then
+      if token:next-is special '(' true; then
          ast:parse:function-definition $expr "$out"
       else
          ast:make assigns assign-sequence

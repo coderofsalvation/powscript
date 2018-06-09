@@ -19,6 +19,10 @@ printf_seq() {
   done
 }
 
+pop() {
+  setvar "$2" "${*:$(($1 + 3))}"
+}
+
 
 # setvar $varname $value
 #

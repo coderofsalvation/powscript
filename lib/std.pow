@@ -1,9 +1,3 @@
-NL="
-"
-
-pass()
-  true
-
 map(A f)
   shift 2
   expand
@@ -26,17 +20,24 @@ keys(x y)
 values(x y)
   echo $y
 
-isset(s)
-  if -n $s
-    return 1
-  else
-    return 0
+set?(s)
+  expand
+    return ${~s:set?}
 
-empty(s)
-  if -z $s
-    return 1
-  else
-    return 0
+unset?(s)
+  expand
+    return ${~s:unset?}
+
+empty?(s)
+  expand
+    return ${~s:empty?}
+
+nonempty?(s)
+  expand
+    return ${~s:nonempty?}
+
+bool(int)
+  return $int
 
 filter(A p)
   shift 2
@@ -59,13 +60,13 @@ pick(A k)
     echo $output
 
 first(A)
-  if -z $A
+  if unset? A
     return 1
   expand
     echo ${~A[0]}
 
 last(A)
-  if -z $A
+  if unset? A
     return 1
   expand
     echo ${~A[-1]}
@@ -73,5 +74,53 @@ last(A)
 require_env(var)
   expand
     pass ${~var:set! "The variable ~var is unset. Exitting."}
+
+ismap?(x)
+  local result k1=__ismap_dummy1 k2=__ismap_dummy2
+  if empty? x
+    return 1
+  expand
+    local ~k1=0 ~k2=0
+    local v
+    test ${~x[~k1]:set?} and v=${~x[~k1]}
+    ~x[~k1]=a
+    ~x[~k2]=b
+    if ${~x[~k1]} is a
+      unset ~x[~k1]
+      unset ~x[~k2]
+      return 0
+    else
+      test ${v:set?} and ~x=$v or unset ~x
+      return 1
+
+copy_map(__A __B)
+  if not ismap? $__A
+    echo "ERROR: in copy_map: $__A is not a map"
+    return 1
+  if not ismap? $__B
+    echo "ERROR: in copy_map: $__B is not a map"
+    return 1
+  expand
+    for __k,__v of ~__A
+      ~__B[$__k]=$__v
+
+copy_array(__A __B)
+  expand
+    for __k,__v of ~__A
+      if not $__k match ^[1-9]+$
+        echo "ERROR: not a valid array key: $__k"
+        return 1
+      ~__B[$__k]=$__v
+
+clear_array(__A)
+  expand
+    for __k in ${~__A:keys}
+      unset ~__A[$__k]
+
+NL="
+"
+
+pass()
+  true
 
 

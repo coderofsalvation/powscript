@@ -3,6 +3,7 @@
 powscript_source lexer/stream.bash #<<EXPAND>>
 powscript_source lexer/tokens.bash #<<EXPAND>>
 powscript_source lexer/states.bash #<<EXPAND>>
+powscript_source lexer/unicode.bash #<<EXPAND>>
 
 
 # token:parse varname
@@ -57,10 +58,16 @@ token:parse() { #<<NOSHADOW>>
       quoted-escape)
         # if the escaped character is special, expand it before
         # putting it in the token, otherwise just put the character
+        local e
         case "$c" in
-          [bfnrtv]) printf -v token "%s\\$c" "$token" ;;
-          *)        token+="$c" ;;
+          [bfnrtv]) printf -v e "\\$c" "$token"  ;;
+          x)        token:parse-unicode-utf-8  e ; move=false ;;
+          u)        token:parse-unicode-utf-16 e ; move=false ;;
+          U)        token:parse-unicode-utf-32 e ; move=false ;;
+          \\)       e='\' ;;
+          *)        e="\\$c" ;;
         esac
+        token+="$e"
         state=double-quotes
         ;;
 
@@ -446,8 +453,8 @@ token:peek() {
 
 
 token:next-is() {
-  local value class res=false
-  token:peek -v value -c class
+  local value class glued res=false
+  token:peek -v value -c class -g glued
   case $# in
     1)
       [ "$class" = "$1" ] && res=true
@@ -455,6 +462,8 @@ token:next-is() {
     2)
       [[ "$class" = "$1" ]] && [[ "$value" = "$2" ]] && res=true
       ;;
+    3)
+      [[ "$class" = "$1" ]] && [[ "$value" = "$2" ]] && [[ "$glued" = "$3" ]] && res=true
   esac
   $res
 }

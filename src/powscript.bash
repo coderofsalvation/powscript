@@ -11,7 +11,9 @@ powscript_source ast/ast.bash            #<<EXPAND>>
 powscript_source lang/backends.bash      #<<EXPAND>>
 powscript_source compiler/compiler.bash  #<<EXPAND>>
 
-powscript_require std #<<REQUIRE>>
+powscript_require std     #<<REQUIRE>>
+powscript_require unicode #<<REQUIRE>>
+powscript_require json    #<<REQUIRE>>
 
 powscript:parse-options "$@"
 backend:select $PowscriptBackend

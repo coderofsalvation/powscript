@@ -1,0 +1,32 @@
+require json
+
+val=''
+typ=''
+obj={}
+
+json_test(json expected_type expected_value)
+  shift 3
+  echo "testing json library: $json"
+  json_parse obj "$json"
+  json_value ${val:ref} obj $@
+  json_type  ${typ:ref} obj $@
+  assert $typ is $expected_type
+  if $expected_value isnt '*' "ERROR: \"$typ\" != \"$expected_type\""
+    assert $val is $expected_value "ERROR: \"$val\" != \"$expected_value\""
+
+json_test '1'     number '1'
+json_test '12'    number '12'
+json_test '2.0'   number '2.0'
+json_test '15.02' number '15.02'
+json_test 'true'  bool   'true'
+json_test 'false' bool   'false'
+json_test '"ab"'  string 'ab'
+json_test '"\n"'  string "\n"
+
+json_test '[1,2]' array  '*'
+json_test '[1,2]' number '1' 0
+json_test '[1,2]' number '2' 1
+
+json_test '{"a":1, "b":2}' object '*'
+json_test '{"a":1, "b":2}' number '1' 'a'
+json_test '{"a":1, "b":2}' number '2' 'b'

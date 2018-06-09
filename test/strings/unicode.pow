@@ -1,0 +1,29 @@
+assert "\x9"              is   "\t"
+assert "\x40"             is   '@'
+assert "\xcf\x89"         is   'ω'
+assert "\xe1\xbd\xa5"     is   'ὥ'
+assert "\xf0\x9f\x90\xb1" is   '🐱'
+
+assert "\u9"          is   "\t"
+assert "\u40"         is   '@'
+assert "\u040"        is   '@'
+assert "\u0040"       is   '@'
+assert "\u3c9"        is   'ω'
+assert "\u03c9"       is   'ω'
+assert "\u1f65"       is   'ὥ'
+assert "\ud83d\udc31" is   '🐱'
+
+assert "\U9"        is "\t"
+assert "\U009"      is "\t"
+assert "\U00000009" is "\t"
+assert "\U00000040" is '@'
+assert "\U000003c9" is 'ω'
+assert "\U0001f431" is '🐱'
+
+assert "\x9x"        is "\tx"
+assert "\x40x"       is "@x"
+assert "\x40a"       is "@a"
+assert "\u40x"       is "@x"
+assert "\u0040a"     is "@a"
+assert "\U40x"       is '@x'
+assert "\U00000040a" is '@a'

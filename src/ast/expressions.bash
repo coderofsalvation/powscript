@@ -8,10 +8,15 @@ powscript_source ast/substitutions.bash #<<EXPAND>>
 #
 
 ast:parse:expr() { #<<NOSHADOW>>
-  local out="$1"
+  local out="$1" allowcat=${2-true}
   local value class glued
   local root root_head=undefined
   local expression exprnum=0 last_expression
+
+  case "$allowcat" in
+    --nocat) allowcat=false ;;
+    --cat)   allowcat=true ;;
+  esac
 
   ast:new root
 
@@ -20,10 +25,16 @@ ast:parse:expr() { #<<NOSHADOW>>
     token:get -v value -c class -g glued
 
     if ${AST_MATH_MODE-false} && [ $class = special ]; then
-      glued=true
+      case "$value" in
+        '+'|'-'|'/'|'*'|'^') glued=true ;;
+      esac
     fi
 
-    if $glued || [ $exprnum = 0 ]; then
+    while ast:state-is '(' && [[ $class =~ (newline|whitespace) ]]; do
+      token:get -v value -c class -g glued
+    done
+
+    if { $glued && $allowcat; } || [ $exprnum = 0 ]; then
       case $class in
         name|string)
           ast:make expression $class "$value"
@@ -83,6 +94,26 @@ ast:parse:expr() { #<<NOSHADOW>>
                 root_head=name
                 ast:clear $root
                 ast:make root name "$value"
+              fi
+              ;;
+
+            ':')
+              if ! ast:state-is '{' && [ $exprnum = 1 ] && ast:is $last_expression name; then
+                local stream_position pcolon_value pcolon_class pcolon_glued
+                token:mark-position stream_position
+                token:skip
+                token:get -v pcolon_value -c pcolon_class -g pcolon_glued
+                token:return-to-mark $stream_position
+
+                if [ "$pcolon_value:$pcolon_class:$pcolon_glued" = "=:special:true" ]; then
+                  ast:clear $root
+                  ast:parse:conditional-assign $last_expression root
+                  ast:from $root head root_head
+                else
+                  ast:make expression name ":"
+                fi
+              else
+                ast:make expression name ":"
               fi
               ;;
 
@@ -177,12 +208,24 @@ ast:parse:expr() { #<<NOSHADOW>>
                 ast:from $root head root_head
 
               else
-                ast:make expression name "$value"
+                if [ "$value" = '-' ] && [ "$exprnum" = 0 ]; then
+                  ast:parse:flag "$value" expression
+                else
+                  ast:make expression name "$value"
+                fi
               fi
               ;;
 
+            '--')
+               ast:parse:flag "$value" expression
+               ;;
+
             *)
-              ast:make expression name "$value"
+              if [ $value = '-' ]; then
+                ast:parse:flag expression
+              else
+                ast:make expression name "$value"
+              fi
               ;;
           esac
           ;;

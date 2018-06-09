@@ -90,18 +90,21 @@ interactive:start() {
               ;;
           esac
         done
-        if ! stream:end; then
-          interactive:get-remaining-input extra_line
-          code="${code:0:$(($# - ${#extra_line}))}"
-        fi
 
-        history -s "$code"
+        while IFS= read -r codeline; do
+          [ -n "$codeline" ] && history -s "$codeline"
+        done <<<"$code"
 
         if $echo_flag; then
           echo "---- CODE ECHO -----"
           echo "$code"
           echo "---------------------"
          fi
+
+        if ! stream:end; then
+          interactive:get-remaining-input extra_line
+          code="${code:0:$(($# - ${#extra_line}))}"
+        fi
 
         if $ast_flag; then
           echo "---- SYNTAX TREE ----"

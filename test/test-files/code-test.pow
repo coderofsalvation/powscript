@@ -93,9 +93,9 @@ switch_test()
 
 
 bar()
-  if isset $1
+  if set? $1
     echo "no argument given"
-  if empty $1
+  if empty? $1
     echo "empty string given"
 
 bar one $@

@@ -421,7 +421,7 @@ when done
   </tr>
 
   <tr>
-    <td align="center"><b>JSON decode</b></td>
+    <td align="center"><b>JSON parsing</b></td>
     <td>
       <pre>
         <code>
@@ -429,8 +429,8 @@ obj={}
 json='{"a": {"b": "c"}}'
         </code>
         <code>
-echo "$json" | json_decode obj
-echo $obj['a-b']
+json_parse obj "$json"
+json_print obj a b
         </code>
       </pre>
     </td>

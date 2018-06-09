@@ -1,0 +1,383 @@
+# usage: echo '{"foo":"bar"}' | json_tokenize | json_parse
+
+json_print()
+  local value
+  json_value ${value:ref} $@ || return 1
+  echo $value
+
+json_print_type()
+  local type
+  json_type ${type:ref} $@ || return 1
+  echo $type
+
+json_value()
+  json_property value $@
+
+json_type()
+  json_property type $@
+
+
+json_property(kind out start_id values)
+  shift 3
+  local id type value
+  if $start_id match ^[0-9]+$
+    shift
+  else
+    values=$start_id
+    start_id=1
+  json_get_id ${id:ref} $start_id $values $@ || return 1
+  expand
+    type=${~values[$id:type]}
+    value=${~values[$id:value]}
+  switch $kind
+    case type
+      out:ref=$type
+    case value
+      switch $type
+        case object|array
+          out:ref=$id
+        case *
+          out:ref=$value
+
+json_get_id(out id values)
+  shift 3
+  if not ismap? $values
+    echo "ERROR: in json_get: $values is not a json object"
+    return 1
+  expand
+    for key in $@
+      id=${~values[$id-$key]}
+  out:ref=$id
+
+json_parse(__out __string)
+  declare map __objects
+  test _json_parse $__out $__string or return 1
+  copy_map __objects $__out
+
+_json_parse(out string)
+  #
+  local index=0
+  local c
+  local state="top"
+  #
+  local unicode1 unicode2
+  #
+  local key=''
+  local value=''
+  declare array value_id_stack
+  declare integer value_stack_pos
+  declare integer value_id
+  declare integer previous_id
+  declare integer next_id
+  #
+  value_id_stack[0]=0
+  value_stack_pos=0
+  value_id=0
+  next_id=1
+  #
+  declare integer state_depth
+  declare array state_list
+  state_depth=0
+  #
+  declare integer line
+  declare integer collumn
+  line=0
+  collumn=0
+  #
+  state_pop()
+    if $state_depth > 0
+      state_depth-=1
+      state=$state_list[$state_depth]
+  #
+  state_push(v)
+    state_list[$state_depth]=$state
+    state_depth+=1
+    state=$v
+  #
+  state_replace(v)
+    state_pop
+    state_push $v
+  #
+  set_type(t)
+    __objects["$value_id:type"]=$t
+  #
+  add_value_to_object()
+    __objects["$previous_id-$key"]=$value_id
+  #
+  add_value_to_array()
+    local index=$__objects[$previous_id:length]
+    __objects["$previous_id-$index"]=$value_id
+    __objects["$previous_id:length"]=$(math index+1)
+  #
+  start_value()
+    previous_id=$value_id
+    value_id=$next_id
+    next_id+=1
+    value_stack_pos+=1
+    value_id_stack[$value_stack_pos]=$value_id
+    state_push 'value'
+  #
+  end_value()
+    __objects["$value_id:value"]="$value"
+    value=
+    value_stack_pos-=1
+    value_id=$previous_id
+    previous_id=$value_id_stack[$value_stack_pos]
+    state_pop
+  #
+  start_array()
+    __objects["$value_id:length"]=0
+  #
+  error(msg)
+    echo "ERROR:$line:$collumn: while parsing json: $msg" >&2
+  #
+  if not ismap? $out
+    error "expected an associative array as an argument, but $out isn't one"; return 1
+  #
+  start_value
+  while $index < ${string:length}
+    c=${string:index index}
+    index+=1
+    #
+    if $c is $NL
+      newline+=1
+      collumn=0
+    else
+      collumn+=1
+    #
+    switch $state
+      case 'value'
+        switch $c
+          case [[:space:]]
+            pass
+          case '{'
+            state_push 'object'
+            state_push 'object-key'
+          case '['
+            start_array
+            state_push 'array-start'
+          case '"'
+            state_push 'string'
+          case '-'
+            state_push 'negative'
+            value='-'
+          case '0'
+            state_push 'after-integer'
+            value='0'
+          case [1-9]
+            value&=$c
+            set_type 'number'
+            state_push 'integer'
+          case 't'
+            value=${string:slice index-1 length 5}
+            switch $value
+              case 'true'|'true'[[:space:]]
+                set_type 'bool'
+                value='true'
+                end_value
+                index+=4
+              case 'true,'|'true]'|'true}'
+                set_type 'bool'
+                value='true'
+                end_value
+                index+=3
+              case *
+                error "unexpected character $c: didn't lead to 'true' ($value...)"; return 1
+          case 'f'
+            value=${string:slice index-1 length 6}
+            switch $value
+              case 'false'|'false'[[:space:]]
+                set_type 'bool'
+                value='false'
+                end_value
+                index+=5
+              case 'false,'|'false]'|'false}'
+                set_type 'bool'
+                value='false'
+                end_value
+                index+=4
+              case *
+                error "unexpected character $c: didn't lead to 'false' ($value...)"; return 1
+          case *
+            error "unexpected character $c"; return 1
+      case 'object-key'
+        switch $c
+          case [[:space:]]
+            pass
+          case '"'
+            state_pop
+            state_push 'object-colon'
+            state_push 'string'
+          case '}'
+            state_pop
+            end_object
+          case *
+            error "unexpected character $c: expected a string as a object key"; return 1
+      case 'object-colon'
+        switch $c
+          case [[:space:]]
+            pass
+          case ':'
+            state_pop
+            start_value
+            add_value_to_object
+          case *
+            error "unexpected character $c: expected a colon (:) after the object key"; return 1
+      case 'object'
+        switch $c
+          case [[:space:]]
+            pass
+          case ','
+            state_push 'object-key'
+          case '}'
+            set_type 'object'
+            state_pop
+            end_value
+          case *
+            error "unexpected character $c: expected ',' or '}' in object"; return 1
+      case 'array-start'
+        switch $c
+          case ']'
+            set_type 'array'
+            state_pop
+            end_value
+          case *
+            index-=1
+            state_replace 'array'
+            start_value
+            add_value_to_array
+      case 'array'
+        switch $c
+          case ','
+             start_value
+             add_value_to_array
+          case ']'
+            set_type 'array'
+            state_pop
+            end_value
+          case *
+            error "expected ',' or '}' in array"; return 1
+      case 'string'
+        switch $c
+          case '"'
+            set_type 'string'
+            state_pop
+            if $state is 'value'
+              end_value
+            elif $state is 'object-colon'
+              key="$value"
+              value=''
+          case '\'
+            state_push 'escape'
+          case *
+            value&=$c
+      case 'escape'
+        state_pop
+        switch $c
+          case '"'|'\'|'/'
+            value&=$c
+          case [bfnrt]
+            local v
+            printf -v v "\\$c"
+            value&=$v
+          case u
+            local unicode offset
+            parse_utf16 -r ${unicode:ref} -o ${offset:ref} ${string:slice index+1 length 8} || return 1
+            value&=$unicode
+            index+=$offset
+          case *
+            error "invalid escape character: $c"; return 1
+      case 'negative'
+        switch $c
+          case 0
+            state_replace 'after-integer'
+            value&=0
+          case [1-9]
+            state_replace 'integer'
+            value&=$c
+          case *
+             error "unexpected character $c: expected a digit from 0 to 9"; return 1
+      case 'integer'
+        switch $c
+          case [0-9]
+            value&=$c
+          case '.'
+            value&='.'
+            state_replace 'floating-point'
+          case [[:space:]]
+            state_pop
+            set_type 'number'
+            end_value
+          case ','|']'|'}'
+            state_pop
+            set_type 'number'
+            end_value
+            index-=1
+          case *
+             error "unexpected character $c: expected a digit from 0 to 9, . or whitespace"; return 1
+      case 'after-integer'
+        switch $c
+          case '.'
+            value&='.'
+            state_replace 'floating-point-start'
+          case [[:space:]]
+            state_pop
+            set_type 'number'
+            end_value
+          case ','|']'|'}'
+            state_pop
+            set_type 'number'
+            end_value
+            index-=1
+          case *
+             error "unexpected character $c: expected . or whitespace"; return 1
+      case 'floating-point-start'
+        switch $c
+          case [0-9]
+            value&=$c
+            state_replace 'floating-point'
+          case *
+             error "unexpected character $c: expected a digit from 0 to 9 after ."; return 1
+      case 'floating-point'
+        switch $c
+          case [0-9]
+            value&=$c
+          case [eE]
+            value&=e
+            state_replace 'float-e'
+          case [[:space:]]
+            state_pop
+            set_type 'number'
+            end_value
+          case ','|']'|'}'
+            state_pop
+            set_type 'number'
+            end_value
+            index-=1
+          case *
+             error "unexpected character $c: expected a digit from 0 to 9, e/E or whitespace."; return 1
+      case 'float-e'
+        switch $c
+          case [0-9]|+|-
+            value&=$c
+            state_replace 'float-e-value'
+          case *
+             error "unexpected character $c: expected a digit from 0 to 9, + or -."; return 1
+      case 'float-e-value'
+        switch $c
+          case [0-9]
+            value&=$c
+          case [[:space:]]
+            state_pop
+            set_type 'number'
+            end_value
+  while $state isnt 'top'
+    switch $state
+      case 'integer'|'floating-point'|'float-e-value'
+        state_pop
+        end_value
+      case *
+        error "premature end of input. ($state)"
+        return 1
+
+

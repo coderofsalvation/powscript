@@ -6,7 +6,14 @@
 ast:parse:math() { #<<NOSHADOW>>
   local out="$1"
   local expr math_expr
-  local float_precision
+  local float_precision math_type
+
+  if ast:state-is topmath; then
+    math_type="top"
+  else
+    math_type="expr"
+  fi
+
 
   AST_MATH_MODE=true ast:parse:expr expr
 
@@ -20,7 +27,7 @@ ast:parse:math() { #<<NOSHADOW>>
       ast:error "expected number for floating point precision in math expression, got $float_precision"
     fi
   else
-    ast:make math_expr math-top '' $expr
+    ast:make math_expr "math-$math_type" '' $expr
   fi
 
   setvar "$out" $math_expr
@@ -52,8 +59,17 @@ ast:parse:math-unary() {
 
 ast:parse:math-binary() {
   local expr="$1" left="$2" op="$3"
-  local right
+  local right class
 
+  token:peek -c class
+  while [[ $class =~ (newline|whitespace) ]]; do
+    token:skip
+    token:peek -c class
+  done
+  if [ $class = eof ] && ${POWSCRIPT_ALLOW_INCOMPLETE-false}; then
+    POWSCRIPT_INCOMPLETE_STATE="m$op"
+    exit
+  fi
   ast:parse:expr right
   ast:parse:validate-math-operand $left
   ast:parse:validate-math-operand $right
@@ -74,21 +90,25 @@ ast:parse:math-binary() {
 #
 
 ast:parse:validate-math-operand() {
-  local operand="$1"
+  local operand="$1" value head
 
   ast:all-from "$operand" -v value -h head
 
   case "$head" in
     name)
-      if [[ "$value" =~ ([a-zA-Z_][a-zA-Z_0-9]*|@) ]]; then
-        ast:set $operand head simple-substitution
-      elif [[ "$value" =~ [0-9]+ ]]; then
+      if [[ "$value" =~ ^[~]?([a-zA-Z_][a-zA-Z_0-9]*|@)$ ]]; then
+        local default_op default_value
+        ast:make default_op    name ":-"
+        ast:make default_value name "0"
+        ast:set $operand head string-default
+        ast:set $operand children "$default_value $default_op"
+      elif [[ "$value" =~ ^(0x[0-9a-fA-F]+|[0-9]+)$ ]]; then
         true
       else
         ast:error "invalid variable name '$value' in math expression"
       fi
       ;;
-    *substitution|math)
+    *substitution|string-*|math)
       ;;
     list)
       local element elements count=0

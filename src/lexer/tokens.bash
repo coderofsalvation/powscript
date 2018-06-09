@@ -104,11 +104,11 @@ token:in-topmost() {
 
 
 token:mark-position() {
-  TokenMark=${Tokens[index]}
+  setvar "$1" ${Tokens[index]}
 }
 
 token:return-to-mark() {
-  Tokens[index]=$TokenMark
+  Tokens[index]="$1"
 }
 
 

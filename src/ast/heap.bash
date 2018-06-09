@@ -37,6 +37,50 @@ ast:make() {
   setvar "$1" "$__newast"
 }
 
+ast:make-from-string() {
+  local __mkstr_out
+  ast:_make-from-string __mkstr_out "$2"
+  setvar "$1" "$__mkstr_out"
+}
+
+ast:_make-from-string() {
+  local out="$1" string="$2"
+  local ast child
+  local trimmed incomplete_marker marker_head marker info head value
+  declare -a children
+
+  while IFS="" read -r line; do
+    trimmed="${line#${line%%[^" "]*}}"
+    incomplete_marker="${trimmed%%[^-]*}"
+    marker_head="${trimmed:${#incomplete_marker}:1}"
+    if [[ ! "$marker_head" = '+' ]]; then
+      marker_head=""
+    fi
+    marker="$incomplete_marker$marker_head"
+    info="${trimmed#$marker}"
+    info="${info#${info%%[^" "]*}}"
+
+    case "$marker" in
+      *+)
+        ast="$info"
+        ;;
+      *)
+        head="${info%% *}"
+        if [ -n "$head" ]; then
+          value="${info#*$head}"
+          value="${value# }"
+          ast:make ast $head "$value"
+          children[${#marker}]=$ast
+        fi
+        ;;
+    esac
+    if [ ${#marker} -gt 0 ]; then
+      ast:push-child ${children[${#marker}-1]} "$ast"
+    fi
+  done <<<"$string"
+  setvar "$out" "${children[0]}"
+}
+
 ast:from() {
   setvar "$3" "${Asts["$2-$1"]}"
 }

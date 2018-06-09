@@ -92,6 +92,9 @@ testdirectory "test/math" './powscript --no-std ${file}' 'file' '.*\.pow'
 header "Evaluation tests:"
 testdirectory "test/test-files" './powscript ${file}' 'file' '.*\.pow'
 
+header "Library tests:"
+testdirectory "test/lib" './powscript ${file}' 'file' '.*\.pow'
+
 header "Interactive mode tests:"
 testdirectory "test/interactive" './powscript --no-std --interactive < ${file}' 'file'
 

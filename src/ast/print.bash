@@ -28,11 +28,11 @@ ast:print-child() {
       printf "'%s'" "$ast_value"
       ;;
     call)
-      local command=${child_array[0]}
+      local command=${child_array[1]}
       local argument
 
       ast:print-child $command
-      for argument in ${child_array[@]:1}; do
+      for argument in ${child_array[@]:2}; do
         printf ' '
         ast:print-child $argument
       done
@@ -84,7 +84,7 @@ ast:print-child() {
       ast:print-child ${child_array[0]}
       printf ')'
       ;;
-    math-top)
+    math-top|math-expr)
       printf 'math '
       ast:print-child ${child_array[0]}
       ;;
@@ -168,11 +168,24 @@ ast:print-child() {
       echo
       ast:print-child ${child_array[3]}
       ;;
-    switch|case|while|expand)
-      printf '%s' "$ast_head"
+    switch|case|while)
+      printf '%s' "$ast_head "
       ast:print-child ${child_array[0]}
       echo
       ast:print-child ${child_array[1]}
+      ;;
+    expand)
+      printf 'expand'
+      echo
+      ast:print-child ${child_array[0]}
+      ;;
+    local)
+      local child
+      printf 'local'
+      for child in ${child_array[@]}; do
+        printf ' '
+        ast:print-child $child
+      done
       ;;
     string-length)
       printf '%s' "\${$ast_value:length}"
@@ -235,6 +248,18 @@ ast:print-child() {
       ast:print-child ${child_array[0]}
       printf ')}'
       ;;
+    string-test)
+      local op
+      printf "\${$ast_value:"
+      ast:from ${child_array[1]} value op
+
+      case "$op" in
+        '+1')  printf  'unset?}'    ;;
+        '+-1') printf  'set?}'      ;;
+        ':+1')  printf 'empty?}'    ;;
+        ':+-1') printf 'nonempty?}' ;;
+      esac
+      ;;
     array-operation)
       local var index subst
       ast:from ${child_array[0]} value var
@@ -247,6 +272,12 @@ ast:print-child() {
     pattern)
       local op
       printf '%s' "$ast_value"
+      ;;
+    flag-double-dash*)
+      printf '%s' "--$ast_value"
+      ;;
+    flag-single-dash*)
+      printf '%s' "-$ast_value"
       ;;
     await*)
       local then

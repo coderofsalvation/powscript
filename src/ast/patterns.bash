@@ -6,20 +6,31 @@
 ast:parse:pattern() { #<<NOSHADOW>>
   local pattern_type="$1" out="$2"
   local nclass class value glued
-  local pattern unfinished=true nesting=0
+  local pattern unfinished=true nesting=0 escaped=false
+  local pattern_expr midpat_expansion pattern_cat catted=false
 
   finish() {
     unfinished=false
     token:backtrack
   }
 
+  ast:make pattern_cat cat ''
   pattern=""
 
   while $unfinished; do
     token:get -v value -c class -g glued
 
-    if [ -n "$pattern" ] && ! $glued; then
+    if { [ -n "$pattern" ] || $catted; } && ! $glued; then
       pattern+=" "
+    fi
+
+    if $escaped; then
+      escaped=false
+      case "$class" in
+        name|special) pattern+="\\$value"   ;;
+        string)       pattern+="\\'$value'" ;;
+      esac
+      continue
     fi
 
     case "$class" in
@@ -51,6 +62,20 @@ ast:parse:pattern() { #<<NOSHADOW>>
             nesting=$((nesting-1))
             ;;
 
+          *:\\:*)
+            escape=true
+            ;;
+
+          *:[$]*:*)
+            token:backtrack
+            ast:make pattern_expr pattern "$pattern"
+            ast:parse:expr midpat_expansion --nocat
+            ast:push-child $pattern_cat $pattern_expr
+            ast:push-child $pattern_cat $midpat_expansion
+            pattern=''
+            catted=true
+            ;;
+
           *)
             pattern+="$value"
             ;;
@@ -62,7 +87,15 @@ ast:parse:pattern() { #<<NOSHADOW>>
     esac
   done
 
-  ast:make "$out" pattern "$pattern"
+  if $catted; then
+    if [ -n "$pattern" ]; then
+      ast:make pattern_expr pattern "$pattern"
+      ast:push-child $pattern_cat $pattern_expr
+    fi
+    setvar "$out" $pattern_cat
+  else
+    ast:make "$out" pattern "$pattern"
+  fi
 }
 noshadow ast:parse:pattern 1
 

@@ -21,11 +21,11 @@ bash:compile() { #<<NOSHADOW>>
   case "$expr_head" in
     name|string|assign|cat|if|elif|else|end_if|call|for|\
     while|expand|command-substitution|switch|case|require|\
-    pattern|and|pipe|elements|simple-substitution|assert|\
+    pattern|and|pipe|elements|simple-substitution|*assert|\
     function-def|local|block|math|math-top|math-float|\
-    math-assigned|assign-sequence|readline|file-input|\
-    string-length|string-removal|string-default|\
-    string-indirect|double-string|empty-substitution)
+    math-assigned|math-expr|assign-sequence|readline|file-input|\
+    string-length|string-removal|string-default|string-test|\
+    string-indirect|double-string|nothing|empty-substitution|flag*)
 
       sh:compile $expr "$out"
       ;;
@@ -41,6 +41,10 @@ bash:compile() { #<<NOSHADOW>>
         array)   result="declare -a" ;;
         map)     result="declare -A" ;;
         string)  result="declare" ;;
+        'global integer') result="declare -gi" ;;
+        'global array')   result="declare -ga" ;;
+        'global map')     result="declare -gA" ;;
+        'global string')  result="declare -g" ;;
       esac
 
       for child_ast in $expr_children; do
@@ -165,10 +169,19 @@ bash:compile() { #<<NOSHADOW>>
 
       backend:compile $index_ast index
 
-      index="${index#echo \$(( }"
-      index="${index% ))}"
-
       set_substitution "\${$name:$index:1}"
+      ;;
+
+    string-slice-from)
+      local name start_ast
+      local start
+
+      ast:from $expr value name
+      ast:children $expr start_ast
+
+      backend:compile $start_ast start
+
+      set_substitution "\${$name:$start}"
       ;;
 
     string-slice)
@@ -180,12 +193,6 @@ bash:compile() { #<<NOSHADOW>>
 
       backend:compile $start_ast start
       backend:compile $len_ast   len
-
-      start="${start#echo \$(( }"
-      start="${start% ))}"
-
-      len="${len#echo \$(( }"
-      len="${len% ))}"
 
       set_substitution "\${$name:$start:$len}"
       ;;
@@ -200,10 +207,10 @@ bash:compile() { #<<NOSHADOW>>
       backend:compile $from_ast from
       backend:compile $to_ast   to
 
-      from="${from#echo \$(( }"
+      from="${from#\$(( }"
       from="${from% ))}"
 
-      to="${to#echo \$(( }"
+      to="${to#\$(( }"
       to="${to% ))}"
 
       from="\$(($from < 0 ? 0 : $from))"
@@ -245,7 +252,7 @@ bash:compile() { #<<NOSHADOW>>
       set_substitution "\${$name$op$pattern/$by}"
       ;;
 
-    array-operation)
+    array-operation|array-test)
       local subst_ast param_ast
       local subst param
 

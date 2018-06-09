@@ -18,7 +18,6 @@ sh:compile() { #<<NOSHADOW>>
     fi
   }
 
-
   case "$expr_head" in
     name)
       ast:from $expr value "$out"
@@ -40,6 +39,22 @@ sh:compile() { #<<NOSHADOW>>
       setvar "$out" "\"$string\""
       ;;
 
+    nothing)
+      setvar "$out" ""
+      ;;
+
+    flag*)
+      local dash='' name
+      ast:from $expr value name
+
+      case "$expr_head" in
+        *single-dash) dash='-'  ;;
+        *double-dash) dash='--' ;;
+      esac
+
+      setvar "$out" "$dash$name"
+      ;;
+
     cat)
       local child compiled result=""
       ast:from $expr children expr_children
@@ -51,26 +66,39 @@ sh:compile() { #<<NOSHADOW>>
       ;;
 
     require)
-      local file_ast file code compiled_file
+      local file_ast ofile file code compiled_file
       ast:from $expr children file_ast
 
       bash:compile $file_ast file
       file="$(eval "echo $file")"
+      ofile="$file"
 
       case "$file" in
         /*) ;;
         *)  file="${POWCOMP_DIR-$PWD}/$file" ;;
       esac
 
-      code="$(cat "$file")"$'\n\n'
-      compiled_file="$(POWCOMP_DIR="$(dirname "$file")" files:compile-file <<<"$code")"
+      if [ -f "$file" ]; then
+        code="$(cat "$file")"$'\n\n'
+      else
+        code="${PowscriptLib[$ofile]}"$'\n\n'
+        if [ -z "$code" ]; then
+          echo "ERROR: $file not found, and $ofile is not a library" >&2
+          if ${POWSCRIPT_ALLOW_INCOMPLETE-false}; then
+            return 1
+          else
+            exit 1
+          fi
+        fi
+      fi
 
+      compiled_file="$(POWCOMP_DIR="$(dirname "$file")" files:compile-file <<<"$code")"
       setvar "$out" "$compiled_file"$'\n'
       ;;
 
-    assert)
+    assert|light-assert)
       local condition_ast message_ast condition message
-      local NL=$'\n'
+      local NL=$'\n' onfailure
 
       ast:children $expr condition_ast message_ast
 
@@ -78,12 +106,23 @@ sh:compile() { #<<NOSHADOW>>
 
       if ast:is $message_ast print_condition; then
         message="Assertation failed: $(ast:print $condition_ast)"
+        message="cat <<'ASSERT_EOF'$NL$message${NL}ASSERT_EOF$NL"
       else
         backend:compile $message_ast message
+        message="echo $message"
       fi
-      message="<<'ASSERT_EOF'$NL$message${NL}ASSERT_EOF$NL"
 
-      setvar "$out" "if $condition; then :; else >&2 cat $message$NL exit 1; fi"
+      case "$expr_head" in
+        assert) onfailure="exit 1" ;;
+        light-assert)
+          if ${INSIDE_FUNCTION-false}; then
+            onfailure="return 1"
+          else
+            onfailure="false"
+          fi
+          ;;
+      esac
+      setvar "$out" "if $condition; then :; else >&2 $message$NL $onfailure; fi"
       ;;
 
     and|pipe|file-input)
@@ -190,8 +229,8 @@ sh:compile() { #<<NOSHADOW>>
 
       backend:compile $call_ast call
 
-      if ast:is $call_ast math-top; then
-        setvar "$out" "${call:5}"
+      if ast:is $call_ast math-expr; then
+        setvar "$out" "$call"
       else
         set_substitution "\$( $call )"
       fi
@@ -303,6 +342,19 @@ sh:compile() { #<<NOSHADOW>>
       set_substitution "\${$name$op$default}"
       ;;
 
+    string-test)
+      local name op_ast def_ast
+      local op def
+
+      ast:from $expr value name
+      ast:children $expr op_ast def_ast
+
+      backend:compile $op_ast  op
+      backend:compile $def_ast def
+
+      set_substitution "\$(( \${$name$op}+$def ))"
+      ;;
+
     math-float)
       local precision child_ast child
 
@@ -319,6 +371,15 @@ sh:compile() { #<<NOSHADOW>>
       NO_QUOTING=true backend:compile $child_ast child
 
       setvar "$out" "echo \$(( $child ))"
+      ;;
+
+    math-expr)
+      local child_ast child
+
+      ast:from $expr children child_ast
+      NO_QUOTING=true backend:compile $child_ast child
+
+      setvar "$out" "\$(( $child ))"
       ;;
 
     math)
@@ -376,11 +437,13 @@ sh:compile() { #<<NOSHADOW>>
         if ${INSIDE_FUNCTION-false}; then
           result+=" $child"
         else
-          result+="; $child"
+          if ast:is $child assign; then
+            result+="; : $child"
+          fi
         fi
       done
 
-      setvar "$out" "$result"
+      setvar "$out" "$result;"
       ;;
 
     declare)
@@ -399,9 +462,9 @@ sh:compile() { #<<NOSHADOW>>
       result='{'
       for child_ast in $expr_children; do
         backend:compile $child_ast child
-        result="$result"$'\n'"$child"
+        [ -n "$child" ] && result="$result"$'\n'"$child"
       done
-      result="$result"$'\n}'
+      result="${result}"$'\n}'
 
       setvar "$out" "$result"
       ;;

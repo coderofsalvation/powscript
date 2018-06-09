@@ -35,6 +35,27 @@ stream:next-character() {
   fi
 }
 
+stream:require-string() {
+  local req="$1" str="" c
+  while [ ${#req} -gt ${#str} ]; do
+    if stream:end; then
+      >&2 echo "ERROR: end of input before the required string '$req' was found"
+    fi
+    stream:get-character c
+    stream:next-character
+    str+=$c
+  done
+  if [ "$str" = "$req" ]; then
+    return 0
+  else
+    >&2 echo "ERROR:$(
+      stream:get-line-number):$(
+      stream:get-collumn):Found '$str' found instead of the required '$req'"
+    return 1
+  fi
+}
+
+
 stream:register-escaped-newline() {
   Stream[line]=" ${Stream[line]}"
   Stream[index]=$((${Stream[index]}+1))

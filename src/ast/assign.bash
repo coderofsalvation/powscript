@@ -33,6 +33,44 @@ ast:parse:assign() {
 }
 
 
+# ast:parse:special-assign $name $out
+#
+# Parse an special assingment of the form:
+#
+# * unset=    <expr>
+# * set=      <expr>
+# * empty=    <expr>
+# * nonempty= <expr>
+# * ref=      <expr>
+#
+
+ast:parse:conditional-assign() { #<<NOSHADOW>>
+  local name="$1" out="$2"
+  local assign_type assign_expr tclass
+
+  token:get -v assign_type -c tclass
+  case "$assign_type:$tclass" in
+    'ref:name')      ;;
+    'set:name')      ;;
+    'unset:name')    ;;
+    'empty:name')    ;;
+    'nonempty:name') ;;
+    *)
+      ast:error "Invalid conditional assign: $assign_type:$tclass"
+      ;;
+  esac
+
+  token:require special '='
+  ast:parse:expr assign_expr
+
+  if [ "$assign_type" = ref ]; then
+    ast:make "$out" assign-ref '' $name $assign_expr
+  else
+    ast:make "$out" assign-conditional "$assign_type" $name $assign_expr
+  fi
+}
+noshadow ast:parse:conditional-assign 1
+
 # ast:parse:math-assign $expr $name $op
 #
 # Parse an math AST to be attributed to a
@@ -97,16 +135,25 @@ ast:parse:concat-assign() {
 
 ast:parse:assign-sequence() { #<<NOSHADOW>>
   local first=$1 out="$2"
-  local seq extra cmd
+  local predicate seq extra cmd
 
   ast:make seq assign-sequence '' $first
 
-  ast:parse:sequence $seq 'ast:is-assign %' extra
-
-  if [ "$extra" = '-1' ]; then
-    setvar "$out" $seq
+  if ast:state-is ==; then
+    predicate='ast:is-assign % && ast:parse:not-binary-conditional %'
   else
-    ast:parse:command-call $seq $extra cmd
+    predicate='ast:is-assign %'
+  fi
+  ast:parse:sequence $seq "$predicate" extra
+
+  if ast:state-is == && ! ast:parse:not-binary-conditional $extra; then
+    setvar "$out" $seq
+
+  elif [ "$extra" = '-1' ]; then
+    setvar "$out" $seq
+
+  else
+    ast:parse:command-call-with-cmd $seq $extra cmd
     setvar "$out" $cmd
   fi
 }

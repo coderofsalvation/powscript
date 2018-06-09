@@ -15,7 +15,7 @@ ast:parse:substitution() { #<<NOSHADOW>>
 
   case "$head" in
     name)
-      if ast:state-is '{' && ! token:next-is special '}'; then
+      if $curly && ! token:next-is special '}'; then
         if token:next-is special ':'; then
           token:require special ':'
           ast:make postcat cat ''
@@ -54,7 +54,11 @@ ast:parse:substitution() { #<<NOSHADOW>>
                 if ast:is $param indirect-indexing-substitution; then
                   ast:error "unimplemented variable substitution (keys used after indexing)"
                 else
-                  ast:make subst array-operation '' $subst $param
+                  if ast:is $param string-test; then
+                    ast:make subst array-test '' $subst $param
+                  else
+                    ast:make subst array-operation '' $subst $param
+                  fi
                 fi
 
               else
@@ -75,7 +79,11 @@ ast:parse:substitution() { #<<NOSHADOW>>
             if ast:is $param indirect-indexing-substitution; then
               ast:error "unimplemented variable substitution (keys used after indexing)"
             else
-              ast:make subst array-operation '' $subst $param
+              if ast:is $param string-test; then
+                ast:make subst array-test '' $subst $param
+              else
+                ast:make subst array-operation '' $subst $param
+              fi
             fi
 
           fi
@@ -164,6 +172,7 @@ noshadow ast:parse:curly-substitution
 # lowercase* <pattern>
 # indirect
 # keys
+# ref
 #
 
 ast:parse:parameter-substitution() { #<<NOSHADOW>>
@@ -185,7 +194,6 @@ ast:parse:parameter-substitution() { #<<NOSHADOW>>
 
   case "$opname" in
     unset|empty)   modifier='='; mclass='string' ;;
-    set|nonempty)  modifier='!'; mclass='name'   ;;
     *fix|replace)  modifier='*'  mclass='name'   ;;
     *case)         modifier='*'  mclass='name'   ;;
   esac
@@ -239,9 +247,13 @@ ast:parse:parameter-substitution() { #<<NOSHADOW>>
     slice)
       local start len
       NOBC=true ast:parse:math start
-      token:require name length
-      NOBC=true ast:parse:math len
-      ast:make "$out" string-slice "$varname" $start $len
+      if token:next-is name length; then
+        token:require name length
+        NOBC=true ast:parse:math len
+        ast:make "$out" string-slice "$varname" $start $len
+      else
+        ast:make "$out" string-slice-from "$varname" $start
+      fi
       ;;
     from)
       local from to
@@ -289,6 +301,13 @@ ast:parse:parameter-substitution() { #<<NOSHADOW>>
       ast:parse:pattern 'string-op' by
       ast:make "$out" string-replace "$varname" $pattern $by $op
       ;;
+    *set\?|*empty\?)
+      local expr op opval def defval
+      ast:conditional-exp-operators "$opname" opval defval
+      ast:make op  name "$opval"
+      ast:make def name "$defval"
+      ast:make "$out" string-test "$varname" $op $def
+      ;;
     unset*|empty*|set*|nonempty*)
       local expr op opval
       case "$opname" in
@@ -314,6 +333,9 @@ ast:parse:parameter-substitution() { #<<NOSHADOW>>
       ast:make "$out" string-default "$varname" $expr $op
       ;;
 
+    ref)
+      ast:make "$out" variable-reference "$varname"
+      ;;
     *)
       ast:error "Invalid string operation: $opname"
       ;;
@@ -321,6 +343,23 @@ ast:parse:parameter-substitution() { #<<NOSHADOW>>
 
 }
 noshadow ast:parse:parameter-substitution 2
+
+ast:conditional-exp-operators() { #<<NOSHADOW>>
+  local opname="$1" op="$2" def="$3"
+  local opval defval
+  case "$opname" in
+    unset\?)    opval='+1'   defval='0';;
+    set\?)      opval='+-1'  defval='1';;
+    empty\?)    opval=':+1'  defval='0';;
+    nonempty\?) opval=':+-1' defval='1';;
+  *)
+    ast:error "Invalid string operation: $opname"
+    ;;
+  esac
+  setvar "$op"  "$opval"
+  setvar "$def" "$defval"
+}
+noshadow ast:conditional-exp-operators 1 2
 
 # ast:parse:command-substitution
 #
