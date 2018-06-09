@@ -18,6 +18,8 @@ powscript_require json    #<<REQUIRE>>
 powscript:parse-options "$@"
 backend:select $PowscriptBackend
 
+cache:update
+
 powscript:compile() {
   printf '' >"$PowscriptOutput"
   files:compile "$PowscriptOutput" "${PowscriptFiles[@]}"

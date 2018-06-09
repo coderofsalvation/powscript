@@ -61,7 +61,7 @@ ast:parse:expr() { #<<NOSHADOW>>
                 root_head=array-length
                 token:skip
               else
-                make:ast root name '$#'
+                ast:make root name '$#'
                 root_head=name
               fi
               ;;

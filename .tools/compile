@@ -105,7 +105,7 @@ else
 fi
 
 read_file() {
-  local line file lib noshadow_mode=false noshadow_func=""
+  local line file lib var val noshadow_mode=false noshadow_func=""
   export RequireOp=add
   export ShadowingOp=trimming_add
   export ShadowingGetFunc=get_noshadow_func
@@ -148,6 +148,11 @@ read_file() {
 
     elif [[ "$line" =~ .*'#<<IGNORE>>' ]]; then
       :
+
+    elif [[ "$line" =~ .*'#<<VAR>>' ]]; then
+      var="${line%%=*}"
+      eval "val=${line#$var=}"
+      add "$var=$val"
 
     elif [[ "$line" =~ .*'#<<NOSHADOW>>' ]]; then
       noshadow_func="dummy()"$'\n'"{"

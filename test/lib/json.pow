@@ -10,8 +10,8 @@ json_test(json expected_type expected_value)
   json_parse obj "$json"
   json_value ${val:ref} obj $@
   json_type  ${typ:ref} obj $@
-  assert $typ is $expected_type
-  if $expected_value isnt '*' "ERROR: \"$typ\" != \"$expected_type\""
+  assert $typ is $expected_type "ERROR: \"$typ\" != \"$expected_type\""
+  if $expected_value isnt '*'
     assert $val is $expected_value "ERROR: \"$val\" != \"$expected_value\""
 
 json_test '1'     number '1'

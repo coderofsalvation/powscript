@@ -2472,7 +2472,7 @@ __shadowing_ast:parse:expr() {
                 root_head=array-length
                 token:skip
               else
-                make:ast root name '$#'
+                ast:make root name '$#'
                 root_head=name
               fi
               ;;
@@ -5632,9 +5632,10 @@ __shadowing_sh:compile() {
 
       if [ -f "$file" ]; then
         code="$(cat "$file")"$'\n\n'
+        compiled_file="$(POWCOMP_DIR="$(dirname "$file")" files:compile-file <<<"$code")"
       else
-        code="${PowscriptLib[$ofile]}"$'\n\n'
-        if [ -z "$code" ]; then
+        compiled_file="$(cache:library $ofile)"
+        if [ -z "$compiled_file" ]; then
           echo "ERROR: $file not found, and $ofile is not a library" >&2
           if ${POWSCRIPT_ALLOW_INCOMPLETE-false}; then
             return 1
@@ -5644,7 +5645,6 @@ __shadowing_sh:compile() {
         fi
       fi
 
-      compiled_file="$(POWCOMP_DIR="$(dirname "$file")" files:compile-file <<<"$code")"
       setvar "$out" "$compiled_file"$'\n'
       ;;
 
@@ -6143,6 +6143,8 @@ powscript:help() {
   options:
     -h|--help             Display this message and exit.
 
+    -v|--version          Display version number and exit.
+
     -i|--interactive      Launch interactive mode.
                           Default if no input files are given.
 
@@ -6164,6 +6166,103 @@ powscript:help() {
   '
 }
 # FILE: compiler/helptext.bash
+POWSCRIPT_VERSION=1.0.28
+
+version:number() {
+  echo "$POWSCRIPT_VERSION"
+}
+
+version:up-to-date() {
+  [ "$(version:major-of "$1")" -ge "$(version:major-of "$POWSCRIPT_VERSION")" ] ||
+  [ "$(version:minor-of "$1")" -ge "$(version:minor-of "$POWSCRIPT_VERSION")" ] ||
+  [ "$(version:patch-of "$1")" -ge "$(version:patch-of "$POWSCRIPT_VERSION")" ]
+}
+
+version:major-of() {
+  echo "${1%%.*}"
+}
+
+version:minor-of() {
+  local minor_patch="${1#*.}"
+  echo "${minor_patch%.*}"
+}
+
+version:patch-of() {
+  echo "${1##*.}"
+}
+# FILE: compiler/version.bash
+PowscriptDirectory="$HOME/.powscript"
+PowscriptCacheDirectory="$PowscriptDirectory/cache"
+
+declare -gA PowscriptLibCache
+
+cache:init() {
+  for lib in "${!PowscriptLib[@]}"; do
+    PowscriptLibCache[$lib]="$(<"$PowscriptCacheDirectory/lib/$lib.$PowscriptBackend")"
+  done
+}
+
+cache:library() {
+  cache:update
+  echo "${PowscriptLibCache[$1]}"
+}
+
+cache:remove() {
+  rm -r "$PowscriptCacheDirectory"
+}
+
+cache:update() {
+  if cache:init-directory || ! cache:up-to-date; then
+    cache:update-libraries
+    cache:update-version
+  elif [ "${#PowscriptLibCache[@]}" = 0 ]; then
+    cache:init
+  fi
+}
+
+cache:up-to-date() {
+  version:up-to-date "$(cache:version)" || return 1
+  for lib in "${!PowscriptLib[@]}"; do
+    [ -f "$PowscriptCacheDirectory/lib/$lib.$PowscriptBackend" ] || return 1
+  done
+}
+
+cache:update-version() {
+  echo "$(version:number)" >"$PowscriptCacheDirectory/version"
+}
+
+cache:version() {
+  if [ -f "$PowscriptCacheDirectory/version" ]; then
+    cat "$PowscriptCacheDirectory/version"
+  else
+    echo "0.0.0"
+  fi
+}
+
+cache:update-libraries() {
+  local lib code
+  backend:select "$PowscriptBackend"
+  for lib in "${!PowscriptLib[@]}"; do
+    code="${PowscriptLib[$lib]}"$'\n\n'
+    PowscriptLibCache[$lib]="$(files:compile-file '/dev/stdout' <<<"$code")"
+    echo "${PowscriptLibCache[$lib]}" >"$PowscriptCacheDirectory/lib/$lib.$PowscriptBackend"
+  done
+}
+
+cache:init-directory() {
+  if [ ! -d "$PowscriptDirectory" ]; then
+    mkdir "$PowscriptDirectory"
+  fi
+  if [ ! -d "$PowscriptCacheDirectory" ]; then
+    mkdir "$PowscriptCacheDirectory"
+    mkdir "$PowscriptCacheDirectory/lib"
+    cache:update-version
+    return 0
+  else
+    return 1
+  fi
+}
+# FILE: compiler/cache.bash
 PowscriptBackend=bash
 PowscriptInteractiveMode=nofile
 PowscriptCompileFile=false
@@ -6211,6 +6310,10 @@ powscript:parse-options() {
         shift
         PowscriptIncludeStd=false
         ;;
+      '--update-cache')
+        shift
+        cache:remove
+        ;;
       '-c'|'--compile')
         PowscriptCompileFile=true
         shift
@@ -6224,6 +6327,12 @@ powscript:parse-options() {
           PowscriptInteractiveMode=no
         fi
         shift
+        ;;
+
+      '-v'|'--version')
+        shift
+        version:number
+        exit 0
         ;;
 
       '-'*)
@@ -6289,7 +6398,7 @@ files:compile-files() {
 
   for file in "$@"; do
     POWCOMP_DIR="$(dirname "$file")"
-    files:compile-file "$output" <<<"$(cat "$file")"$'\n\n'
+    files:compile-file "$output" <<<"$(<"$file")"$'\n\n'
   done
 }
 
@@ -6311,7 +6420,7 @@ files:start-code() {
   files:compile-file "$1" <<<"$PowscriptFileStart"$'\n\n'
 
   if ${PowscriptIncludeStd-true}; then
-    files:compile-file "$1" <<<"${PowscriptLib[std]}"$'\n\n'
+    echo "$(cache:library std)"$'\n\n' >>"$1"
   fi
 }
 
@@ -6346,7 +6455,7 @@ interactive:start() {
   exec 4<>"$rfifo"
 
   if ${PowscriptIncludeStd-true}; then
-    files:compile-file "$wfifo" <<<"${PowscriptLib[std]}"$'\n\n'
+    echo "$(cache:library std)" >>"$wfifo"
   fi
 
   if [ -f "$HOME/.powrc" ]; then
@@ -6573,6 +6682,8 @@ PowscriptLib[json]=$'# usage: echo \'{"foo":"bar"}\' | json_tokenize | json_pars
 
 powscript:parse-options "$@"
 backend:select $PowscriptBackend
+
+cache:update
 
 powscript:compile() {
   printf '' >"$PowscriptOutput"

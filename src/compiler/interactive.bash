@@ -23,7 +23,7 @@ interactive:start() {
   exec 4<>"$rfifo"
 
   if ${PowscriptIncludeStd-true}; then
-    files:compile-file "$wfifo" <<<"${PowscriptLib[std]}"$'\n\n'
+    echo "$(cache:library std)" >>"$wfifo"
   fi
 
   if [ -f "$HOME/.powrc" ]; then

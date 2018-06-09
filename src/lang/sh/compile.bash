@@ -80,9 +80,10 @@ sh:compile() { #<<NOSHADOW>>
 
       if [ -f "$file" ]; then
         code="$(cat "$file")"$'\n\n'
+        compiled_file="$(POWCOMP_DIR="$(dirname "$file")" files:compile-file <<<"$code")"
       else
-        code="${PowscriptLib[$ofile]}"$'\n\n'
-        if [ -z "$code" ]; then
+        compiled_file="$(cache:library $ofile)"
+        if [ -z "$compiled_file" ]; then
           echo "ERROR: $file not found, and $ofile is not a library" >&2
           if ${POWSCRIPT_ALLOW_INCOMPLETE-false}; then
             return 1
@@ -92,7 +93,6 @@ sh:compile() { #<<NOSHADOW>>
         fi
       fi
 
-      compiled_file="$(POWCOMP_DIR="$(dirname "$file")" files:compile-file <<<"$code")"
       setvar "$out" "$compiled_file"$'\n'
       ;;
 

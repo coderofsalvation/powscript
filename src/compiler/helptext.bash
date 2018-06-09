@@ -5,6 +5,8 @@ powscript:help() {
   options:
     -h|--help             Display this message and exit.
 
+    -v|--version          Display version number and exit.
+
     -i|--interactive      Launch interactive mode.
                           Default if no input files are given.
 

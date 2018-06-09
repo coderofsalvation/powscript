@@ -16,7 +16,7 @@ files:compile-files() {
 
   for file in "$@"; do
     POWCOMP_DIR="$(dirname "$file")"
-    files:compile-file "$output" <<<"$(cat "$file")"$'\n\n'
+    files:compile-file "$output" <<<"$(<"$file")"$'\n\n'
   done
 }
 
@@ -38,7 +38,7 @@ files:start-code() {
   files:compile-file "$1" <<<"$PowscriptFileStart"$'\n\n'
 
   if ${PowscriptIncludeStd-true}; then
-    files:compile-file "$1" <<<"${PowscriptLib[std]}"$'\n\n'
+    echo "$(cache:library std)"$'\n\n' >>"$1"
   fi
 }
 

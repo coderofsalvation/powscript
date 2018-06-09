@@ -1,13 +1,13 @@
-POWSCRIPT_VERSION="$(grep -e 's/"version":\"(.*)\"/\1/g' "$PowscriptSourceDirectory/../package.json")" #<<VAR>>
+POWSCRIPT_VERSION="$(grep -o -e '"version":.*' "$PowscriptSourceDirectory/../package.json" | sed -e 's/"version":[ ]*"\(.*\)",/\1/g')" #<<VAR>>
 
 version:number() {
   echo "$POWSCRIPT_VERSION"
 }
 
 version:up-to-date() {
-  [ $(version:major-of "$1") -ge $(version:major-of "$POWSCRIPT_VERSION") ] ||
-  [ $(version:minor-of "$1") -ge $(version:minor-of "$POWSCRIPT_VERSION") ] ||
-  [ $(version:patch-of "$1") -ge $(version:patch-of "$POWSCRIPT_VERSION") ]
+  [ "$(version:major-of "$1")" -ge "$(version:major-of "$POWSCRIPT_VERSION")" ] ||
+  [ "$(version:minor-of "$1")" -ge "$(version:minor-of "$POWSCRIPT_VERSION")" ] ||
+  [ "$(version:patch-of "$1")" -ge "$(version:patch-of "$POWSCRIPT_VERSION")" ]
 }
 
 version:major-of() {
@@ -16,7 +16,7 @@ version:major-of() {
 
 version:minor-of() {
   local minor_patch="${1#*.}"
-  echo "${minor_patch%*.}"
+  echo "${minor_patch%.*}"
 }
 
 version:patch-of() {

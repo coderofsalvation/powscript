@@ -45,6 +45,10 @@ powscript:parse-options() {
         shift
         PowscriptIncludeStd=false
         ;;
+      '--update-cache')
+        shift
+        cache:remove
+        ;;
       '-c'|'--compile')
         PowscriptCompileFile=true
         shift
@@ -58,6 +62,12 @@ powscript:parse-options() {
           PowscriptInteractiveMode=no
         fi
         shift
+        ;;
+
+      '-v'|'--version')
+        shift
+        version:number
+        exit 0
         ;;
 
       '-'*)
