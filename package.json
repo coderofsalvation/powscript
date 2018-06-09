@@ -1,6 +1,6 @@
 {
   "name": "powscript",
-  "version": "1.0.28",
+  "version": "1.1.1",
   "description": "bash dialect transpiler in bash: painless shellscript / indentbased / coffeescript for shellscript / bash for hipsters",
   "main": "powscript",
   "directories": {
@@ -26,7 +26,7 @@
     "unix"
   ],
   "author": "coder of salvation (Leon van Kammen)",
-  "license": "ISC",
+  "license": "BSD-2-CLAUSE",
   "bugs": {
     "url": "https://github.com/coderofsalvation/powscript/issues"
   },

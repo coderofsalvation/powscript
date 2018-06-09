@@ -49,6 +49,10 @@ powscript:parse-options() {
         shift
         cache:remove
         ;;
+      '--no-cache')
+        shift
+        POWSCRIPT_NO_CACHE=true
+        ;;
       '-c'|'--compile')
         PowscriptCompileFile=true
         shift

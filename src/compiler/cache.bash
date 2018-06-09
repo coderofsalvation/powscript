@@ -5,13 +5,23 @@ declare -gA PowscriptLibCache
 
 cache:init() {
   for lib in "${!PowscriptLib[@]}"; do
-    PowscriptLibCache[$lib]="$(<"$PowscriptCacheDirectory/lib/$lib.$PowscriptBackend")"
+    if [ -f "$(cache:file "$lib")" ]; then
+      PowscriptLibCache[$lib]="$(<"$(cache:file "$lib")")"
+    fi
   done
 }
 
+cache:file() {
+  echo "$PowscriptCacheDirectory/lib/$1.$PowscriptBackend"
+}
+
 cache:library() {
-  cache:update
-  echo "${PowscriptLibCache[$1]}"
+  if ${POWSCRIPT_NO_CACHE-false}; then
+    files:compile-file <<<"${PowscriptLib[$1]}"$'\n\n'
+  else
+    cache:update
+    echo "${PowscriptLibCache[$1]}"
+  fi
 }
 
 cache:remove() {
@@ -19,18 +29,20 @@ cache:remove() {
 }
 
 cache:update() {
-  if cache:init-directory || ! cache:up-to-date; then
-    cache:update-libraries
-    cache:update-version
-  elif [ "${#PowscriptLibCache[@]}" = 0 ]; then
-    cache:init
+  if ! ${POWSCRIPT_NO_CACHE:-false}; then
+    if cache:init-directory || ! cache:up-to-date; then
+      cache:update-libraries
+      cache:update-version
+    elif [ "${#PowscriptLibCache[@]}" = 0 ]; then
+      cache:init
+    fi
   fi
 }
 
 cache:up-to-date() {
   version:up-to-date "$(cache:version)" || return 1
   for lib in "${!PowscriptLib[@]}"; do
-    [ -f "$PowscriptCacheDirectory/lib/$lib.$PowscriptBackend" ] || return 1
+    [ -f "$(cache:file "$lib")" ] || return 1
   done
 }
 
@@ -49,11 +61,14 @@ cache:version() {
 cache:update-libraries() {
   local lib code
   backend:select "$PowscriptBackend"
+  echo -e "\\033[1mCompiling libraries..."
   for lib in "${!PowscriptLib[@]}"; do
+    echo "* compiling: $lib"
     code="${PowscriptLib[$lib]}"$'\n\n'
     PowscriptLibCache[$lib]="$(files:compile-file '/dev/stdout' <<<"$code")"
-    echo "${PowscriptLibCache[$lib]}" >"$PowscriptCacheDirectory/lib/$lib.$PowscriptBackend"
+    echo "${PowscriptLibCache[$lib]}" >"$(cache:file "$lib")"
   done
+  echo -e "\033[0m"
 }
 
 cache:init-directory() {

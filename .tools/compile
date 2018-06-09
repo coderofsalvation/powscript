@@ -11,6 +11,16 @@ if [ -f ./powscript ]; then
   trap '{ mv "$Dir/.powscript.backup" "$Dir/powscript"; exit; }' ERR
 fi
 
+source "$PowscriptSourceDirectory/compiler/version.bash"
+OldPatchVersion="$(version:patch-of "$(version:number)")"
+NewPatchVersion="$(( OldPatchVersion + 1))"
+
+
+update_patch_version() {
+  sed -i -e 's/"version":[ ]*\"\(.*\)\.\(.*\)\..*",/"version": "\1.\2.'"$1"'",/g' "$Dir/package.json" || true
+  sed -i -e 's/POWSCRIPT_VERSION=*\(.*\)\.\(.*\)\..*/POWSCRIPT_VERSION=\1.\2.'"$1"'/g' "$Dir/powscript" || true
+}
+
 
 printf '' >"$Dir/powscript"
 
@@ -173,11 +183,19 @@ read_file() {
   done <"$1"
 }
 
+
+
 read_file "$Dir/src/powscript.bash"
 
 chmod +x "$Dir/powscript"
 
 
 if [ -f "$Dir/.powscript.backup" ]; then
+  if ! cmp -s "$Dir/.powscript.backup" "$Dir/powscript"; then
+    if [[ "$*" =~ (--verbose|-v) ]]; then
+      diff "$Dir/.powscript.backup" "$Dir/powscript" || true
+    fi
+    update_patch_version "$NewPatchVersion"
+  fi
   rm "$Dir/.powscript.backup"
 fi

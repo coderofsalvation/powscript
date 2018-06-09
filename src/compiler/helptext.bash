@@ -22,8 +22,14 @@ powscript:help() {
                           decreasing startup time.
 
     -d|--debug            Debug mode for developers.
+                          In bash, using "source ./powscript --debug"
+                          will make all internal functions available
+                          for testing.
 
     --to sh|bash          Select target language for compilation.
 
+    --no-cache            Don'"'"'t use cache'"'"'d compiled files.
+
+    --update-cache        Force cache files to be recompiled.
   '
 }
