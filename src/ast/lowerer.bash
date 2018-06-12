@@ -316,7 +316,9 @@ noshadow ast:lower-scanned 1
 ast:extract-function-arguments() { #<<NOSHADOW>>
   local args_expr="$1" out="$2"
   local positionals="" keywords=""
-  local arg args arg_head arg_value kw=false
+  local arg args arg_head arg_value
+  local kw=false has_rest_pos=false has_rest_kw=false
+  local rest_keyword rest_positional
   declare -i positional_count keyword_count
 
   positional_count=0
@@ -328,16 +330,42 @@ ast:extract-function-arguments() { #<<NOSHADOW>>
     ast:from $arg head arg_head
     case "$arg_head" in
       name)
-        if $kw; then
+        if { $has_rest_pos && ! $kw; } || $has_rest_kw; then
+          ast:error "'rest' argument must be the last of it's kind in the list ($arg_value)"
+
+        elif $kw; then
           keyword_count+=1
           ast:from $arg value arg_value
           ast:make arg name $arg_value
           keywords+=" $arg"
+
         else
           positional_count+=1
           positionals+=" $arg"
         fi
         ;;
+
+      cat)
+        local first second more
+        ast:children $arg first second more
+
+        if ast:is $first name '@' && ast:is $second name && [ -z "$more" ]; then
+          ast:from $second value arg_value
+
+          if { $has_rest_pos && ! $kw; } || $has_rest_kw; then
+            ast:error "'rest' argument must be the last of it's kind in the list ($arg_value)"
+          elif $kw; then
+            has_rest_kw=true
+            rest_keyword="$arg_value"
+          else
+            has_rest_pos=true
+            rest_positional="$arg_value"
+          fi
+        else
+          ast:error "Invalid name used for function argument (ast:print $arg)"
+        fi
+        ;;
+
       flag-double-dash-only)
         if $kw; then
           ast:error 'can only have one '--' in argument lists'
@@ -351,15 +379,35 @@ ast:extract-function-arguments() { #<<NOSHADOW>>
     esac
   done
 
-  case "$positional_count:$keyword_count" in
-    0:0)
-      ast:make "$out" nothing
+  case "$positional_count:$kw" in
+    0:false)
+      if $has_rest_pos; then
+        ast:make-from-string "$out" "
+        block
+        - declare array
+        -- name $rest_positional
+        - assign
+        -- name $rest_positional
+        -- list
+        --- simple-substitution @
+        "
+      else
+        ast:make "$out" nothing
+      fi
       ;;
-    *:0)
+    *:false)
       local locals test isset assign subst
       positional_count=1
       ast:make locals local '' $positionals
       ast:make "$out" block '' $locals
+      if $has_rest_pos; then
+        ast:make-from-string test "
+          declare array
+          - name $rest_positional
+        "
+        ast:push-child "${!out}" $test
+      fi
+
       for arg in $positionals; do
         ast:make-from-string test "
           condition and
@@ -373,9 +421,23 @@ ast:extract-function-arguments() { #<<NOSHADOW>>
         ast:push-child "${!out}" $test
         positional_count+=1
       done
+      if $has_rest_pos; then
+        ast:make-from-string test "
+          condition and
+          - condition >=
+          -- name \$#
+          -- name $positional_count
+          - assign
+          -- name $rest_positional
+          -- list
+          --- string-slice-from @
+          ---- name $positional_count
+        "
+        ast:push-child "${!out}" $test
+      fi
       ;;
-    *:*)
-      local argvar keyvar posvar locals arg_set arg_test key_assign
+    *:true)
+      local argvar keyvar posvar locals restdecs arg_set arg_test key_assign
       local key keyname keylocals="" keylocal
 
       ast:gensym argvar keyword_arg
@@ -390,11 +452,24 @@ ast:extract-function-arguments() { #<<NOSHADOW>>
 
       ast:make locals local '' $argvar $keyvar $posvar $positionals $keylocals
 
-      ast:make-argument-test  "$argvar" "$keyvar" "$posvar" "$positionals" arg_test
-      ast:make-keyword-assign "$argvar" "$keyvar" "$posvar" "$keywords"    key_assign
+      ast:make-argument-test  "$argvar" "$keyvar" "$posvar" "$positionals" "$rest_positional" arg_test
+      ast:make-keyword-assign "$argvar" "$keyvar" "$posvar" "$keywords"    "$rest_keyword"    key_assign
       ast:make-argument-set   "$argvar" "$keyvar" "$posvar" "$arg_test" "$key_assign" arg_set
 
-      ast:make "$out" block '' $locals $arg_set
+      if $has_rest_pos || $has_rest_kw; then
+        ast:make-from-string restdecs "
+          block
+          ${rest_positional:+"
+            - declare array
+            -- name $rest_positional
+          "}
+          ${rest_keyword:+"
+            - declare map
+            -- name $rest_keyword
+          "}
+        "
+      fi
+      ast:make "$out" block '' $locals $restdecs $arg_set
       ;;
   esac
 }
@@ -438,7 +513,7 @@ ast:make-argument-set() { #<<NOSHADOW>>
 noshadow ast:make-argument-set 5
 
 ast:make-argument-test() { #<<NOSHADOW>>
-  local argvar="$1" keyvar="$2" posvar="$3" positionals="$4" out="$5"
+  local argvar="$1" keyvar="$2" posvar="$3" positionals="$4" rpos="$5" out="$6"
   local arg argcase cases=""
   local argvar_name posvar_name emptycases
   declare -i poscount=1
@@ -465,7 +540,27 @@ ast:make-argument-test() { #<<NOSHADOW>>
     poscount+=1
   done
 
-  [ -z "$cases" ] && emptycases="---- name true"
+  if [ -n "$rpos" ]; then
+    ast:make-from-string argcase "
+      case
+      - pattern *
+      - block
+      -- indexing-assign
+      --- name $rpos
+      --- array-length $rpos
+      --- simple-substitution $argvar_name
+      --+ $posvar
+      --- math-expr
+      ---- math +
+      ----+ $posvar
+      ----- name 1
+    "
+    cases+=" $argcase"
+  fi
+
+  if [ -z "$cases" ]; then
+    emptycases="---- name true"
+  fi
 
   ast:make-from-string "$out" "
     switch
@@ -489,10 +584,10 @@ ast:make-argument-test() { #<<NOSHADOW>>
     $emptycases
   "
 }
-noshadow ast:make-argument-test 4
+noshadow ast:make-argument-test 5
 
 ast:make-keyword-assign() { #<<NOSHADOW>>
-  local argvar="$1" keyvar="$2" posvar="$3" keywords="$4" out="$5"
+  local argvar="$1" keyvar="$2" posvar="$3" keywords="$4" rkey="$5" out="$6"
   local cases="" keycase key keyname keyshort
   local keyvar_name argvar_name
 
@@ -514,24 +609,47 @@ ast:make-keyword-assign() { #<<NOSHADOW>>
     cases+=" $keycase"
   done
 
+  if [ -n "$rkey" ]; then
+    ast:make-from-string keycase "
+    case
+    - pattern *
+    - block
+    -- assign
+    --+ $keyvar
+    --- string-slice-from $keyvar_name
+    ---- name 1
+    -- indexing-assign
+    --- name $rkey
+    --- string-removal $keyvar_name
+    ---- pattern -
+    ---- name #
+    --- simple-substitution $argvar_name
+    "
+    cases+=" $keycase"
+  else
+    ast:make-from-string keycase "
+    case
+    - pattern *
+    - block
+    -- call
+    --- assign-sequence
+    --- name :
+    "
+    cases+=" $keycase"
+  fi
+
   ast:make-from-string "$out" "
     block
     - switch
     -- simple-substitution $keyvar_name
     -- block
     --+ $cases
-    --- case
-    ---- pattern *
-    ---- block
-    ----- call
-    ------ assign-sequence
-    ------ name :
     - assign
     -+ $keyvar
     -- string
   "
 }
-noshadow ast:make-keyword-assign 4
+noshadow ast:make-keyword-assign 5
 
 typing:start-scope() {
   CurrentScope+=1
@@ -569,7 +687,7 @@ typing:declared-name() { #<<NOSHADOW>>
 
   ast:from $expr head expr_head
   case $expr_head in
-    name|flag-double-dash-only)
+    name|flag-double-dash-only|cat)
       ;;
     *assign)
       ast:children $expr expr
