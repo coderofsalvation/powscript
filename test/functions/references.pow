@@ -1,0 +1,28 @@
+f(r)
+  r:ref=1
+
+g(r)
+  echo ${r:deref}
+
+h(R)
+  R:ref[0]=1
+  R:ref[1]=2
+
+i(R)
+  echo ${R:deref[1]}
+
+a=0
+A=(0 1)
+
+
+f ${a:ref}
+h ${A:ref[@]}
+
+assert $a is 1
+assert $A[0] is 1
+assert $A[1] is 2
+
+assert $(g ${a:ref}) is 1
+assert $(i ${A:ref[@]}) is 2
+
+assert $(i (2 3 4)) is 3

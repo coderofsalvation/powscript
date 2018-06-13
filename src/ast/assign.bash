@@ -33,7 +33,37 @@ ast:parse:assign() {
 }
 
 
-# ast:parse:special-assign $name $out
+# ast:parse:array-dereference-assign $name $out
+#
+# Parse an assignment of the form:
+#
+# :ref[<expr]= <expr>
+#
+
+ast:parse:array-dereference-assign() { #<<NOSHADOW>>
+  local var="$1" out="$2"
+  local name index value indexing
+
+  token:require name ref
+  token:require special '['
+
+  ast:push-state '['
+  ast:parse:expr index
+  ast:pop-state
+
+  token:require special ']'
+  token:require special '='
+
+  ast:parse:expr value
+
+  ast:from $var value name
+  ast:make indexing indexing "$name" $index
+  ast:make "$out" assign-ref '' $indexing $value
+}
+noshadow ast:parse:array-dereference-assign 1
+
+
+# ast:parse:conditional-assign $name $out
 #
 # Parse an special assingment of the form:
 #

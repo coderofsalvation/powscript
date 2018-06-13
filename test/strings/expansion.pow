@@ -21,6 +21,6 @@ assert ${Z:empty= 2}   is 2
 X=3
 Y=X
 
-assert ${Y:indirect} is 3
+assert ${Y:deref} is 3
 assert ${} is ''
 assert ${A:empty '\$\$""'} is '\$\$""'

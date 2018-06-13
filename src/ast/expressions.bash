@@ -105,13 +105,25 @@ ast:parse:expr() { #<<NOSHADOW>>
                 token:get -v pcolon_value -c pcolon_class -g pcolon_glued
                 token:return-to-mark $stream_position
 
-                if [ "$pcolon_value:$pcolon_class:$pcolon_glued" = "=:special:true" ]; then
-                  ast:clear $root
-                  ast:parse:conditional-assign $last_expression root
-                  ast:from $root head root_head
-                else
-                  ast:make expression name ":"
-                fi
+                case "$pcolon_value:$pcolon_class:$pcolon_glued" in
+                  "=:special:true")
+                    ast:clear $root
+                    ast:parse:conditional-assign $last_expression root
+                    ast:from $root head root_head
+                    ;;
+                  "[:special:true")
+                    if token:next-is name ref; then
+                      ast:clear $root
+                      ast:parse:array-dereference-assign $last_expression root
+                      ast:from $root head root_head
+                    else
+                      ast:make expression name ":"
+                    fi
+                    ;;
+                  *)
+                    ast:make expression name ":"
+                    ;;
+                esac
               else
                 ast:make expression name ":"
               fi
@@ -176,7 +188,7 @@ ast:parse:expr() { #<<NOSHADOW>>
                   exprnum=3
                 fi
               elif [ $exprnum -gt 0 ]; then
-                root=determinable
+                root_head=determinable
               else
                 ast:push-state '['
                 if ${AST_MATH_MODE-false}; then

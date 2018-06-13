@@ -41,8 +41,8 @@ KV=${V : keys}
 assert $KA is "a b"
 assert $KV is "0 1 2"
 
-assert ${A[*]:indirect} is "a b"
-assert ${V[*]:indirect} is "0 1 2"
+assert ${A[*]:deref} is "a b"
+assert ${V[*]:deref} is "0 1 2"
 
-assert ${A[*] : indirect} is "a b"
-assert ${V[*] : indirect} is "0 1 2"
+assert ${A[*] : deref} is "a b"
+assert ${V[*] : deref} is "0 1 2"

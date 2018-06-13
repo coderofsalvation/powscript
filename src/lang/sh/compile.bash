@@ -305,16 +305,16 @@ sh:compile() { #<<NOSHADOW>>
       set_substitution "\${$name}"
       ;;
 
+    variable-dereference)
+      local name
+      ast:from $expr value name
+      set_substitution "\${!$name}"
+      ;;
+
     string-length)
       local name
       ast:from $expr value name
       set_substitution "\${#$name}"
-      ;;
-
-    string-indirect)
-      local name
-      ast:from $expr value name
-      set_substitution "\${!$name}"
       ;;
 
     string-removal)
@@ -434,12 +434,12 @@ sh:compile() { #<<NOSHADOW>>
       fi
 
       for child_ast in $expr_children; do
-        sh:compile $child_ast child
+        backend:compile $child_ast child
         if ${INSIDE_FUNCTION-false}; then
           result+=" $child"
         else
-          if ast:is $child assign; then
-            result+="; : $child"
+          if ast:is $child_ast assign; then
+            result+="; $child"
           fi
         fi
       done
@@ -476,6 +476,7 @@ sh:compile() { #<<NOSHADOW>>
 
     condition)
       local op left right quoted=no
+      local expr_children
       ast:from $expr value op
       ast:from $expr children expr_children
       expr_children=( $expr_children )
