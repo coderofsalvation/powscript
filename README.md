@@ -4,6 +4,8 @@
 
 write shellscript in a powful way!
 
+> IMPORTANT: a brand NEW powscript beta-version is available [here](https://github.com/fcard/powscript/tree/token-ast-compiler), come see!
+
 ## Usage
 
     $ wget "https://raw.githubusercontent.com/coderofsalvation/powscript/master/powscript" -O /usr/local/bin/powscript && chmod 755 /usr/local/bin/powscript
