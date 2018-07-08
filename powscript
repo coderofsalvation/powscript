@@ -203,7 +203,7 @@ transpile_interpolate() {
       esac
     fi
     i=$(($i+1))
-    printf "$char"
+    echo -ne "$char"
   done
   $interpol && printf '"'
   echo $i > $_last_interpol_size
