@@ -1,9 +1,9 @@
 
+PowscriptTempDirectory="$(mktemp -d .powscript.XXXXXX )"
 
-PowscriptTempDirectory="$(mktemp -d).powscript"
 powscript:temp-name() {
   local suffix=".powscript$1"
-  setvar "$2" "$(mktemp -u -p "$PowscriptTempDirectory")$suffix"
+  setvar "$2" "$(mktemp -u -p "$PowscriptTempDirectory").$1"
 }
 
 powscript:make-temp() {

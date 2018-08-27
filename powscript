@@ -6108,11 +6108,11 @@ backend:select() {
 
 # FILE: lang/backends.bash
 
+PowscriptTempDirectory="$(mktemp -d .powscript.XXXXXX )"
 
-PowscriptTempDirectory="$(mktemp -d).powscript"
 powscript:temp-name() {
   local suffix=".powscript$1"
-  setvar "$2" "$(mktemp -u -p "$PowscriptTempDirectory")$suffix"
+  setvar "$2" "$(mktemp -u -p "$PowscriptTempDirectory").$1"
 }
 
 powscript:make-temp() {
@@ -6172,7 +6172,7 @@ powscript:help() {
   '
 }
 # FILE: compiler/helptext.bash
-POWSCRIPT_VERSION=1.1.4
+POWSCRIPT_VERSION=1.1.6
 
 version:number() {
   echo "$POWSCRIPT_VERSION"
