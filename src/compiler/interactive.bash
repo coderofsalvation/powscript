@@ -30,7 +30,7 @@ interactive:start() {
     files:compile-file "$wfifo" <"$HOME/.powrc"
   fi
 
-  while ps -p $proc >/dev/null; do
+  while pgrep $proc >/dev/null; do
     result=
 
     if [ -n "${extra_line// /}" ]; then
