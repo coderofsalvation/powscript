@@ -1,0 +1,10 @@
+X=aabbcc
+
+assert ${X:prefix  *a} is abbcc
+assert ${X:prefix* *a} is bbcc
+assert ${X:suffix  c*} is aabbc
+assert ${X:suffix* c*} is aabb
+
+assert ${X:replace a by b}  is babbcc
+assert ${X:replace* a by b} is bbbbcc
+assert ${X:replace* [ac] by b} is bbbbbb

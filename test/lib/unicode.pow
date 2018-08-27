@@ -1,0 +1,17 @@
+require unicode
+
+test_unicode(u s8 s16 s32)
+  local r8 r16 r32
+  parse_utf8  $s8  -r ${r8:ref}
+  parse_utf16 $s16 -r ${r16:ref}
+  parse_utf32 $s32 -r ${r32:ref}
+  echo "Testing unicode library: '$u'"
+  assert $r8  is $u
+  assert $r16 is $u
+  assert $r32 is $u
+
+test_unicode "\t" '\x9' '\u9'  '\U9'
+test_unicode '@'  '\x40' '\u40' '\U40'
+test_unicode 'ω'  '\xcf\x89' '\u3c9' '\U3c9'
+test_unicode 'ὥ'  '\xe1\xbd\xa5' '\u1f65' '\U1f65'
+test_unicode '🐱' '\xf0\x9f\x90\xb1' '\ud83d\udc31' '\U1f431'

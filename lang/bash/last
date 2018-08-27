@@ -1,4 +1,0 @@
-last(){
-  [[ ! -n $1 ]] && return 1
-  echo "$(eval "echo \${$1[@]:(-1)}")"
-}

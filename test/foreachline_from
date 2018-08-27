@@ -1,7 +1,0 @@
-
-foo()
-  for line from $1
-    echo "->"$line
-
-
-foo $selfpath/package.json

@@ -1,0 +1,11 @@
+assert $(math 1)   is 1
+assert $(math 1+2) is 3
+assert $(math 1-2) is -1
+assert $(math 2*3) is 6
+assert $(math 8/2) is 4
+assert $(math 3/2) is 1
+assert $(math 2^2) is 4
+assert $(math 2^3) is 8
+assert $(math -1 * -1) is 1
+assert $(math -1 / -1) is 1
+assert $(math 1 + 2 * 3) is 7

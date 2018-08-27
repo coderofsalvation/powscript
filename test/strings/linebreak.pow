@@ -1,0 +1,6 @@
+x='foo
+   bar'
+
+y=$(printf "foo\n   bar\n")
+
+assert $x is $y

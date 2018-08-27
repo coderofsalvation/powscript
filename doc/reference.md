@@ -14,7 +14,7 @@
     <td>
       <pre>
         <code>
-foo( a, b )
+foo(a b)
   echo a=$a b=$b
         </code>
         <code>
@@ -25,10 +25,9 @@ foo one two
     <td>
       <pre>
         <code>
-foo(){
-  local a="$1"
-  local b="$2"
-  echo a="$a" b="$b"
+f() {
+local a="${1}" b="${2}"
+echo a="${a}" b="${b}"
 }
         </code>
         <code>
@@ -54,7 +53,7 @@ switch $foo
     <td>
       <pre>
         <code>
-case $foo in
+case "${foo}" in
   [0-9]*)
     echo "bar"
     ;;
@@ -84,8 +83,9 @@ if not false and true
         </code>
         <code>
 if $x > $y
-  if $a < $b
-    echo "bar"
+  echo "bar"
+elif $a < $b
+  echo "baz"
 </code>
       </pre>
     </td>
@@ -107,9 +107,9 @@ fi
         </code>
         <code>
 if [[ "$x" -gt "$y" ]]; then
-  if [[ "$a" -lt "$b" ]]; then
-    echo "bar"
-  fi
+  echo "bar"
+elif [[ "$a" -lt "$b" ]]; then
+  echo "baz"
 fi
         </code>
       </pre>
@@ -125,7 +125,7 @@ foo={}
 foo["bar"]="a value"
         </code>
         <code>
-for k,v in foo
+for k,v of foo
   echo k=$k
   echo v=$v
         </code>
@@ -161,10 +161,10 @@ echo "${foo["bar"]}"
         <code>
 bla=[]
 bla[0]="foo"
-bla+="push value"
+bla@="push value"
         </code>
         <code>
-for i in bla
+for i of bla
   echo bla=$i
         </code>
         <code>
@@ -177,7 +177,7 @@ echo $bla[0]
         <code>
 declare -a bla
 bla[0]="foo"
-bla+=("push value")
+bla[${#bla}]="push value"
         </code>
         <code>
 for i in "${bla[@]}"; do
@@ -242,13 +242,12 @@ fi
     <td>
       <pre>
         <code>
-# include bash- or powscript
-# at compiletime (=portable)
+# compile and include
+# powscript file
 require 'mymodule.pow'
         </code>
         <code>
-# include remote bashscript
-# at runtime
+# source works at runtime
 source foo.bash
         </code>
       </pre>
@@ -267,9 +266,9 @@ source foo.bash
       <pre>
         <code>
 bar()
-  if isset $1
+  if empty $1
     echo "no argument given"
-  if not empty $1
+  if isset $1
     echo "string given"
         </code>
         <code>
@@ -281,10 +280,10 @@ foo "$@"
       <pre>
         <code>
 foo(){
-  if [[ "${#1}" == 0 ]]; then
+  if [ -z "${1}" ]; then
     echo "no argument given"
   fi
-  if [[ ! "${#1}" == 0 ]]; then
+  if [ -n "${#1}" ]; then
     echo "string given"
   fi
 }
@@ -324,8 +323,8 @@ echo -e "a\nb\n" | mappipe fn
     <td>
       <pre>
         <code>
-math '9 / 2'
-math '9 / 2' 4
+math (9 / 2)
+math (9 / 2) 4
         </code>
       </pre>
     </td>
@@ -422,7 +421,7 @@ when done
   </tr>
 
   <tr>
-    <td align="center"><b>JSON decode</b></td>
+    <td align="center"><b>JSON parsing</b></td>
     <td>
       <pre>
         <code>
@@ -430,8 +429,8 @@ obj={}
 json='{"a": {"b": "c"}}'
         </code>
         <code>
-echo "$json" | json_decode obj
-echo $obj['a-b']
+json_parse obj "$json"
+json_print obj a b
         </code>
       </pre>
     </td>
@@ -449,8 +448,8 @@ echo $obj['a-b']
     <td>
       <pre>
         <code>
-fn()
-  echo "1=$1 2=$2"
+fn(a b)
+  echo "1=$a 2=$b"
         </code>
         <code>
 curry fnc a
@@ -498,8 +497,8 @@ map foo values
     <td>
       <pre>
         <code>
-printitem()
-  echo "key=$1 value=$2"
+printitem(k v)
+  echo "key=$k value=$v"
         </code>
         <code>
 foo={}
@@ -526,7 +525,7 @@ foo={}
 bar={}
 foo["one"]="foo"
 bar["foo"]="123"
-map foo values |
+map foo values |\
   mappipe pick bar
         </code>
       </pre>
@@ -545,12 +544,12 @@ map foo values |
     <td>
       <pre>
         <code>
-fnA()
-  echo "($1)"
+fnA(x)
+  echo "($x)"
         </code>
         <code>
-fnB()
-  echo "|$1|"
+fnB(x)
+  echo "|$x|"
         </code>
         <code>
 compose decorate fnA fnB

@@ -1,0 +1,38 @@
+declare string  i
+declare integer j
+
+i=0
+j=0
+
+assert $i is 0
+assert $j is 0
+
+i+=1
+j+=1
+
+assert $i is 1
+assert $j is 1
+
+i*=2
+j*=2
+
+assert $i is 2
+assert $j is 2
+
+i^=3
+j^=3
+
+assert $i is 8
+assert $j is 8
+
+i/=2
+j/=2
+
+assert $i is 4
+assert $j is 4
+
+i-=1
+j-=1
+
+assert $i is 3
+assert $j is 3

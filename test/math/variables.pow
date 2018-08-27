@@ -1,0 +1,12 @@
+a=1
+b=2
+c=3
+
+assert $(math a)   is 1
+assert $(math a+b) is 3
+assert $(math a*b) is 2
+assert $(math b*a) is 2
+assert $(math b/a) is 2
+assert $(math b*c) is 6
+assert $(math b^c) is 8
+

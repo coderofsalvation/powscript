@@ -1,0 +1,16 @@
+f(a b -- x y)
+  echo "a=$a b=$b x=$x y=$y"
+
+assert $(f 1 2)             is "a=1 b=2 x= y="
+assert $(f 1 2 --x X)       is "a=1 b=2 x=X y="
+assert $(f 1 2 --y Y)       is "a=1 b=2 x= y=Y"
+assert $(f 1 2 --x X --y Y) is "a=1 b=2 x=X y=Y"
+assert $(f     --x X --y Y) is "a= b= x=X y=Y"
+assert $(f 2   --x X --y Y) is "a=2 b= x=X y=Y"
+
+g(-- arc)
+  echo $arc
+
+assert $(g --arc 1) is 1
+assert $(g -a 1)    is 1
+assert $(g)         is ${}

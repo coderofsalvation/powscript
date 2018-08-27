@@ -1,0 +1,16 @@
+echo 'hello world'
+
+f()
+  printf -v x "x: $1"
+  if $x
+    echo 10
+
+X=(
+ echo "a
+ b
+ c
+ "
+)
+
+x[y]=10
+

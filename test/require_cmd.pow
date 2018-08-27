@@ -1,4 +1,0 @@
-require_cmd 'awk'
-require_cmd 'ps'
-
-echo hello world

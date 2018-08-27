@@ -1,0 +1,8 @@
+assert true
+assert not false
+assert true and true
+assert true or false
+assert x is x
+assert 1 < 2
+assert xy match .*y
+assert -f powscript

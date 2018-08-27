@@ -1,6 +1,0 @@
-shopt compat40 2>&1 | grep invalid &>/dev/null && { echo "this app runs on bash >= 4.x, please upgrade"; exit 1;  }
-{
-  # enable strict bash 4.0 mode by disabling higher modes
-  for mode in compat49 compat48 compat47 compat46 compat45 compat44 compat43 compat42 compat41; do shopt -u $mode; done
-  shopt -s compat40
-} &>/dev/null # hide errors of old 4.x versions

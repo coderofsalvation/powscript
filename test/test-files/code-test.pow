@@ -1,0 +1,159 @@
+require 'mymod.pow'
+
+foo="1 2 3 4 5"
+
+# comparison
+i="foo"
+if "$i" is "foo"
+  echo "foo"
+
+if $i is "foo"
+  echo "foo"
+else
+  echo "bar"
+
+foo()
+  local appname="${1}"
+  local pidfile=$(process:getpidfile "$appname")
+  if -f $pidfile
+    cat $pidfile
+  else
+    echo -1
+
+webserver:onrequest(request)
+  if $request match (POST .*\/pull)
+    appname=${request: replace POST by  ''}
+    appname=${appname: replace pull* by ''}
+    deffile=$(process:gettmpfile $appname).def
+    if -f $deffile
+      workdir=$(apps:getworkdir $deffile)
+      if -d $workdir/.git
+        cd $workdir
+        echo -e "received webhook: pull $appname, performing git pull"
+      else
+        echo -e "received webhook: pull $appname (error: $workdir is not a git repo)"
+    else
+      echo -e "received webhook: pull $appname (error: no such app)"
+
+
+if not $j is "foo" and $x is "bar"
+  if $j is "foo" or $j is "xfoo"
+    if $j > $y and $j != $y or $j >= $y
+      echo "foo"
+
+if not $j is "foo" and $x is "bar"
+  if $j is "foo" or $j is "xfoo"
+    if $j > $y and $j != $y or $j >= $y
+      echo "foo"
+    else
+      flop
+  else
+    echo flip
+else
+  echo flap
+
+# extended pattern matching
+# (google 'extglob' for more
+
+if $f match ^([f]oo)
+  echo "foo found!"
+
+for k,v of foo
+  for j,x of bla
+    for v,f of bla
+      echo "foo"
+
+simple_arrays()
+  bla=[]
+  bla[0]="foo"
+  bla@="push value"
+  for i in bla
+    echo bla=$i
+  echo $bla[0]
+
+associative_arrays()
+  foo={}
+  foo["bar"]="a value"
+  for k,v of foo
+    echo k=$k
+    echo v=$v
+  echo $foo["bar"]
+  echo $foo["bar"] > /tmp/foo
+  rm /tmp/foo
+
+
+switch_test()
+  switch $foo
+    case 0-9
+      echo "i want to switch an if for two years"
+      echo "bar"
+    case *
+      echo "foo"
+      echo "bar"
+
+
+bar()
+  if set? $1
+    echo "no argument given"
+  if empty? $1
+    echo "empty string given"
+
+bar one $@
+
+printitem()
+  echo "key=$1 value=$2"
+
+foo={}
+foo["one"]="foo"
+foo["two"]="bar"
+map foo printitem
+
+
+myfunc(a)
+  if $a > 1
+    echo "$1"
+
+simple_arrays
+associative_arrays
+
+afoo={}
+abar={}
+afoo["one"]="foo"
+abar["foo"]="123"
+map afoo values | mappipe pick abar
+
+vfoo=(1 2 3 4)
+echo last="$(last vfoo)"
+
+math 9 / 2
+math 9 / 2  4
+
+funcA()
+  echo "($1)"
+
+funcB()
+  echo "|$1|"
+
+compose decorate_string funcA funcB
+decorate_string "foo"
+
+usage()
+  echo "foo <number>"
+
+switch $1
+  case [0-9]*
+    echo "arg 1 is a number"
+  case *
+    help=$(usage)
+    echo "Usage: $help" and exit
+
+exit 0
+
+# check literal multiline string
+
+foo='
+  literalfunc()
+    this should not be parsed as powscript
+'
+
+

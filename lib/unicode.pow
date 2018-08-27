@@ -1,0 +1,169 @@
+unicode_parsing_error(utf_type msg)
+  echo "ERROR: While parsing a $utf_type unicode character: $msg" >&2
+
+unicode_test_eof(utf_type string i)
+  if i > ${string:length}
+    unicode_parsing_error $utf_type 'Premature end of input'
+    return 1
+
+unicode_eat_delimiter(type string delim i iref)
+  if ${string:slice i length ${delim:length}} isnt $delim
+    unicode_parsing_error $type "required delimiter '$delim' not found after byte $gotten"
+    return 1
+  else
+    iref:ref= $(math i+${delim:length})
+
+
+parse_utf8(string -- result offset start delim prefix)
+  local c byte='' unicode='' final_value
+  local state='get-byte'
+  declare integer i gotten needed
+  i=${state:set 0}
+  gotten=0
+  needed=1
+  if ${delim:unset?}
+    prefix:unset='\x'
+  delim:unset='\x'
+  #
+  unicode_eat_delimiter utf-8 $string $prefix $i ${i:ref} || return 1
+  while gotten < needed
+    unicode_test_eof utf-8 $string $i || return 1
+    #
+    c=${string:index i}
+    switch $c
+      case [0-9abcdefABCDEF]
+        i+=1
+        byte&=$c
+      case *
+        if "${byte:length}:$gotten" is '1:0'
+          unicode="\\x$byte"
+          gotten=1
+        else
+          unicode_parsing_error utf-8 "Invalid unicode $unicode\\x$byte"
+          return 1
+    if ${byte:length} is 2
+      switch $gotten
+        case 0
+          local byte_value=0x$byte
+          if byte_value < 0x80
+            needed=1
+          elif byte_value < 0xe0
+            needed=2
+          elif byte_value < 0xf0
+            needed=3
+          elif byte_value < 0xf8
+            needed=4
+          else
+            unicode_parsing_error utf-8 "Invalid byte 1: $byte"
+        case *
+          local byte_value=0x$byte
+          if byte_value < 0x80 or byte_value > 0xbf
+            unicode_parsing_error utf-8 "Invalid byte $(math gotten+1): $byte"
+            return 1
+      state='get-byte'
+      gotten+=1
+      unicode&="\\x$byte"
+      byte=''
+      if gotten < needed
+        unicode_eat_delimiter utf-8 $string $delim $i ${i:ref} || return 1
+  printf -v unicode "$unicode"
+  if ${result:set?}
+    result:ref= $unicode
+  else
+    echo $unicode
+  #
+  if ${offset:set?}
+    offset:ref= $i
+
+
+parse_utf16(string -- result start offset delim prefix)
+  local c unicode1='' unicode2='' final_value
+  local state='unicode1' result
+  declare integer i
+  i=${start:unset 0}
+  #
+  if ${delim:unset?}
+    prefix=${prefix:unset '\u'}
+  delim=${delim:unset '\u'}
+  #
+  unicode_eat_delimiter utf-16 $string $prefix $i ${i:ref} || return 1
+  while ${final_value:unset?}
+    unicode_test_eof utf-16 $string $i || return 1
+    #
+    c=${string:index i}
+    switch $state
+      case unicode1
+        switch $c
+          case [0-9abcdefABCDEF]
+            unicode1&=$c
+            i+=1
+            if ${unicode1:length} is 4
+              local value=0x$unicode1
+              if value > 0xd7ff and value < 0xdbff
+                state='unicode2'
+                unicode_eat_delimiter utf-16 $string $delim $i ${i:ref} || return 1
+              elif value > 0xdbff and value < 0xdc00
+                unicode_parsing_error utf-16 "Invalid character: \\u$unicode1"
+              else
+                printf -v final_value "\\u$unicode1"
+          case *
+            if ${unicode1:length} > 0
+              printf -v final_value "\\u$unicode1"
+            else
+              unicode_parsing_error utf-16 "Invalid character: \\u$unicode1"
+      case unicode2
+        switch $c
+          case [0-9abcdefABCDEF]
+            unicode2&=$c
+            i+=1
+            if ${unicode2:length} is 4
+              local value=0x$unicode2
+              if value > 0xdc00 and value < 0xdfff
+                local high=0x$unicode1 low=$value
+                final_value=$(math
+                  ((high - 0xd800) * 0x0400) +
+                  ((low  - 0xdc00) + 0x10000))
+                printf -v final_value '%x' $final_value
+                printf -v final_value "\\U$final_value"
+              else
+                unicode_parsing_error utf-16 "Invalid low surrogate: \\u$unicode2"
+          case *
+            unicode_parsing_error utf-16 "Invalid low surrogate: \\u$unicode2"
+  if ${result:set?}
+    result:ref= "$final_value"
+  else
+    echo "$final_value"
+  if ${offset:set?}
+    offset:ref= $i
+
+
+parse_utf32(string -- result start offset prefix)
+  local unicode="" final_value c
+  declare integer i
+  i=${start:unset 0}
+  prefix:unset='\U'
+  unicode_eat_delimiter utf-32 $string $prefix $i ${i:ref} || return 1
+  #
+  while ${final_value:unset?}
+    unicode_test_eof utf-32 $string $i || return 1
+    #
+    c=${string:index i}
+    switch $c
+      case [0-9abcdefABCDEF]
+        unicode&=$c
+        i+=1
+        if ${unicode:length} is 8
+          printf -v final_value "\\U$unicode"
+      case *
+        if ${unicode:nonempty?}
+          printf -v final_value "\\U$unicode"
+        else
+          unicode_parsing_error utf-32 "Invalid character: \\U"
+          return 1
+  if ${result:set?}
+    result:ref= "$final_value"
+  else
+    echo "$final_value"
+  if ${offset:set?}
+    offset:ref= $i
+
