@@ -45,7 +45,6 @@ write shellscript in a powful way!
 
 Output:
 
-    $ powscript --compile foo.pow > foo.bash
     $ URL=https://raw.githubusercontent.com/coderofsalvation/powscript/master/package.json ./foo.bash version
     1.0.26
 
@@ -55,11 +54,11 @@ Check <a href="https://github.com/coderofsalvation/powscript/wiki/Reference">her
 
 * indentbased, memorizable, coffeescript-inspired syntax
 * removes semantic noise like { ! [[ @ ]] || ~=
-* safetynets: automatic quoting, halt on error or missing dependency (require_cmd)
+* safetynets: automatic quoting, halt on error or missing dependencies (`require_cmd`,`require_env`)
 * comfort: [json, easy arrays, easy async, functional programming](https://github.com/coderofsalvation/powscript/blob/master/doc/reference.md), named variables instead of positionals
 * [Modules / bundling](https://github.com/coderofsalvation/powscript/blob/master/doc/modules-example.md)
 * [remote/local packages & dependencies](http://github.com/coderofsalvation/powscript/blob/master/doc/dependencies-and-packages.md)
-* written/generated for bash >= 4.x, 'zero'-dependency solution
+* written/generated for bash >= 4.x, 'zero'-dependency solution for embedded devices e.g.
 * hasslefree: easy installation without gcc compilation/3rd party software
 
 ## Examples
