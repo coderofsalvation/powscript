@@ -73,7 +73,13 @@ last(A)
 
 require_env(var)
   expand
-    pass ${~var:set! "The variable ~var is unset. Exitting."}
+    pass ${~var:set! "Required ENV-variable ~var not set (hint: '~var=yourvalue ./yourscript')."}
+
+require_cmd(var)
+  if which $var 1>/dev/null 2>/dev/null
+    return 0
+  expand
+    pass ${~var:set! "Please install the required command '~var' (was not found)."}
 
 ismap?(x)
   local result k1=__ismap_dummy1 k2=__ismap_dummy2

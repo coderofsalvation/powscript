@@ -21,27 +21,32 @@ write shellscript in a powful way!
 ## Example
 
     #!/usr/bin/env powscript
+
+    require     'json'
+    require_env 'URL'
     require_cmd 'curl'
 
     usage(app)
       echo "$app <jsonkey>"
 
-    print_json(key)
-      json={}
-      curl "https://raw.githubusercontent.com/coderofsalvation/powscript/master/package.json" | json_decode json
-      echo $json[$key]
+    version()
+      data={}
+      json=$(curl -s "$URL")
+      json_parse data "$json"
+      echo data.version
 
-    run()
-      if empty $1
+    run(cmd)
+      if empty? cmd
         help=$(usage myapp)
         echo "Usage: $help" && exit
-      print_json $1
+      $cmd
 
     run $@
 
 Output:
 
-    $ ./myapp version
+    $ powscript --compile foo.pow > foo.bash
+    $ URL=https://raw.githubusercontent.com/coderofsalvation/powscript/master/package.json ./foo.bash version
     1.0.26
 
 Check <a href="https://github.com/coderofsalvation/powscript/wiki/Reference">here</a> for more examples
