@@ -6108,11 +6108,11 @@ backend:select() {
 
 # FILE: lang/backends.bash
 
-PowscriptTempDirectory="$(mktemp -d .powscript.XXXXXX )"
+PowscriptTempDirectory="$(mkdir "$(mktemp -u).powscript")"
 
 powscript:temp-name() {
   local suffix=".powscript$1"
-  setvar "$2" "$(mktemp -u -p "$PowscriptTempDirectory").$1"
+  setvar "$2" "$(mktemp -u -p "$PowscriptTempDirectory")$suffix"
 }
 
 powscript:make-temp() {
@@ -6129,7 +6129,7 @@ powscript:clean-up() {
   local exit_code=$?
   POWSCRIPT_CDEBUG_STOP=false
   [ -d "$PowscriptTempDirectory" ] && rm -r "$PowscriptTempDirectory"
-  [ -n "$PowscriptGuestProcess"  ] && pgrep "$PowscriptGuestProcess" >/dev/null && kill -QUIT "$PowscriptGuestProcess"
+  [ -n "$PowscriptGuestProcess"  ] && pgrep -P "$PowscriptGuestProcess" >/dev/null && kill -QUIT "$PowscriptGuestProcess"
   exit $exit_code
 }
 
@@ -6172,7 +6172,7 @@ powscript:help() {
   '
 }
 # FILE: compiler/helptext.bash
-POWSCRIPT_VERSION=1.1.14
+POWSCRIPT_VERSION=1.1.15
 
 version:number() {
   echo "$POWSCRIPT_VERSION"
@@ -6487,7 +6487,7 @@ interactive:start() {
     files:compile-file "$wfifo" <"$HOME/.powrc"
   fi
 
-  while pgrep $proc >/dev/null; do
+  while pgrep -P $proc >/dev/null; do
     result=
 
     if [ -n "${extra_line// /}" ]; then
