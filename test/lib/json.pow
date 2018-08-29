@@ -38,3 +38,6 @@ json_test '[
   2
 ]' array '*'
 
+# values after objects
+json_test '{"a":{"b":1}, "c":2}' number '2' 'c'
+
