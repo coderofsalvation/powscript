@@ -248,6 +248,8 @@ _json_parse(out string)
             add_value_to_array
       case 'array'
         switch $c
+          case [[:space:]]
+            pass
           case ','
              start_value
              add_value_to_array

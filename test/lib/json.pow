@@ -30,3 +30,11 @@ json_test '[1,2]' number '2' 1
 json_test '{"a":1, "b":2}' object '*'
 json_test '{"a":1, "b":2}' number '1' 'a'
 json_test '{"a":1, "b":2}' number '2' 'b'
+
+
+# spaces in arrays
+json_test '[
+  1,
+  2
+]' array '*'
+
