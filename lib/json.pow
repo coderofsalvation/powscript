@@ -122,7 +122,7 @@ _json_parse(out string)
     value=
     value_stack_pos-=1
     value_id=$previous_id
-    previous_id=$value_id_stack[$value_stack_pos]
+    previous_id=$value_id_stack[$(math value_stack_pos-1)]
     state_pop
   #
   start_array()
@@ -210,7 +210,7 @@ _json_parse(out string)
             state_push 'string'
           case '}'
             state_pop
-            end_object
+            end_value
           case *
             error "unexpected character $c: expected a string as a object key"; return 1
       case 'object-colon'
