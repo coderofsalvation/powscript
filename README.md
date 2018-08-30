@@ -26,7 +26,7 @@ write shellscript in a powful way!
     require_env 'PATH'
 
     usage(err @extra)
-      echo "Usage: ./myapp <run> [--foo=hello]"
+      echo "Usage: ./myapp <run> [--foo hello]"
       echo "error: $err, ${extra[@]}"
       exit 1
 
@@ -42,7 +42,7 @@ write shellscript in a powful way!
 Output:
 
     $ powscript -c foo.pow -o foo.bash
-    $ ./foo.bash version
+    $ ./foo.bash run --foo hello
     hello powscript world!
 
 Check the [full boilerplate here](https://github.com/coderofsalvation/powscript/blob/master/doc/boilerplate.md) and <a href="https://github.com/coderofsalvation/powscript/wiki/Reference">here</a> for more examples
