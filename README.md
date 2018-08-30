@@ -9,9 +9,9 @@ write shellscript in a powful way!
 ## Usage
 
     $ wget "https://raw.githubusercontent.com/coderofsalvation/powscript/master/powscript" -O /usr/local/bin/powscript && chmod 755 /usr/local/bin/powscript
-    $ powscript myscript.pow                              # run directly
-    $ powscript --compile myscript.pow > myscript         # output bashscript
-    $ powscript --compile --sh myscript.pow > myscript.sh # output sh-script (experimental)
+    $ powscript myscript.pow                          # run directly
+    $ powscript -c myscript.pow > myscript            # output bashscript
+    $ powscript -c --to sh myscript.pow > myscript.sh # output sh-script (experimental)
 
 ## Wiki
 
@@ -26,7 +26,7 @@ write shellscript in a powful way!
     require_env 'PATH'
 
     usage(err @extra)
-      echo "Usage: ./myapp <cmd> [--foo=hello]"
+      echo "Usage: ./myapp <run> [--foo=hello]"
       echo "error: $err, ${extra[@]}"
       exit 1
 
@@ -37,10 +37,11 @@ write shellscript in a powful way!
       json_parse data '{"foo":"world"}'
       echo "$foo powscript $(json_print data foo)!"
 
-    $@ || usage "missing arg" "please pass <cmd>"
+    $@
 
 Output:
 
+    $ powscript -c foo.pow -o foo.bash
     $ ./foo.bash version
     hello powscript world!
 
