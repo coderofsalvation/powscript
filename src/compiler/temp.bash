@@ -1,9 +1,9 @@
 
-PowscriptTempDirectory="$(mktemp -d .powscript.XXXXXX )"
+PowscriptTempDirectory="$(mkdir "$(mktemp -u).powscript")"
 
 powscript:temp-name() {
   local suffix=".powscript$1"
-  setvar "$2" "$(mktemp -u -p "$PowscriptTempDirectory").$1"
+  setvar "$2" "$(mktemp -u -p "$PowscriptTempDirectory")$suffix"
 }
 
 powscript:make-temp() {
@@ -20,7 +20,7 @@ powscript:clean-up() {
   local exit_code=$?
   POWSCRIPT_CDEBUG_STOP=false
   [ -d "$PowscriptTempDirectory" ] && rm -r "$PowscriptTempDirectory"
-  [ -n "$PowscriptGuestProcess"  ] && pgrep "$PowscriptGuestProcess" >/dev/null && kill -QUIT "$PowscriptGuestProcess"
+  [ -n "$PowscriptGuestProcess"  ] && pgrep -P "$PowscriptGuestProcess" >/dev/null && kill -QUIT "$PowscriptGuestProcess"
   exit $exit_code
 }
 
