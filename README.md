@@ -24,14 +24,14 @@ write shellscript in a powful way!
     require_cmd 'echo'
     require_env 'TERM'
 
-    err(msg exitcode)
+    error(msg exitcode)
       echo "error: $msg"
       if set? $exitcode
         exit $exitcode
 
     run(@args -- foo)
       if empty? foo
-        error "please pass --foo ..." 1
+        error "please pass --foo <string>" 1
       echo $args[@] "$foo universe!!"
       echo "HOME=$HOME"
 
