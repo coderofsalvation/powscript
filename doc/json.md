@@ -1,10 +1,7 @@
-# Full Boilerplate
-
-Here's a full boilerplate with some json action going on:
+# JSON Boilerplate
 
     require     'json'
     require_cmd 'curl'
-    require_env 'PATH'
 
     usage(app)
       local example_url="https://raw.githubusercontent.com/coderofsalvation/powscript/master/package.json"
@@ -20,10 +17,6 @@ Here's a full boilerplate with some json action going on:
         $app repository type --url '$example_url'
         $app repository url  --url '$example_url'
       "
-
-    myfunc(a b c d @opt)
-      echo "$a $b $c $d"
-      echo $opt[@]
 
     run(@keys -- url)
       if empty? url

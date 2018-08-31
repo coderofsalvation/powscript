@@ -21,31 +21,30 @@ write shellscript in a powful way!
 ## Example
 
     #!/usr/bin/env powscript
-    require     'json'
     require_cmd 'echo'
-    require_env 'PATH'
+    require_env 'TERM'
 
-    usage(err @extra)
-      echo "Usage: ./myapp <run> [--foo hello]"
-      echo "error: $err, ${extra[@]}"
-      exit 1
+    err(msg exitcode)
+      echo "error: $msg"
+      if set? $exitcode
+        exit $exitcode
 
     run(@args -- foo)
       if empty? foo
-        usage "missing arg" "please pass --foo ..."
-      data={}
-      json_parse data '{"foo":"world"}'
-      echo "$foo powscript $(json_print data foo)!"
+        error "please pass --foo ..." 1
+      echo $args[@] "$foo universe!!"
+      echo "HOME=$HOME"
 
-    $@
+    run $@
 
 Output:
 
     $ powscript -c foo.pow -o foo.bash
-    $ ./foo.bash run --foo hello
-    hello powscript world!
+    $ ./foo.bash hello --foo powful
+    hello powful universe!
+    HOME=/home/yourusername
 
-Check the [full boilerplate here](https://github.com/coderofsalvation/powscript/blob/master/doc/boilerplate.md) and <a href="https://github.com/coderofsalvation/powscript/wiki/Reference">here</a> for more examples
+Check a [json example here](https://github.com/coderofsalvation/powscript/blob/master/doc/boilerplate.md) and <a href="https://github.com/coderofsalvation/powscript/wiki/Reference">here</a> for more examples
 
 ## Features
 
