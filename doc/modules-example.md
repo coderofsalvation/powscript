@@ -31,5 +31,5 @@ to include external scripts / cmd
 
 # Bundle all modules
 
-just run `powscript --compile myapp.pow > all-in-one.bash`
+just run `powscript -c mylibs.pow -o mylibs.bash`
 
