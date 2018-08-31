@@ -44,7 +44,7 @@ Output:
     hello powful universe!
     HOME=/home/yourusername
 
-Check a [json example here](https://github.com/coderofsalvation/powscript/blob/master/doc/boilerplate.md) and <a href="https://github.com/coderofsalvation/powscript/wiki/Reference">here</a> for more examples
+Check a [json example here](https://github.com/coderofsalvation/powscript/blob/master/doc/json.md) and <a href="https://github.com/coderofsalvation/powscript/wiki/Reference">here</a> for more examples
 
 ## Features
 
