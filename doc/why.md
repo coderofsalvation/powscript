@@ -7,4 +7,3 @@ It can turn huge codebases into a smaller readable one.
 * bash evolves slowly, which is good for stability reasons. Powscript will always be backwards compatible.
 
 The aim of powscript is to keep the transpiler small & fast.
-Therefore not all ideas will be suitable (json parser e.g.)
