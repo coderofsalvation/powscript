@@ -7,7 +7,7 @@ to include external scripts / cmd
 * use `require_cmd` to check whether external cmds are installed during **runtime**
 * use `require_env` to check whether certain environment variables are set during **runtime**
 
-####  /myapp.pow
+####  /mylibs.pow
 
     require 'mod/mymod.pow'
     require 'mod/foo.bash'
