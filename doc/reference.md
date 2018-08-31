@@ -36,6 +36,46 @@ foo one two
       </pre>
     </td>
   </tr>
+  <tr>
+    <td align="center"><b>Variable/Array-ish arguments</b></td>
+    <td>
+      <pre>
+        <code>
+foo(a b @extra)
+  echo a=$a b=$b 
+  if set? extra
+    echo first: $extra[0]
+    echo all: $extra[@]
+        </code>
+        <code>
+foo one two a b c
+        </code>
+      </pre>
+    </td>
+    <td>
+      <pre>
+        <code>
+foo() {
+  {
+    local a b;
+    declare -a extra
+    [ $# -ge 1 ] && a="${1}"
+    [ $# -ge 2 ] && b="${2}"
+    [ $# -ge 3 ] && extra=( "${@:3}" )
+  }
+  echo a="${a}" b="${b}"
+  if set? extra; then
+  echo first: "${extra[0]}"
+  echo all: "${extra[@]}"
+  fi
+}
+
+foo 1 2 foo bar flop        </code>
+        </code>
+      </pre>
+    </td>
+  </tr>
+
 
   <tr>
     <td align="center"><b>Switch statement</b></td>
