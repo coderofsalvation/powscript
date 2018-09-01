@@ -1,4 +1,7 @@
-# JSON Boilerplate
+# JSON 
+
+JSON is a very popular format.
+While there are great utilities like `jq`, powscript also supports basic json:
 
     require     'json'
     require_cmd 'curl'
