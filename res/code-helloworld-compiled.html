@@ -1,0 +1,78 @@
+<pre>
+<code>#!/bin/bash
+
+set?() {
+  {
+    local s;
+    [ $# -ge 1 ] &amp;&amp; s="${1}"
+  }
+  eval "{ return \"\$(( \${$s+-1}+1 ))\"; }"
+}
+
+empty?() {
+  {
+    local s;
+    [ $# -ge 1 ] &amp;&amp; s="${1}"
+  }
+  eval "{ return \"\$(( \${$s:+1}+0 ))\"; }"
+}
+
+require_env() {
+  {
+    local var;
+    [ $# -ge 1 ] &amp;&amp; var="${1}"
+  }
+  eval "{
+    pass \"\${$var?\"Required ENV-variable $var not set (hint: \"\"'\"\"$var=yourvalue ./yourscript\"\"'\"\").\"}\"
+  }"
+}
+
+require_cmd() {
+  {
+    local var;
+    [ $# -ge 1 ] &amp;&amp; var="${1}"
+  }
+  if which "${var}" 1&gt;/dev/null 2&gt;/dev/null; then
+    return 0
+  fi
+  eval "{ pass \"\${$var?\"Please install the required command \"\"'\"\"$var\"\"'\"\" (was not found).\"}\" }"
+}
+
+pass() { 
+  true 
+}
+
+require_cmd 'echo'
+require_env 'TERM'
+
+error() {
+  {
+    local msg exitcode;
+    [ $# -ge 1 ] &amp;&amp; msg="${1}"
+    [ $# -ge 2 ] &amp;&amp; exitcode="${2}"
+  }
+  echo 'error: '"${msg}"''
+  if set? "${exitcode}"; then
+    exit "${exitcode}"
+  fi
+}
+
+run() {
+  {
+  local foo;
+    [ $# -ge 1 ] &amp;&amp; foo="${1}"
+  }
+  if empty? foo; then
+    error 'please pass --foo &lt;string&gt;' 1
+  fi
+  echo "$hello" "universe!!"
+  echo 'HOME='"${HOME}"''
+}
+
+run "${@}"
+
+if [ "${ASYNC}" = 1 ]; then
+  wait
+fi
+</code>
+</pre>

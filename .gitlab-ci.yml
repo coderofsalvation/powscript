@@ -1,0 +1,14 @@
+image: node:6
+variables:
+  DOCKER_DRIVER: overlay2
+pages:
+  stage: deploy
+  script:
+  - npm install paperapp -g
+  - paperapp deploy public
+  - gzip -k -6 -r public
+  artifacts:
+    paths:
+    - public
+  only:
+  - master

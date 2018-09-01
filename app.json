@@ -1,0 +1,141 @@
+{
+  "components":["res/component/grid.js","https://unpkg.com/marked@0.5.0/lib/marked.js"],
+  "store":{
+    "persons":[
+      {"name":"John Doe"},
+      {"name":"Foo Bar"} 
+    ]
+  },
+  "wallpaper":"https://stmed.net/sites/default/files/white-wallpapers-25354-2505529.jpg",
+  "cards": [
+    {
+      "title": "Home",
+      "homepage": true,
+      "items": [
+        { "format":"h1", "value":"Write powful shellscript", "attr":{
+          "class":"hero" 
+        }},
+        { "format":"div",
+          "attr":{
+              "class":"tablet"
+          }, 
+          "value":"${res/code-helloworld.html}"
+        }, 
+        { "format":"template",
+          "attr":{
+            "id":"code"
+          }, 
+          "style":{
+              "display":"none"
+          }, 
+          "value":"${res/code-helloworld-compiled.html}"
+        }, 
+        { 
+          "format":"button", 
+          "value":"Convert!",  
+          "attr":{
+            "class":"bright",
+            "id": "convert"
+          }
+        }, 
+        {
+          "value":"<br><br>"
+        }, 
+        {
+        
+          "format":"p",  
+          "value":"<b>POWSCRIPT</b> is an easier way to write robust shellscripts. Easy to maintain. Easy to reason about", 
+          "style":{ "textAlign":"justify"}
+        },
+        { "class": "rule" },
+        { "format":"h1", "value":"Features"},
+        { "format":"li", "value":"indentbased, memorizable, ruby/python-inspired syntax" }, 
+        { "format":"li", "value":"removes semantic noise like { ! [[ @ ]] || ~="}, 
+        { "format":"li", "value":"safetynets: automatic quoting, halt on error or missing dependencies"}, 
+        { "format":"li", "value":"comfort: json, easy arrays, easy async, functional programming"}, 
+        { "format":"li", "value":"named variables instead of positionals"}, 
+        { "format":"li", "value":"Modules / bundling"}, 
+        { "format":"h1", "value":"No dependencies"}, 
+        { "class":"rule" }, 
+        { "format":"li", "value":"written/generated for bash >= 4.x"}, 
+        { "format":"li", "value":"write portable apps for embedded linux"}, 
+        { "format":"li", "value":"remote/local packages & dependencies"}, 
+        { "format":"li", "value":"hasslefree: no gcc or packages"},
+        { "class":"rule" }, 
+        { "attr":{"id":"reference"}, 
+          "value":"${https://raw.githubusercontent.com/coderofsalvation/powscript/master/doc/reference.md}"
+        }
+      ]
+    },
+    {
+      "title": "Why",
+      "items": [
+        { "value":"<br>"}, 
+        {
+          "format":"img", 
+          "src":"res/hackerman.jpg", 
+          "style":{
+            "min-height":"427px", 
+            "filter":"hue-rotate(160deg) opacity(0.9)"
+          }
+        }, 
+        {
+          "format": "h1",
+          "value": "Why? Because hackerman.."
+        }, 
+        { "attr":{"id":"why"}, 
+          "value":"${https://raw.githubusercontent.com/coderofsalvation/powscript/master/doc/why.md}"
+        }, 
+        { "attr":{"id":"FAQ"}, 
+          "value":"${https://raw.githubusercontent.com/coderofsalvation/powscript/master/doc/FAQ.md}"
+        }
+      ]
+    }, 
+    {
+      "title": "JSON",
+      "items": [
+        {
+          "value": "<br>"
+        }, 
+        { "attr":{"id":"json"}, 
+          "value":"${https://raw.githubusercontent.com/coderofsalvation/powscript/master/doc/json.md}"
+        } 
+      ]
+    }, 
+    {
+      "title": "Modules",
+      "items": [
+        {
+          "value": "<br>"
+        }, 
+        { "attr":{"id":"modules-example"}, 
+          "value":"${https://raw.githubusercontent.com/coderofsalvation/powscript/master/doc/modules-example.md}"
+        } 
+      ]
+    }, 
+    {
+      "title": "Not in menu",
+	  "menu": false, 
+      "items": [
+        {
+          "format": "h1",
+          "value": "I am not in the menu"
+        }
+      ]
+    }
+  ],
+  "header":{
+  	"items":[
+        { "value": "<a href='https://github.com/coderofsalvation/powscript' target='_blank'><img style='position: fixed; top: 0; left: 0; border: 0;' src='https://s3.amazonaws.com/github/ribbons/forkme_left_orange_ff7600.png' alt='Fork me on GitHub'></a>"}
+  	]	
+  }, 
+  "footer":{
+  	"items":[
+  	  { "class":"rule"}, 
+      { "format":"h3", "value":"Credits" }, 
+      { "format":"li", "value":"<a href='https://github.com/coderofsalvation'>Leon van Kammen (coderofsalvation)</a>"}, 
+      { "format":"li", "value":"<a href='https://github.com/fcard'>Fabio (fcard)</a>"}, 
+      { "value":"<br><br>" }
+  	]	
+  }
+}

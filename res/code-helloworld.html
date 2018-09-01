@@ -1,0 +1,17 @@
+<pre>
+<code>#!/usr/bin/env powscript
+require_cmd 'echo'
+require_env 'TERM'
+
+error(msg exitcode)
+  echo "error: $msg"
+  if set? $exitcode
+    exit $exitcode
+
+run(hello)
+  echo $hello "universe!!"
+  echo "HOME=$HOME"
+
+run $@
+</code>
+</pre>

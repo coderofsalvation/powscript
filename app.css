@@ -1,0 +1,121 @@
+body, body *, div{
+  font-family:'Raleway',Helvetica;
+}
+
+h1,
+.bright,
+label {
+   color:#fbc403; 
+}
+
+.bright-bg {
+   background-color: #ebe6d4;
+}
+
+.input:focus{
+  border-bottom: 2px solid #fbc403;
+}
+
+#wallpaper {
+    display:none;
+    background-image:none;
+	filter: opacity(0.5);
+	-webkit-filter: opacity(0.5);
+	-ms-filter: opacity(0.5);
+}
+
+input,textarea{
+	background-color:#f1e9cd;
+}
+
+/* tablet */
+
+h1.hero {
+  font-size:60px;
+  margin: 82px 0px;
+  line-height:69px;
+}
+
+.tablet {
+  height:50vh;
+  width:100%;
+  border-radius:15px;
+  border: 35px solid #CCC;
+  background-color:#444;
+  z-index:5;
+}
+
+pre {
+    border-radius:6px;
+    background-color:#444;
+    text-align: left;
+    max-height: 43vh;
+    overflow: scroll;
+    margin:0;
+    padding: 20px;
+}
+
+pre code{
+    font-family: Helvetica;
+    font-size:16px;
+    color:#AAA;
+}
+pre, 
+code{
+    line-height:25px;
+}
+
+table {
+    border-spacing: 10px;
+    border-collapse: separate;
+}
+
+table tr td pre {
+  padding:0px;
+}
+
+table tr th, 
+table tr td {
+  vertical-align:top;
+  text-align:left;
+  padding:20px;
+  border-radius:6px;
+}
+
+table tr td:nth-child(2), 
+table tr td:nth-child(3){
+  background-color:#444;
+  font-family: Helvetica;
+  font-size:16px;
+  color:#AAA;
+}
+
+.tablet:after{
+    /*
+  border-radius:50%;
+  border: 20px solid #F0F;
+  width:30px;
+  height:30px;
+  position:absolute;
+  content:'';
+  top:0;
+  left:0;
+  z-index:10;
+  */
+}
+
+.img{
+  border-radius:6px;
+}
+
+/* cycling themes (a till f) */
+
+/*
+body.c {
+	filter: hue-rotate(90deg);
+}
+body.c img,
+body.c .img{
+	filter: hue-rotate(-90deg);	
+}
+*/
