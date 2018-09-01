@@ -4,8 +4,6 @@
 
 write shellscript in a powful way!
 
-> IMPORTANT: a brand NEW powscript beta-version is available [here](https://github.com/fcard/powscript/tree/token-ast-compiler), come see!
-
 ## Usage
 
     $ wget "https://raw.githubusercontent.com/coderofsalvation/powscript/master/powscript" -O /usr/local/bin/powscript && chmod 755 /usr/local/bin/powscript
@@ -85,12 +83,12 @@ Then hitting ctrl-p in your console will enter powscript mode:
 
 Powscript can produce 'kindof' POSIX `/bin/sh`-compatible output by removing bashisms, by introducing the `--sh` flag:
 
-    $ powscript --compile foo.pow      > foo.bash
-    $ powscript --sh --compile foo.pow > foo.sh
+    $ powscript --c foo.pow -o foo.bash
+    $ powscript --to sh --c foo.pow -o foo.sh
 
 This however, is experimental, as well as the standalone bash2sh converter:
 
-    $ cat foo.bash | powscript --tosh  > foo.sh
+    $ cat foo.bash | powscript --to sh  > foo.sh
 
 > NOTE: remove bashisms manually using docs/tools like [bashism guide](http://mywiki.wooledge.org/Bashism) or [checkbashisms](https://linux.die.net/man/1/checkbashisms)
 > The general rule for POSIX sh-output is: `don't write bashfeatures in powscript`
@@ -104,8 +102,8 @@ See [FAQ](doc/FAQ.md)
 > HINT: use live expansion inside vim.
 > Put the lines below in .vimrc and hit 'p>' in normal/visual mode to expand powscript
 
-    vmap p> :!PIPE=2 powscript --compile<CR>
-    nmap p> ggVG:!PIPE=2 powscript --compile<CR>
+    vmap p> :!PIPE=2 powscript -c<CR>
+    nmap p> ggVG:!PIPE=2 powscript -c<CR>
 
 ## OSX users
 
