@@ -4,7 +4,7 @@
 
 > **Q: Is powscript a programming language **
 
-> A: not really. 
+> A: not really.
 
 > **Q: What do i need to run powscript?**
 

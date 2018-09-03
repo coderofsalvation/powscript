@@ -1,4 +1,4 @@
-# JSON 
+# JSON
 
 JSON is a very popular format.
 While there are great utilities like `jq`, powscript also supports basic json:

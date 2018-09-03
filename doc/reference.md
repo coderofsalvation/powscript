@@ -42,7 +42,7 @@ foo one two
       <pre>
         <code>
 foo(a b @extra)
-  echo a=$a b=$b 
+  echo a=$a b=$b
   if set? extra
     echo first: $extra[0]
     echo all: $extra[@]
