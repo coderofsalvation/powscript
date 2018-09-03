@@ -6290,7 +6290,7 @@ powscript:help() {
   '
 }
 # FILE: compiler/helptext.bash
-POWSCRIPT_VERSION=1.1.15
+POWSCRIPT_VERSION=1.1.16
 
 version:number() {
   echo "$POWSCRIPT_VERSION"
