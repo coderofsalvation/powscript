@@ -1,3 +1,4 @@
+powscript_source lang/bash/start.bash       #<<EXPAND>>
 powscript_source lang/bash/interactive.bash #<<EXPAND>>
 
 bash:run() {

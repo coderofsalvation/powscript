@@ -35,6 +35,7 @@ files:compile-file() {
 }
 
 files:start-code() {
+  backend:file-start >>"$1"
   files:compile-file "$1" <<<"$PowscriptFileStart"$'\n\n'
 
   if ${PowscriptIncludeStd-true}; then
