@@ -9,6 +9,7 @@ backend:select() {
     backend:compile     () { ${1}:compile     \"\$@\"; }
     backend:interactive () { ${1}:interactive \"\$@\"; }
     backend:run         () { ${1}:run         \"\$@\"; }
+    backend:file-start  () { ${1}:file-start  \"\$@\"; }
   "
 }
 

@@ -5283,6 +5283,14 @@ backend:compile-children() {
 }
 
 # FILE: lang/common.bash
+FileStartBash="\
+#!/usr/bin/env bash
+"
+
+bash:file-start() {
+  echo "$FileStartBash"
+}
+# FILE: lang/bash/start.bash
 bash:interactive() {
   local wfifo="$1"
   local rfifo="$2"
@@ -5642,6 +5650,14 @@ bash:compile() {
 }
 
 # FILE: lang/bash/compile.bash
+FileStartSh="\
+#!/usr/bin/env sh
+"
+
+sh:file-start() {
+  echo "$FileStartSh"
+}
+# FILE: lang/sh/start.bash
 sh:interactive() {
   local wfifo="$1"
   local rfifo="$2"
@@ -6221,6 +6237,7 @@ backend:select() {
     backend:compile     () { ${1}:compile     \"\$@\"; }
     backend:interactive () { ${1}:interactive \"\$@\"; }
     backend:run         () { ${1}:run         \"\$@\"; }
+    backend:file-start  () { ${1}:file-start  \"\$@\"; }
   "
 }
 
@@ -6290,7 +6307,7 @@ powscript:help() {
   '
 }
 # FILE: compiler/helptext.bash
-POWSCRIPT_VERSION=1.1.16
+POWSCRIPT_VERSION=1.1.17
 
 version:number() {
   echo "$POWSCRIPT_VERSION"
@@ -6560,6 +6577,7 @@ files:compile-file() {
 }
 
 files:start-code() {
+  backend:file-start >>"$1"
   files:compile-file "$1" <<<"$PowscriptFileStart"$'\n\n'
 
   if ${PowscriptIncludeStd-true}; then
