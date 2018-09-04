@@ -76,10 +76,9 @@ require_env(var)
     pass ${~var:set! "Required ENV-variable ~var not set (hint: '~var=yourvalue ./yourscript')."}
 
 require_cmd(var)
-  if which $var 1>/dev/null 2>/dev/null
-    return 0
-  expand
-    pass ${~var:set! "Please install the required command '~var' (was not found)."}
+  if not command -v $var 1>/dev/null 2>/dev/null
+    echo "Please install the required command '$var' (was not found)."
+    exit 1
 
 ismap?(x)
   local result k1=__ismap_dummy1 k2=__ismap_dummy2
