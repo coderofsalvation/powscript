@@ -2,11 +2,31 @@
 
 [![Travis build status](https://travis-ci.org/coderofsalvation/powscript.svg?branch=master)](https://travis-ci.org/coderofsalvation/powscript.svg?branch=master)
 
-write shellscript in a powful way!
+Write shellscript in a powful way!
+
+## Installation and Upgrade
+
+There's an [unnoficial AUR package](https://aur.archlinux.org/packages/powscript/) that can be installed using any AUR helper or by downloading the PKGBUILD and building it yourself:
+
+    $ yay -S powscript
+
+Or, if you prefer to build it yourself:
+
+```bash
+$ wget "https://aur.archlinux.org/cgit/aur.git/plain/PKGBUILD?h=powscript" -O ./PKGBUILD \
+  && makepkg -sr \
+  && sudo pacman -U powscript-<pkgVersion>-any.pkg.tar.xz
+```
+Rebuilding and reinstalling the package will install the latest version available in the repository. If you're on any other distribution you can install powscript running:
+
+```bash
+$ wget "https://raw.githubusercontent.com/coderofsalvation/powscript/master/powscript" -O ./powscript \
+  && sudo install --backup --compare ./powscript /usr/local/bin/
+```
+If you want to upgrade your current version, you can just re-run the above command.
 
 ## Usage
 
-    $ wget "https://raw.githubusercontent.com/coderofsalvation/powscript/master/powscript" -O /usr/local/bin/powscript && chmod 755 /usr/local/bin/powscript
     $ powscript myscript.pow                          # run directly
     $ powscript -c myscript.pow > myscript            # output bashscript
     $ powscript -c --to sh myscript.pow > myscript.sh # output sh-script (experimental)
