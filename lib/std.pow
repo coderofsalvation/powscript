@@ -77,7 +77,7 @@ require_env(var)
 
 require_cmd(var)
   if not command -v $var 1>/dev/null 2>/dev/null
-    echo "Please install the required command '$var' (was not found)."
+    echo "Please install the required command '$var' (it was not found)." >/dev/stderr
     exit 1
 
 ismap?(x)
