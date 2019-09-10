@@ -1818,7 +1818,47 @@ ast:parse:assign() {
 }
 
 
-# ast:parse:special-assign $name $out
+# ast:parse:array-dereference-assign $name $out
+#
+# Parse an assignment of the form:
+#
+# :ref[<expr]= <expr>
+#
+
+
+__shadowing_ast:parse:array-dereference-assign() {
+  local var="$1" out="$2"
+  local name index value indexing
+
+  token:require name ref
+  token:require special '['
+
+  ast:push-state '['
+  ast:parse:expr index
+  ast:pop-state
+
+  token:require special ']'
+  token:require special '='
+
+  ast:parse:expr value
+
+  ast:from $var value name
+  ast:make indexing indexing "$name" $index
+  ast:make "$out" assign-ref '' $indexing $value
+}
+
+ast:parse:array-dereference-assign() {
+  if [ -z ${__noshadow_15_+x} ]; then
+    local __noshadow_15_
+    local __noshadow_15_2
+  fi
+  __shadowing_ast:parse:array-dereference-assign "$1"  __noshadow_15_2
+  setvar "$2" "$__noshadow_15_2"
+}
+
+
+
+# ast:parse:conditional-assign $name $out
 #
 # Parse an special assingment of the form:
 #
@@ -1857,12 +1897,12 @@ __shadowing_ast:parse:conditional-assign() {
 }
 
 ast:parse:conditional-assign() {
-  if [ -z ${__noshadow_15_+x} ]; then
-    local __noshadow_15_
-    local __noshadow_15_2
+  if [ -z ${__noshadow_16_+x} ]; then
+    local __noshadow_16_
+    local __noshadow_16_2
   fi
-  __shadowing_ast:parse:conditional-assign "$1"  __noshadow_15_2
-  setvar "$2" "$__noshadow_15_2"
+  __shadowing_ast:parse:conditional-assign "$1"  __noshadow_16_2
+  setvar "$2" "$__noshadow_16_2"
 }
 
 
@@ -1955,12 +1995,12 @@ __shadowing_ast:parse:assign-sequence() {
 }
 
 ast:parse:assign-sequence() {
-  if [ -z ${__noshadow_16_+x} ]; then
-    local __noshadow_16_
-    local __noshadow_16_2
+  if [ -z ${__noshadow_17_+x} ]; then
+    local __noshadow_17_
+    local __noshadow_17_2
   fi
-  __shadowing_ast:parse:assign-sequence "$1"  __noshadow_16_2
-  setvar "$2" "$__noshadow_16_2"
+  __shadowing_ast:parse:assign-sequence "$1"  __noshadow_17_2
+  setvar "$2" "$__noshadow_17_2"
 }
 
 
@@ -2101,12 +2141,12 @@ __shadowing_ast:parse:substitution() {
 }
 
 ast:parse:substitution() {
-  if [ -z ${__noshadow_17_+x} ]; then
-    local __noshadow_17_
-    local __noshadow_17_2
+  if [ -z ${__noshadow_18_+x} ]; then
+    local __noshadow_18_
+    local __noshadow_18_2
   fi
-  __shadowing_ast:parse:substitution "$1"  __noshadow_17_2
-  setvar "$2" "$__noshadow_17_2"
+  __shadowing_ast:parse:substitution "$1"  __noshadow_18_2
+  setvar "$2" "$__noshadow_18_2"
 }
 
 
@@ -2134,12 +2174,12 @@ __shadowing_ast:parse:curly-substitution() {
 }
 
 ast:parse:curly-substitution() {
-  if [ -z ${__noshadow_18_+x} ]; then
-    local __noshadow_18_
-    local __noshadow_18_1
+  if [ -z ${__noshadow_19_+x} ]; then
+    local __noshadow_19_
+    local __noshadow_19_1
   fi
-  __shadowing_ast:parse:curly-substitution  __noshadow_18_1
-  setvar "$1" "$__noshadow_18_1"
+  __shadowing_ast:parse:curly-substitution  __noshadow_19_1
+  setvar "$1" "$__noshadow_19_1"
 }
 
 
@@ -2169,9 +2209,11 @@ ast:parse:curly-substitution() {
 # lowercase <pattern>
 # uppercase* <pattern>
 # lowercase* <pattern>
-# indirect
 # keys
 # ref
+# ref[@]
+# deref
+# deref[<expr>]
 #
 
 
@@ -2193,9 +2235,9 @@ __shadowing_ast:parse:parameter-substitution() {
   fi
 
   case "$opname" in
-    unset|empty)   modifier='='; mclass='string' ;;
-    *fix|replace)  modifier='*'  mclass='name'   ;;
-    *case)         modifier='*'  mclass='name'   ;;
+    unset|empty)   modifier='='; mclass='string'  ;;
+    *fix|replace)  modifier='*'  mclass='name'    ;;
+    *case)         modifier='*'  mclass='name'    ;;
   esac
 
 
@@ -2223,6 +2265,8 @@ __shadowing_ast:parse:parameter-substitution() {
       fi
       ;;
 
+    ref|deref)
+      ;;
     *)
       if [ -n "$child_b" ]; then
         ast:error "trailling expression after operation name: $(ast:print $child_b)"
@@ -2236,8 +2280,8 @@ __shadowing_ast:parse:parameter-substitution() {
   esac
 
   case "$opname" in
-    length|indirect)
-      ast:make "$out" "string-$opname" "$varname"
+    length)
+      ast:make "$out" "string-length" "$varname"
       ;;
     keys)
       local at
@@ -2334,7 +2378,29 @@ __shadowing_ast:parse:parameter-substitution() {
       ;;
 
     ref)
-      ast:make "$out" variable-reference "$varname"
+      if token:next-is special '['; then
+        token:require special '['
+        token:require special '@'
+        token:require special ']'
+        ast:make "$out" array-reference "$varname"
+      else
+        ast:make "$out" variable-reference "$varname"
+      fi
+      ;;
+    deref)
+      if token:next-is special '['; then
+        local index
+        token:require special '['
+
+        ast:push-state '['
+        ast:parse:expr index
+        ast:pop-state
+
+        token:require special ']'
+        ast:make "$out" array-dereference "$varname" $index
+      else
+        ast:make "$out" variable-dereference "$varname"
+      fi
       ;;
     *)
       ast:error "Invalid string operation: $opname"
@@ -2344,12 +2410,12 @@ __shadowing_ast:parse:parameter-substitution() {
 }
 
 ast:parse:parameter-substitution() {
-  if [ -z ${__noshadow_19_+x} ]; then
-    local __noshadow_19_
-    local __noshadow_19_3
+  if [ -z ${__noshadow_20_+x} ]; then
+    local __noshadow_20_
+    local __noshadow_20_3
   fi
-  __shadowing_ast:parse:parameter-substitution "$1" "$2"  __noshadow_19_3
-  setvar "$3" "$__noshadow_19_3"
+  __shadowing_ast:parse:parameter-substitution "$1" "$2"  __noshadow_20_3
+  setvar "$3" "$__noshadow_20_3"
 }
 
 
@@ -2371,13 +2437,13 @@ __shadowing_ast:conditional-exp-operators() {
 }
 
 ast:conditional-exp-operators() {
-  if [ -z ${__noshadow_20_+x} ]; then
-    local __noshadow_20_
-    local __noshadow_20_2 __noshadow_20_3
+  if [ -z ${__noshadow_21_+x} ]; then
+    local __noshadow_21_
+    local __noshadow_21_2 __noshadow_21_3
   fi
-  __shadowing_ast:conditional-exp-operators "$1"  __noshadow_20_2 __noshadow_20_3
-  setvar "$2" "$__noshadow_20_2"
-setvar "$3" "$__noshadow_20_3"
+  __shadowing_ast:conditional-exp-operators "$1"  __noshadow_21_2 __noshadow_21_3
+  setvar "$2" "$__noshadow_21_2"
+setvar "$3" "$__noshadow_21_3"
 }
 
 
@@ -2400,12 +2466,12 @@ __shadowing_ast:parse:command-substitution() {
 }
 
 ast:parse:command-substitution() {
-  if [ -z ${__noshadow_21_+x} ]; then
-    local __noshadow_21_
-    local __noshadow_21_1
+  if [ -z ${__noshadow_22_+x} ]; then
+    local __noshadow_22_
+    local __noshadow_22_1
   fi
-  __shadowing_ast:parse:command-substitution  __noshadow_21_1
-  setvar "$1" "$__noshadow_21_1"
+  __shadowing_ast:parse:command-substitution  __noshadow_22_1
+  setvar "$1" "$__noshadow_22_1"
 }
 
 
@@ -2516,13 +2582,25 @@ __shadowing_ast:parse:expr() {
                 token:get -v pcolon_value -c pcolon_class -g pcolon_glued
                 token:return-to-mark $stream_position
 
-                if [ "$pcolon_value:$pcolon_class:$pcolon_glued" = "=:special:true" ]; then
-                  ast:clear $root
-                  ast:parse:conditional-assign $last_expression root
-                  ast:from $root head root_head
-                else
-                  ast:make expression name ":"
-                fi
+                case "$pcolon_value:$pcolon_class:$pcolon_glued" in
+                  "=:special:true")
+                    ast:clear $root
+                    ast:parse:conditional-assign $last_expression root
+                    ast:from $root head root_head
+                    ;;
+                  "[:special:true")
+                    if token:next-is name ref; then
+                      ast:clear $root
+                      ast:parse:array-dereference-assign $last_expression root
+                      ast:from $root head root_head
+                    else
+                      ast:make expression name ":"
+                    fi
+                    ;;
+                  *)
+                    ast:make expression name ":"
+                    ;;
+                esac
               else
                 ast:make expression name ":"
               fi
@@ -2587,7 +2665,7 @@ __shadowing_ast:parse:expr() {
                   exprnum=3
                 fi
               elif [ $exprnum -gt 0 ]; then
-                root=determinable
+                root_head=determinable
               else
                 ast:push-state '['
                 if ${AST_MATH_MODE-false}; then
@@ -2674,12 +2752,12 @@ __shadowing_ast:parse:expr() {
 }
 
 ast:parse:expr() {
-  if [ -z ${__noshadow_22_+x} ]; then
-    local __noshadow_22_
-    local __noshadow_22_1
+  if [ -z ${__noshadow_23_+x} ]; then
+    local __noshadow_23_
+    local __noshadow_23_1
   fi
-  __shadowing_ast:parse:expr  __noshadow_22_1
-  setvar "$1" "$__noshadow_22_1"
+  __shadowing_ast:parse:expr  __noshadow_23_1
+  setvar "$1" "$__noshadow_23_1"
 }
 
 
@@ -2705,12 +2783,12 @@ __shadowing_ast:parse:specific-expr() {
 }
 
 ast:parse:specific-expr() {
-  if [ -z ${__noshadow_23_+x} ]; then
-    local __noshadow_23_
-    local __noshadow_23_2
+  if [ -z ${__noshadow_24_+x} ]; then
+    local __noshadow_24_
+    local __noshadow_24_2
   fi
-  __shadowing_ast:parse:specific-expr "$1"  __noshadow_23_2
-  setvar "$2" "$__noshadow_23_2"
+  __shadowing_ast:parse:specific-expr "$1"  __noshadow_24_2
+  setvar "$2" "$__noshadow_24_2"
 }
 
 # FILE: ast/expressions.bash
@@ -2751,12 +2829,12 @@ __shadowing_ast:parse:math() {
 }
 
 ast:parse:math() {
-  if [ -z ${__noshadow_24_+x} ]; then
-    local __noshadow_24_
-    local __noshadow_24_1
+  if [ -z ${__noshadow_25_+x} ]; then
+    local __noshadow_25_
+    local __noshadow_25_1
   fi
-  __shadowing_ast:parse:math  __noshadow_24_1
-  setvar "$1" "$__noshadow_24_1"
+  __shadowing_ast:parse:math  __noshadow_25_1
+  setvar "$1" "$__noshadow_25_1"
 }
 
 
@@ -2885,12 +2963,12 @@ __shadowing_ast:parse:flag() {
 }
 
 ast:parse:flag() {
-  if [ -z ${__noshadow_25_+x} ]; then
-    local __noshadow_25_
-    local __noshadow_25_2
+  if [ -z ${__noshadow_26_+x} ]; then
+    local __noshadow_26_
+    local __noshadow_26_2
   fi
-  __shadowing_ast:parse:flag "$1"  __noshadow_25_2
-  setvar "$2" "$__noshadow_25_2"
+  __shadowing_ast:parse:flag "$1"  __noshadow_26_2
+  setvar "$2" "$__noshadow_26_2"
 }
 
 # FILE: ast/flag.bash
@@ -2913,12 +2991,12 @@ __shadowing_ast:parse:command-call() {
 }
 
 ast:parse:command-call() {
-  if [ -z ${__noshadow_26_+x} ]; then
-    local __noshadow_26_
-    local __noshadow_26_2
+  if [ -z ${__noshadow_27_+x} ]; then
+    local __noshadow_27_
+    local __noshadow_27_2
   fi
-  __shadowing_ast:parse:command-call "$1"  __noshadow_26_2
-  setvar "$2" "$__noshadow_26_2"
+  __shadowing_ast:parse:command-call "$1"  __noshadow_27_2
+  setvar "$2" "$__noshadow_27_2"
 }
 
 
@@ -2951,12 +3029,12 @@ __shadowing_ast:parse:command-call-with-cmd() {
 }
 
 ast:parse:command-call-with-cmd() {
-  if [ -z ${__noshadow_27_+x} ]; then
-    local __noshadow_27_
-    local __noshadow_27_3
+  if [ -z ${__noshadow_28_+x} ]; then
+    local __noshadow_28_
+    local __noshadow_28_3
   fi
-  __shadowing_ast:parse:command-call-with-cmd "$1" "$2"  __noshadow_27_3
-  setvar "$3" "$__noshadow_27_3"
+  __shadowing_ast:parse:command-call-with-cmd "$1" "$2"  __noshadow_28_3
+  setvar "$3" "$__noshadow_28_3"
 }
 
 
@@ -3000,12 +3078,12 @@ __shadowing_ast:parse:declare() {
 }
 
 ast:parse:declare() {
-  if [ -z ${__noshadow_28_+x} ]; then
-    local __noshadow_28_
-    local __noshadow_28_1
+  if [ -z ${__noshadow_29_+x} ]; then
+    local __noshadow_29_
+    local __noshadow_29_1
   fi
-  __shadowing_ast:parse:declare  __noshadow_28_1
-  setvar "$1" "$__noshadow_28_1"
+  __shadowing_ast:parse:declare  __noshadow_29_1
+  setvar "$1" "$__noshadow_29_1"
 }
 
 # FILE: ast/declare.bash
@@ -3069,12 +3147,12 @@ __shadowing_ast:parse:block() {
 }
 
 ast:parse:block() {
-  if [ -z ${__noshadow_29_+x} ]; then
-    local __noshadow_29_
-    local __noshadow_29_2
+  if [ -z ${__noshadow_30_+x} ]; then
+    local __noshadow_30_
+    local __noshadow_30_2
   fi
-  __shadowing_ast:parse:block "$1"  __noshadow_29_2
-  setvar "$2" "$__noshadow_29_2"
+  __shadowing_ast:parse:block "$1"  __noshadow_30_2
+  setvar "$2" "$__noshadow_30_2"
 }
 
 
@@ -3182,12 +3260,12 @@ __shadowing_ast:parse:pattern() {
 }
 
 ast:parse:pattern() {
-  if [ -z ${__noshadow_30_+x} ]; then
-    local __noshadow_30_
-    local __noshadow_30_2
+  if [ -z ${__noshadow_31_+x} ]; then
+    local __noshadow_31_
+    local __noshadow_31_2
   fi
-  __shadowing_ast:parse:pattern "$1"  __noshadow_30_2
-  setvar "$2" "$__noshadow_30_2"
+  __shadowing_ast:parse:pattern "$1"  __noshadow_31_2
+  setvar "$2" "$__noshadow_31_2"
 }
 
 
@@ -3228,12 +3306,12 @@ __shadowing_ast:parse:if() {
 }
 
 ast:parse:if() {
-  if [ -z ${__noshadow_31_+x} ]; then
-    local __noshadow_31_
-    local __noshadow_31_2
+  if [ -z ${__noshadow_32_+x} ]; then
+    local __noshadow_32_
+    local __noshadow_32_2
   fi
-  __shadowing_ast:parse:if "$1"  __noshadow_31_2
-  setvar "$2" "$__noshadow_31_2"
+  __shadowing_ast:parse:if "$1"  __noshadow_32_2
+  setvar "$2" "$__noshadow_32_2"
 }
 
 
@@ -3313,12 +3391,12 @@ __shadowing_ast:parse:while() {
 }
 
 ast:parse:while() {
-  if [ -z ${__noshadow_32_+x} ]; then
-    local __noshadow_32_
-    local __noshadow_32_1
+  if [ -z ${__noshadow_33_+x} ]; then
+    local __noshadow_33_
+    local __noshadow_33_1
   fi
-  __shadowing_ast:parse:while  __noshadow_32_1
-  setvar "$1" "$__noshadow_32_1"
+  __shadowing_ast:parse:while  __noshadow_33_1
+  setvar "$1" "$__noshadow_33_1"
 }
 
 
@@ -3417,12 +3495,12 @@ __shadowing_ast:parse:for() {
 }
 
 ast:parse:for() {
-  if [ -z ${__noshadow_33_+x} ]; then
-    local __noshadow_33_
-    local __noshadow_33_1
+  if [ -z ${__noshadow_34_+x} ]; then
+    local __noshadow_34_
+    local __noshadow_34_1
   fi
-  __shadowing_ast:parse:for  __noshadow_33_1
-  setvar "$1" "$__noshadow_33_1"
+  __shadowing_ast:parse:for  __noshadow_34_1
+  setvar "$1" "$__noshadow_34_1"
 }
 
 
@@ -3457,12 +3535,12 @@ __shadowing_ast:parse:switch() {
 }
 
 ast:parse:switch() {
-  if [ -z ${__noshadow_34_+x} ]; then
-    local __noshadow_34_
-    local __noshadow_34_1
+  if [ -z ${__noshadow_35_+x} ]; then
+    local __noshadow_35_
+    local __noshadow_35_1
   fi
-  __shadowing_ast:parse:switch  __noshadow_34_1
-  setvar "$1" "$__noshadow_34_1"
+  __shadowing_ast:parse:switch  __noshadow_35_1
+  setvar "$1" "$__noshadow_35_1"
 }
 
 
@@ -3489,12 +3567,12 @@ __shadowing_ast:parse:case() {
 }
 
 ast:parse:case() {
-  if [ -z ${__noshadow_35_+x} ]; then
-    local __noshadow_35_
-    local __noshadow_35_1
+  if [ -z ${__noshadow_36_+x} ]; then
+    local __noshadow_36_
+    local __noshadow_36_1
   fi
-  __shadowing_ast:parse:case  __noshadow_35_1
-  setvar "$1" "$__noshadow_35_1"
+  __shadowing_ast:parse:case  __noshadow_36_1
+  setvar "$1" "$__noshadow_36_1"
 }
 
 
@@ -3526,12 +3604,12 @@ __shadowing_ast:parse:assert() {
 }
 
 ast:parse:assert() {
-  if [ -z ${__noshadow_36_+x} ]; then
-    local __noshadow_36_
-    local __noshadow_36_1
+  if [ -z ${__noshadow_37_+x} ]; then
+    local __noshadow_37_
+    local __noshadow_37_1
   fi
-  __shadowing_ast:parse:assert  __noshadow_36_1
-  setvar "$1" "$__noshadow_36_1"
+  __shadowing_ast:parse:assert  __noshadow_37_1
+  setvar "$1" "$__noshadow_37_1"
 }
 
 
@@ -3550,12 +3628,12 @@ __shadowing_ast:parse:test() {
 }
 
 ast:parse:test() {
-  if [ -z ${__noshadow_37_+x} ]; then
-    local __noshadow_37_
-    local __noshadow_37_1
+  if [ -z ${__noshadow_38_+x} ]; then
+    local __noshadow_38_
+    local __noshadow_38_1
   fi
-  __shadowing_ast:parse:test  __noshadow_37_1
-  setvar "$1" "$__noshadow_37_1"
+  __shadowing_ast:parse:test  __noshadow_38_1
+  setvar "$1" "$__noshadow_38_1"
 }
 
 
@@ -3623,12 +3701,12 @@ __shadowing_ast:parse:conditional() {
 }
 
 ast:parse:conditional() {
-  if [ -z ${__noshadow_38_+x} ]; then
-    local __noshadow_38_
-    local __noshadow_38_1
+  if [ -z ${__noshadow_39_+x} ]; then
+    local __noshadow_39_
+    local __noshadow_39_1
   fi
-  __shadowing_ast:parse:conditional  __noshadow_38_1
-  setvar "$1" "$__noshadow_38_1"
+  __shadowing_ast:parse:conditional  __noshadow_39_1
+  setvar "$1" "$__noshadow_39_1"
 }
 
 
@@ -3699,12 +3777,12 @@ __shadowing_ast:parse:seek-conditional-operator() {
 }
 
 ast:parse:seek-conditional-operator() {
-  if [ -z ${__noshadow_39_+x} ]; then
-    local __noshadow_39_
-    local __noshadow_39_1
+  if [ -z ${__noshadow_40_+x} ]; then
+    local __noshadow_40_
+    local __noshadow_40_1
   fi
-  __shadowing_ast:parse:seek-conditional-operator  __noshadow_39_1
-  setvar "$1" "$__noshadow_39_1"
+  __shadowing_ast:parse:seek-conditional-operator  __noshadow_40_1
+  setvar "$1" "$__noshadow_40_1"
 }
 
 
@@ -3726,12 +3804,12 @@ __shadowing_ast:parse:negated-conditional() {
 }
 
 ast:parse:negated-conditional() {
-  if [ -z ${__noshadow_40_+x} ]; then
-    local __noshadow_40_
-    local __noshadow_40_1
+  if [ -z ${__noshadow_41_+x} ]; then
+    local __noshadow_41_
+    local __noshadow_41_1
   fi
-  __shadowing_ast:parse:negated-conditional  __noshadow_40_1
-  setvar "$1" "$__noshadow_40_1"
+  __shadowing_ast:parse:negated-conditional  __noshadow_41_1
+  setvar "$1" "$__noshadow_41_1"
 }
 
 
@@ -3753,12 +3831,12 @@ __shadowing_ast:parse:flag-conditional() {
 }
 
 ast:parse:flag-conditional() {
-  if [ -z ${__noshadow_41_+x} ]; then
-    local __noshadow_41_
-    local __noshadow_41_2
+  if [ -z ${__noshadow_42_+x} ]; then
+    local __noshadow_42_
+    local __noshadow_42_2
   fi
-  __shadowing_ast:parse:flag-conditional "$1"  __noshadow_41_2
-  setvar "$2" "$__noshadow_41_2"
+  __shadowing_ast:parse:flag-conditional "$1"  __noshadow_42_2
+  setvar "$2" "$__noshadow_42_2"
 }
 
 
@@ -3792,12 +3870,12 @@ __shadowing_ast:parse:command-conditional() {
 }
 
 ast:parse:command-conditional() {
-  if [ -z ${__noshadow_42_+x} ]; then
-    local __noshadow_42_
-    local __noshadow_42_2
+  if [ -z ${__noshadow_43_+x} ]; then
+    local __noshadow_43_
+    local __noshadow_43_2
   fi
-  __shadowing_ast:parse:command-conditional "$1"  __noshadow_42_2
-  setvar "$2" "$__noshadow_42_2"
+  __shadowing_ast:parse:command-conditional "$1"  __noshadow_43_2
+  setvar "$2" "$__noshadow_43_2"
 }
 
 
@@ -3837,12 +3915,12 @@ __shadowing_ast:parse:composite-conditional() {
 }
 
 ast:parse:composite-conditional() {
-  if [ -z ${__noshadow_43_+x} ]; then
-    local __noshadow_43_
-    local __noshadow_43_2
+  if [ -z ${__noshadow_44_+x} ]; then
+    local __noshadow_44_
+    local __noshadow_44_2
   fi
-  __shadowing_ast:parse:composite-conditional "$1"  __noshadow_43_2
-  setvar "$2" "$__noshadow_43_2"
+  __shadowing_ast:parse:composite-conditional "$1"  __noshadow_44_2
+  setvar "$2" "$__noshadow_44_2"
 }
 
 
@@ -3873,12 +3951,12 @@ __shadowing_ast:parse:function-definition() {
 }
 
 ast:parse:function-definition() {
-  if [ -z ${__noshadow_44_+x} ]; then
-    local __noshadow_44_
-    local __noshadow_44_2
+  if [ -z ${__noshadow_45_+x} ]; then
+    local __noshadow_45_
+    local __noshadow_45_2
   fi
-  __shadowing_ast:parse:function-definition "$1"  __noshadow_44_2
-  setvar "$2" "$__noshadow_44_2"
+  __shadowing_ast:parse:function-definition "$1"  __noshadow_45_2
+  setvar "$2" "$__noshadow_45_2"
 }
 
 
@@ -3922,12 +4000,12 @@ __shadowing_ast:parse:await() {
 }
 
 ast:parse:await() {
-  if [ -z ${__noshadow_45_+x} ]; then
-    local __noshadow_45_
-    local __noshadow_45_1
+  if [ -z ${__noshadow_46_+x} ]; then
+    local __noshadow_46_
+    local __noshadow_46_1
   fi
-  __shadowing_ast:parse:await  __noshadow_45_1
-  setvar "$1" "$__noshadow_45_1"
+  __shadowing_ast:parse:await  __noshadow_46_1
+  setvar "$1" "$__noshadow_46_1"
 }
 
 
@@ -3942,6 +4020,7 @@ ast:parse:when-done() {
 
 __shadowing_ast:lower() {
   local expr="$1" out="$2"
+  local low
 
   local VarsInScope=''
   declare -i CurrentScope
@@ -3951,16 +4030,27 @@ __shadowing_ast:lower() {
   typing:scan $expr
 
   CurrentScope=0
-  ast:lower-scanned $expr "$out"
+  ast:lower-scanned $expr low
+
+  if [ "${deref_assigns+x}" = x ]; then
+    ast:make-from-string "$out" "
+      block
+      + $deref_assigns
+      + $low
+    "
+    unset deref_assigns
+  else
+    setvar "$out" "$low"
+  fi
 }
 
 ast:lower() {
-  if [ -z ${__noshadow_46_+x} ]; then
-    local __noshadow_46_
-    local __noshadow_46_2
+  if [ -z ${__noshadow_47_+x} ]; then
+    local __noshadow_47_
+    local __noshadow_47_2
   fi
-  __shadowing_ast:lower "$1"  __noshadow_46_2
-  setvar "$2" "$__noshadow_46_2"
+  __shadowing_ast:lower "$1"  __noshadow_47_2
+  setvar "$2" "$__noshadow_47_2"
 }
 
 
@@ -4142,7 +4232,7 @@ __shadowing_ast:lower-scanned() {
 
       typing:end-scope
       ;;
-    name|math*|string)
+    name|math*|string|array-operation)
       result=$expr
       ;;
     assign-conditional)
@@ -4170,19 +4260,42 @@ __shadowing_ast:lower-scanned() {
 
     assign-ref)
       local var value varname
-      local lowvalue
+      local assign lowvalue
 
       ast:children $expr var value
       ast:lower-scanned $value lowvalue
 
       ast:from $var value varname
+
+      if ast:is $var name; then
+        ast:make-from-string assign "
+          assign
+          - name ~$varname
+          + $lowvalue
+        "
+      else
+        local index lowindex deref derefname
+        ast:children $var index
+        ast:lower-scanned $index lowindex
+
+        ast:dereference $var deref
+        ast:from $deref value derefname
+
+        ast:make-from-string assign "
+          indexing-assign
+          - name ~$derefname
+          + $lowindex
+          + $lowvalue
+        "
+      fi
+
       ast:make-from-string result "
         block
         - light-assert
         -- condition not
         --- condition is
         ---- string-removal $varname
-        ----- pattern __powscript_gensym_reference_variable_
+        ----- pattern __powscript_gensym_*reference_variable_
         ----- name #
         ---- simple-substitution $varname
         -- cat
@@ -4191,9 +4304,7 @@ __shadowing_ast:lower-scanned() {
         --- string  is not a reference
         - expand
         -- block
-        --- assign
-        ---- name ~$varname
-        ---+ $lowvalue
+        --+ $assign
       "
       ;;
 
@@ -4217,7 +4328,9 @@ __shadowing_ast:lower-scanned() {
             ast:from $refvar value refname
             ast:make-from-string refassign "
               local
-              + $refvar
+              - assign
+              -+ $refvar
+              -- simple-substitution $arg_value
             "
             ast:make-from-string refret "
               assign
@@ -4228,8 +4341,42 @@ __shadowing_ast:lower-scanned() {
             ref_returns+=" $refret"
             low_arguments+=" $refvar"
             ;;
+          array-reference)
+            local refassign refvar refname
+            ast:gensym refvar array_reference
+            ast:make-from-string refassign "
+              local
+              - assign
+              -+ $refvar
+              -- name $arg_value
+            "
+            ref_assigns+=" $refassign"
+            low_arguments+=" $refvar"
+            ;;
+          list)
+            local array_ref refassign refvar lowlist
+            ast:lower-scanned $arg lowlist
+            ast:gensym array_ref temp_array
+            ast:gensym refvar    array_reference
+
+            ast:make-from-string refassign "
+              block
+              - declare array
+              -+ $array_ref
+              - assign
+              -+ $array_ref
+              -+ $lowlist
+              - assign
+              -+ $refvar
+              -+ $array_ref
+            "
+            ref_assigns+=" $refassign"
+            low_arguments+=" $refvar"
+            ;;
           *)
-            low_arguments+=" $arg"
+            local lowarg
+            ast:lower-scanned $arg lowarg
+            low_arguments+=" $lowarg"
             ;;
         esac
       done
@@ -4245,6 +4392,50 @@ __shadowing_ast:lower-scanned() {
           + $ref_returns
         "
       fi
+      ;;
+    block)
+      local deref_assigns whitespace elements low_elements=""
+      local element low_element
+
+      ast:all-from $expr -v whitespace -c elements
+      for element in $elements; do
+        deref_assigns=""
+        ast:lower-scanned $element low_element
+        low_elements+=" $deref_assigns $low_element"
+      done
+
+      ast:make result block "$whitespace" $low_elements
+      ;;
+    variable-dereference)
+      local refvar refname var varname
+
+      ast:from $expr value varname
+      ast:make var name "$varname"
+
+      ast:dereference $var refvar
+      ast:from $refvar value refname
+
+      ast:make result simple-substitution "$refname"
+      ;;
+    array-dereference)
+      local index deref_var deref_assign
+      local deref_varname array_ref
+
+      ast:from $expr value    array_ref
+      ast:from $expr children index
+
+      ast:gensym deref_var "array_dereference"
+      ast:from $deref_var value deref_varname
+
+      ast:make-from-string deref_assign "
+         expand
+        - assign
+        -+ $deref_var
+        -- indexing-substitution ~{!$array_ref}
+        --+ $index
+      "
+      deref_assigns+=" $deref_assign"
+      ast:make result simple-substitution "$deref_varname"
       ;;
     *)
       local expr_value expr_children child lowered_child
@@ -4265,12 +4456,39 @@ __shadowing_ast:lower-scanned() {
 }
 
 ast:lower-scanned() {
-  if [ -z ${__noshadow_47_+x} ]; then
-    local __noshadow_47_
-    local __noshadow_47_2
+  if [ -z ${__noshadow_48_+x} ]; then
+    local __noshadow_48_
+    local __noshadow_48_2
   fi
-  __shadowing_ast:lower-scanned "$1"  __noshadow_47_2
-  setvar "$2" "$__noshadow_47_2"
+  __shadowing_ast:lower-scanned "$1"  __noshadow_48_2
+  setvar "$2" "$__noshadow_48_2"
+}
+
+
+
+__shadowing_ast:dereference() {
+  local var="$1" out="$2"
+  local varname deref_assign
+  ast:gensym "$out" "dereference"
+
+  ast:from $var value varname
+
+  ast:make-from-string deref_assign "
+    expand
+    - assign
+    -+ ${!out}
+    -- simple-substitution ~$varname
+  "
+  deref_assigns+=" $deref_assign"
+}
+
+ast:dereference() {
+  if [ -z ${__noshadow_49_+x} ]; then
+    local __noshadow_49_
+    local __noshadow_49_2
+  fi
+  __shadowing_ast:dereference "$1"  __noshadow_49_2
+  setvar "$2" "$__noshadow_49_2"
 }
 
 
@@ -4437,12 +4655,12 @@ __shadowing_ast:extract-function-arguments() {
 }
 
 ast:extract-function-arguments() {
-  if [ -z ${__noshadow_48_+x} ]; then
-    local __noshadow_48_
-    local __noshadow_48_2
+  if [ -z ${__noshadow_50_+x} ]; then
+    local __noshadow_50_
+    local __noshadow_50_2
   fi
-  __shadowing_ast:extract-function-arguments "$1"  __noshadow_48_2
-  setvar "$2" "$__noshadow_48_2"
+  __shadowing_ast:extract-function-arguments "$1"  __noshadow_50_2
+  setvar "$2" "$__noshadow_50_2"
 }
 
 
@@ -4484,12 +4702,12 @@ __shadowing_ast:make-argument-set() {
 }
 
 ast:make-argument-set() {
-  if [ -z ${__noshadow_49_+x} ]; then
-    local __noshadow_49_
-    local __noshadow_49_6
+  if [ -z ${__noshadow_51_+x} ]; then
+    local __noshadow_51_
+    local __noshadow_51_6
   fi
-  __shadowing_ast:make-argument-set "$1" "$2" "$3" "$4" "$5"  __noshadow_49_6
-  setvar "$6" "$__noshadow_49_6"
+  __shadowing_ast:make-argument-set "$1" "$2" "$3" "$4" "$5"  __noshadow_51_6
+  setvar "$6" "$__noshadow_51_6"
 }
 
 
@@ -4568,12 +4786,12 @@ __shadowing_ast:make-argument-test() {
 }
 
 ast:make-argument-test() {
-  if [ -z ${__noshadow_50_+x} ]; then
-    local __noshadow_50_
-    local __noshadow_50_6
+  if [ -z ${__noshadow_52_+x} ]; then
+    local __noshadow_52_
+    local __noshadow_52_6
   fi
-  __shadowing_ast:make-argument-test "$1" "$2" "$3" "$4" "$5"  __noshadow_50_6
-  setvar "$6" "$__noshadow_50_6"
+  __shadowing_ast:make-argument-test "$1" "$2" "$3" "$4" "$5"  __noshadow_52_6
+  setvar "$6" "$__noshadow_52_6"
 }
 
 
@@ -4643,12 +4861,12 @@ __shadowing_ast:make-keyword-assign() {
 }
 
 ast:make-keyword-assign() {
-  if [ -z ${__noshadow_51_+x} ]; then
-    local __noshadow_51_
-    local __noshadow_51_6
+  if [ -z ${__noshadow_53_+x} ]; then
+    local __noshadow_53_
+    local __noshadow_53_6
   fi
-  __shadowing_ast:make-keyword-assign "$1" "$2" "$3" "$4" "$5"  __noshadow_51_6
-  setvar "$6" "$__noshadow_51_6"
+  __shadowing_ast:make-keyword-assign "$1" "$2" "$3" "$4" "$5"  __noshadow_53_6
+  setvar "$6" "$__noshadow_53_6"
 }
 
 
@@ -4703,12 +4921,12 @@ __shadowing_typing:declared-name() {
 }
 
 typing:declared-name() {
-  if [ -z ${__noshadow_52_+x} ]; then
-    local __noshadow_52_
-    local __noshadow_52_2
+  if [ -z ${__noshadow_54_+x} ]; then
+    local __noshadow_54_
+    local __noshadow_54_2
   fi
-  __shadowing_typing:declared-name "$1"  __noshadow_52_2
-  setvar "$2" "$__noshadow_52_2"
+  __shadowing_typing:declared-name "$1"  __noshadow_54_2
+  setvar "$2" "$__noshadow_54_2"
 }
 
 
@@ -5163,12 +5381,12 @@ __shadowing_ast:parse:linestart() {
 }
 
 ast:parse:linestart() {
-  if [ -z ${__noshadow_53_+x} ]; then
-    local __noshadow_53_
-    local __noshadow_53_1
+  if [ -z ${__noshadow_55_+x} ]; then
+    local __noshadow_55_
+    local __noshadow_55_1
   fi
-  __shadowing_ast:parse:linestart  __noshadow_53_1
-  setvar "$1" "$__noshadow_53_1"
+  __shadowing_ast:parse:linestart  __noshadow_55_1
+  setvar "$1" "$__noshadow_55_1"
 }
 
 
@@ -5248,12 +5466,12 @@ __shadowing_ast:parse:top() {
 }
 
 ast:parse:top() {
-  if [ -z ${__noshadow_54_+x} ]; then
-    local __noshadow_54_
-    local __noshadow_54_1
+  if [ -z ${__noshadow_56_+x} ]; then
+    local __noshadow_56_
+    local __noshadow_56_1
   fi
-  __shadowing_ast:parse:top  __noshadow_54_1
-  setvar "$1" "$__noshadow_54_1"
+  __shadowing_ast:parse:top  __noshadow_56_1
+  setvar "$1" "$__noshadow_56_1"
 }
 
 
@@ -5344,7 +5562,7 @@ __shadowing_bash:compile() {
     function-def|local|block|math|math-top|math-float|\
     math-assigned|math-expr|assign-sequence|readline|file-input|\
     string-length|string-removal|string-default|string-test|\
-    string-indirect|double-string|nothing|empty-substitution|flag*)
+    variable-dereference|double-string|nothing|empty-substitution|flag*)
 
       sh:compile $expr "$out"
       ;;
@@ -5641,12 +5859,12 @@ __shadowing_bash:compile() {
 }
 
 bash:compile() {
-  if [ -z ${__noshadow_55_+x} ]; then
-    local __noshadow_55_
-    local __noshadow_55_2
+  if [ -z ${__noshadow_57_+x} ]; then
+    local __noshadow_57_
+    local __noshadow_57_2
   fi
-  __shadowing_bash:compile "$1"  __noshadow_55_2
-  setvar "$2" "$__noshadow_55_2"
+  __shadowing_bash:compile "$1"  __noshadow_57_2
+  setvar "$2" "$__noshadow_57_2"
 }
 
 # FILE: lang/bash/compile.bash
@@ -5990,16 +6208,16 @@ __shadowing_sh:compile() {
       set_substitution "\${$name}"
       ;;
 
+    variable-dereference)
+      local name
+      ast:from $expr value name
+      set_substitution "\${!$name}"
+      ;;
+
     string-length)
       local name
       ast:from $expr value name
       set_substitution "\${#$name}"
-      ;;
-
-    string-indirect)
-      local name
-      ast:from $expr value name
-      set_substitution "\${!$name}"
       ;;
 
     string-removal)
@@ -6119,12 +6337,12 @@ __shadowing_sh:compile() {
       fi
 
       for child_ast in $expr_children; do
-        sh:compile $child_ast child
+        backend:compile $child_ast child
         if ${INSIDE_FUNCTION-false}; then
           result+=" $child"
         else
-          if ast:is $child assign; then
-            result+="; : $child"
+          if ast:is $child_ast assign; then
+            result+="; $child"
           fi
         fi
       done
@@ -6161,6 +6379,7 @@ __shadowing_sh:compile() {
 
     condition)
       local op left right quoted=no
+      local expr_children
       ast:from $expr value op
       ast:from $expr children expr_children
       expr_children=( $expr_children )
@@ -6222,12 +6441,12 @@ __shadowing_sh:compile() {
 }
 
 sh:compile() {
-  if [ -z ${__noshadow_56_+x} ]; then
-    local __noshadow_56_
-    local __noshadow_56_2
+  if [ -z ${__noshadow_58_+x} ]; then
+    local __noshadow_58_
+    local __noshadow_58_2
   fi
-  __shadowing_sh:compile "$1"  __noshadow_56_2
-  setvar "$2" "$__noshadow_56_2"
+  __shadowing_sh:compile "$1"  __noshadow_58_2
+  setvar "$2" "$__noshadow_58_2"
 }
 
 # FILE: lang/sh/compile.bash
@@ -6307,7 +6526,7 @@ powscript:help() {
   '
 }
 # FILE: compiler/helptext.bash
-POWSCRIPT_VERSION=1.1.17
+POWSCRIPT_VERSION=1.1.18
 
 version:number() {
   echo "$POWSCRIPT_VERSION"
@@ -6762,12 +6981,12 @@ __shadowing_interactive:get-remaining-input() {
 }
 
 interactive:get-remaining-input() {
-  if [ -z ${__noshadow_57_+x} ]; then
-    local __noshadow_57_
-    local __noshadow_57_1
+  if [ -z ${__noshadow_59_+x} ]; then
+    local __noshadow_59_
+    local __noshadow_59_1
   fi
-  __shadowing_interactive:get-remaining-input  __noshadow_57_1
-  setvar "$1" "$__noshadow_57_1"
+  __shadowing_interactive:get-remaining-input  __noshadow_59_1
+  setvar "$1" "$__noshadow_59_1"
 }
 
 

@@ -170,9 +170,11 @@ noshadow ast:parse:curly-substitution
 # lowercase <pattern>
 # uppercase* <pattern>
 # lowercase* <pattern>
-# indirect
 # keys
 # ref
+# ref[@]
+# deref
+# deref[<expr>]
 #
 
 ast:parse:parameter-substitution() { #<<NOSHADOW>>
@@ -193,9 +195,9 @@ ast:parse:parameter-substitution() { #<<NOSHADOW>>
   fi
 
   case "$opname" in
-    unset|empty)   modifier='='; mclass='string' ;;
-    *fix|replace)  modifier='*'  mclass='name'   ;;
-    *case)         modifier='*'  mclass='name'   ;;
+    unset|empty)   modifier='='; mclass='string'  ;;
+    *fix|replace)  modifier='*'  mclass='name'    ;;
+    *case)         modifier='*'  mclass='name'    ;;
   esac
 
 
@@ -223,6 +225,8 @@ ast:parse:parameter-substitution() { #<<NOSHADOW>>
       fi
       ;;
 
+    ref|deref)
+      ;;
     *)
       if [ -n "$child_b" ]; then
         ast:error "trailling expression after operation name: $(ast:print $child_b)"
@@ -236,8 +240,8 @@ ast:parse:parameter-substitution() { #<<NOSHADOW>>
   esac
 
   case "$opname" in
-    length|indirect)
-      ast:make "$out" "string-$opname" "$varname"
+    length)
+      ast:make "$out" "string-length" "$varname"
       ;;
     keys)
       local at
@@ -334,7 +338,29 @@ ast:parse:parameter-substitution() { #<<NOSHADOW>>
       ;;
 
     ref)
-      ast:make "$out" variable-reference "$varname"
+      if token:next-is special '['; then
+        token:require special '['
+        token:require special '@'
+        token:require special ']'
+        ast:make "$out" array-reference "$varname"
+      else
+        ast:make "$out" variable-reference "$varname"
+      fi
+      ;;
+    deref)
+      if token:next-is special '['; then
+        local index
+        token:require special '['
+
+        ast:push-state '['
+        ast:parse:expr index
+        ast:pop-state
+
+        token:require special ']'
+        ast:make "$out" array-dereference "$varname" $index
+      else
+        ast:make "$out" variable-dereference "$varname"
+      fi
       ;;
     *)
       ast:error "Invalid string operation: $opname"
