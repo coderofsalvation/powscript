@@ -11,6 +11,8 @@ write shellscript in a powful way!
     $ powscript -c myscript.pow > myscript            # output bashscript
     $ powscript -c --to sh myscript.pow > myscript.sh # output sh-script (experimental)
 
+* [unnoficial AUR package](https://aur.archlinux.org/packages/powscript/)
+
 ## Wiki
 
 * [Syntax reference](https://github.com/coderofsalvation/powscript/blob/master/doc/reference.md)
@@ -97,14 +99,6 @@ This however, is experimental, as well as the standalone bash2sh converter:
 
 See [FAQ](doc/FAQ.md)
 
-## Live expansion inside editor
-
-> HINT: use live expansion inside vim.
-> Put the lines below in .vimrc and hit 'p>' in normal/visual mode to expand powscript
-
-    vmap p> :!PIPE=2 powscript -c<CR>
-    nmap p> ggVG:!PIPE=2 powscript -c<CR>
-
 ## OSX users
 
 OSX might protest since it isn't quite GNU focused. Please run these commands after installing:
@@ -113,3 +107,12 @@ OSX might protest since it isn't quite GNU focused. Please run these commands af
     $ brew install coreutils gnu-sed grep gawk --default-names
     $ echo 'export PATH=/usr/local/opt/coreutils/libexec/gnubin:$PATH' >> ~/.bashrc
     $ sed -i 's|#!/bin/bash|#!/usr/local/bin/bash|g' powscript
+
+## Live expansion inside editor
+
+> HINT: use live expansion inside vim.
+> Put the lines below in .vimrc and hit 'p>' in normal/visual mode to expand powscript to bash
+
+    vmap p> :!PIPE=2 powscript -c<CR>
+    nmap p> ggVG:!PIPE=2 powscript -c<CR>
+
