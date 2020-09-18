@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 
 
 declare -A PowscriptLib
@@ -6599,7 +6599,7 @@ powscript:help() {
   '
 }
 # FILE: compiler/helptext.bash
-POWSCRIPT_VERSION=1.1.25
+POWSCRIPT_VERSION=1.1.26
 
 version:number() {
   echo "$POWSCRIPT_VERSION"

@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 
 PowscriptSourceDirectory="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)" #<<IGNORE>>
 PowscriptLibDirectory="$(cd "$PowscriptSourceDirectory/../lib" && pwd)"  #<<IGNORE>>
