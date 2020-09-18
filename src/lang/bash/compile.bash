@@ -86,7 +86,7 @@ bash:compile() { #<<NOSHADOW>>
       expr_children=( $expr_children )
 
       bash:compile ${expr_children[0]} name
-      bash:compile ${expr_children[1]} index
+      bash:compile ${expr_childre n[1]} index
       bash:compile ${expr_children[2]} value
 
       setvar "$out" "$name[$index]=$value"
@@ -314,6 +314,18 @@ bash:compile() { #<<NOSHADOW>>
           ;;
       esac
       ;;
+
+    pop)
+      local pop_argument_ast pop_argument
+      ast:children $expr pop_argument_ast
+      if [ -n "$pop_argument_ast" ]; then
+        bash:compile $pop_argument_ast pop_argument
+      else
+        pop_argument=1
+      fi
+      setvar "$out" 'set -- "${@:1:$(($# - '"$pop_argument"'))}"'
+      ;;
+
     newline|eof|'')
       ;;
     *)

@@ -22,6 +22,8 @@ interactive:start() {
   exec 3<>"$wfifo"
   exec 4<>"$rfifo"
 
+  backend:file-start >>"$wfifo"
+
   if ${PowscriptIncludeStd-true}; then
     echo "$(cache:library std)" >>"$wfifo"
   fi
@@ -29,6 +31,7 @@ interactive:start() {
   if [ -f "$HOME/.powrc" ]; then
     files:compile-file "$wfifo" <"$HOME/.powrc"
   fi
+
 
   while pgrep -P $proc >/dev/null; do
     result=
