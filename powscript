@@ -5658,7 +5658,7 @@ __shadowing_bash:compile() {
       expr_children=( $expr_children )
 
       bash:compile ${expr_children[0]} name
-      bash:compile ${expr_childre n[1]} index
+      bash:compile ${expr_children[1]} index
       bash:compile ${expr_children[2]} value
 
       setvar "$out" "$name[$index]=$value"
@@ -6599,7 +6599,7 @@ powscript:help() {
   '
 }
 # FILE: compiler/helptext.bash
-POWSCRIPT_VERSION=1.1.26
+POWSCRIPT_VERSION=1.1.27
 
 version:number() {
   echo "$POWSCRIPT_VERSION"

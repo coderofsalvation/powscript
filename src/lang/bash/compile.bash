@@ -86,7 +86,7 @@ bash:compile() { #<<NOSHADOW>>
       expr_children=( $expr_children )
 
       bash:compile ${expr_children[0]} name
-      bash:compile ${expr_childre n[1]} index
+      bash:compile ${expr_children[1]} index
       bash:compile ${expr_children[2]} value
 
       setvar "$out" "$name[$index]=$value"
