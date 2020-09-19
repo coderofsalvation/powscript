@@ -4038,6 +4038,7 @@ __shadowing_ast:parse:pop() {
 
     *)
       ast:make "$out" pop '' $argument
+      ast:parse:require-newline 'pop'
       ;;
   esac
 }

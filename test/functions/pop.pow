@@ -1,0 +1,13 @@
+test_pop()
+  pop
+  echo $@
+
+test_pop2()
+  pop 2
+  echo $@
+
+assert $(test_pop 1 2) is "1"
+assert $(test_pop 1 2 3 4) is "1 2 3"
+assert $(test_pop a b c d e f g h j k) is "a b c d e f g h j"
+assert $(test_pop2 1 2 3 4) is "1 2"
+assert $(test_pop2 a b c d e f g h j k) is "a b c d e f g h"

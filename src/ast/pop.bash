@@ -18,6 +18,7 @@ ast:parse:pop() { #<<NOSHADOW>>
 
     *)
       ast:make "$out" pop '' $argument
+      ast:parse:require-newline 'pop'
       ;;
   esac
 }
