@@ -12,6 +12,7 @@ powscript_source ast/patterns.bash     #<<EXPAND>>
 powscript_source ast/conditionals.bash #<<EXPAND>>
 powscript_source ast/functions.bash    #<<EXPAND>>
 powscript_source ast/parallel.bash     #<<EXPAND>>
+powscript_source ast/pop.bash          #<<EXPAND>>
 powscript_source ast/lowerer.bash      #<<EXPAND>>
 powscript_source ast/print.bash        #<<EXPAND>>
 
@@ -90,7 +91,7 @@ ast:parse:top() { #<<NOSHADOW>>
         case "$expr_value" in
           'if'|'for'|'math'|'case'|'while'|'switch'|\
           'switch'|'await'|'assert'|'require'|'expand'|\
-          'declare'|'test')
+          'declare'|'test'|'pop')
             ast:error "'(' not allowed after reserved name '$expr_value'"
             ;;
         esac
@@ -107,6 +108,7 @@ ast:parse:top() { #<<NOSHADOW>>
         'expand')  ast:parse:expand  "$out" ;;
         'declare') ast:parse:declare "$out" ;;
         'test')    ast:parse:test    "$out" ;;
+        'pop')     ast:parse:pop     "$out" ;;
         'math')
           ast:push-state 'topmath'
           ast:parse:math "$out"

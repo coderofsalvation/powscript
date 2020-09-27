@@ -529,6 +529,16 @@ sh:compile() { #<<NOSHADOW>>
       setvar quoted_block "${quoted_block//\~/\$}"
       setvar "$out" "eval \"$quoted_block\""
       ;;
+    pop)
+      local pop_argument_ast pop_argument
+      ast:children $expr pop_argument_ast
+      if [ -n "$pop_argument_ast" ]; then
+        bash:compile $pop_argument_ast pop_argument
+      else
+        pop_argument=1
+      fi
+      setvar "$out" '__powscript_pop $# '"$pop_argument"'; eval "$__powscript_POP_EXPR"'
+      ;;
     newline|eof|'')
       ;;
     *)

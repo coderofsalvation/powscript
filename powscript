@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 
 
 declare -A PowscriptLib
@@ -4017,6 +4017,42 @@ ast:parse:when-done() {
   ast:parse:block wdn "$1"
 }
 # FILE: ast/parallel.bash
+# ast:parse:pop $out
+#
+# Parses an expression of the forms:
+#   pop
+#   pop <expression>
+#
+
+__shadowing_ast:parse:pop() {
+  local out="$1"
+  local argument argument_head
+
+  ast:parse:expr argument
+  ast:from $argument head argument_head
+
+  case $argument_head in
+    newline)
+      ast:make "$out" pop ''
+      ;;
+
+    *)
+      ast:make "$out" pop '' $argument
+      ast:parse:require-newline 'pop'
+      ;;
+  esac
+}
+
+ast:parse:pop() {
+  if [ -z ${__noshadow_47_+x} ]; then
+    local __noshadow_47_
+    local __noshadow_47_1
+  fi
+  __shadowing_ast:parse:pop  __noshadow_47_1
+  setvar "$1" "$__noshadow_47_1"
+}
+
+# FILE: ast/pop.bash
 
 __shadowing_ast:lower() {
   local expr="$1" out="$2"
@@ -4045,12 +4081,12 @@ __shadowing_ast:lower() {
 }
 
 ast:lower() {
-  if [ -z ${__noshadow_47_+x} ]; then
-    local __noshadow_47_
-    local __noshadow_47_2
+  if [ -z ${__noshadow_48_+x} ]; then
+    local __noshadow_48_
+    local __noshadow_48_2
   fi
-  __shadowing_ast:lower "$1"  __noshadow_47_2
-  setvar "$2" "$__noshadow_47_2"
+  __shadowing_ast:lower "$1"  __noshadow_48_2
+  setvar "$2" "$__noshadow_48_2"
 }
 
 
@@ -4456,12 +4492,12 @@ __shadowing_ast:lower-scanned() {
 }
 
 ast:lower-scanned() {
-  if [ -z ${__noshadow_48_+x} ]; then
-    local __noshadow_48_
-    local __noshadow_48_2
+  if [ -z ${__noshadow_49_+x} ]; then
+    local __noshadow_49_
+    local __noshadow_49_2
   fi
-  __shadowing_ast:lower-scanned "$1"  __noshadow_48_2
-  setvar "$2" "$__noshadow_48_2"
+  __shadowing_ast:lower-scanned "$1"  __noshadow_49_2
+  setvar "$2" "$__noshadow_49_2"
 }
 
 
@@ -4483,12 +4519,12 @@ __shadowing_ast:dereference() {
 }
 
 ast:dereference() {
-  if [ -z ${__noshadow_49_+x} ]; then
-    local __noshadow_49_
-    local __noshadow_49_2
+  if [ -z ${__noshadow_50_+x} ]; then
+    local __noshadow_50_
+    local __noshadow_50_2
   fi
-  __shadowing_ast:dereference "$1"  __noshadow_49_2
-  setvar "$2" "$__noshadow_49_2"
+  __shadowing_ast:dereference "$1"  __noshadow_50_2
+  setvar "$2" "$__noshadow_50_2"
 }
 
 
@@ -4655,12 +4691,12 @@ __shadowing_ast:extract-function-arguments() {
 }
 
 ast:extract-function-arguments() {
-  if [ -z ${__noshadow_50_+x} ]; then
-    local __noshadow_50_
-    local __noshadow_50_2
+  if [ -z ${__noshadow_51_+x} ]; then
+    local __noshadow_51_
+    local __noshadow_51_2
   fi
-  __shadowing_ast:extract-function-arguments "$1"  __noshadow_50_2
-  setvar "$2" "$__noshadow_50_2"
+  __shadowing_ast:extract-function-arguments "$1"  __noshadow_51_2
+  setvar "$2" "$__noshadow_51_2"
 }
 
 
@@ -4702,12 +4738,12 @@ __shadowing_ast:make-argument-set() {
 }
 
 ast:make-argument-set() {
-  if [ -z ${__noshadow_51_+x} ]; then
-    local __noshadow_51_
-    local __noshadow_51_6
+  if [ -z ${__noshadow_52_+x} ]; then
+    local __noshadow_52_
+    local __noshadow_52_6
   fi
-  __shadowing_ast:make-argument-set "$1" "$2" "$3" "$4" "$5"  __noshadow_51_6
-  setvar "$6" "$__noshadow_51_6"
+  __shadowing_ast:make-argument-set "$1" "$2" "$3" "$4" "$5"  __noshadow_52_6
+  setvar "$6" "$__noshadow_52_6"
 }
 
 
@@ -4786,12 +4822,12 @@ __shadowing_ast:make-argument-test() {
 }
 
 ast:make-argument-test() {
-  if [ -z ${__noshadow_52_+x} ]; then
-    local __noshadow_52_
-    local __noshadow_52_6
+  if [ -z ${__noshadow_53_+x} ]; then
+    local __noshadow_53_
+    local __noshadow_53_6
   fi
-  __shadowing_ast:make-argument-test "$1" "$2" "$3" "$4" "$5"  __noshadow_52_6
-  setvar "$6" "$__noshadow_52_6"
+  __shadowing_ast:make-argument-test "$1" "$2" "$3" "$4" "$5"  __noshadow_53_6
+  setvar "$6" "$__noshadow_53_6"
 }
 
 
@@ -4861,12 +4897,12 @@ __shadowing_ast:make-keyword-assign() {
 }
 
 ast:make-keyword-assign() {
-  if [ -z ${__noshadow_53_+x} ]; then
-    local __noshadow_53_
-    local __noshadow_53_6
+  if [ -z ${__noshadow_54_+x} ]; then
+    local __noshadow_54_
+    local __noshadow_54_6
   fi
-  __shadowing_ast:make-keyword-assign "$1" "$2" "$3" "$4" "$5"  __noshadow_53_6
-  setvar "$6" "$__noshadow_53_6"
+  __shadowing_ast:make-keyword-assign "$1" "$2" "$3" "$4" "$5"  __noshadow_54_6
+  setvar "$6" "$__noshadow_54_6"
 }
 
 
@@ -4921,12 +4957,12 @@ __shadowing_typing:declared-name() {
 }
 
 typing:declared-name() {
-  if [ -z ${__noshadow_54_+x} ]; then
-    local __noshadow_54_
-    local __noshadow_54_2
+  if [ -z ${__noshadow_55_+x} ]; then
+    local __noshadow_55_
+    local __noshadow_55_2
   fi
-  __shadowing_typing:declared-name "$1"  __noshadow_54_2
-  setvar "$2" "$__noshadow_54_2"
+  __shadowing_typing:declared-name "$1"  __noshadow_55_2
+  setvar "$2" "$__noshadow_55_2"
 }
 
 
@@ -5381,12 +5417,12 @@ __shadowing_ast:parse:linestart() {
 }
 
 ast:parse:linestart() {
-  if [ -z ${__noshadow_55_+x} ]; then
-    local __noshadow_55_
-    local __noshadow_55_1
+  if [ -z ${__noshadow_56_+x} ]; then
+    local __noshadow_56_
+    local __noshadow_56_1
   fi
-  __shadowing_ast:parse:linestart  __noshadow_55_1
-  setvar "$1" "$__noshadow_55_1"
+  __shadowing_ast:parse:linestart  __noshadow_56_1
+  setvar "$1" "$__noshadow_56_1"
 }
 
 
@@ -5412,7 +5448,7 @@ __shadowing_ast:parse:top() {
         case "$expr_value" in
           'if'|'for'|'math'|'case'|'while'|'switch'|\
           'switch'|'await'|'assert'|'require'|'expand'|\
-          'declare'|'test')
+          'declare'|'test'|'pop')
             ast:error "'(' not allowed after reserved name '$expr_value'"
             ;;
         esac
@@ -5429,6 +5465,7 @@ __shadowing_ast:parse:top() {
         'expand')  ast:parse:expand  "$out" ;;
         'declare') ast:parse:declare "$out" ;;
         'test')    ast:parse:test    "$out" ;;
+        'pop')     ast:parse:pop     "$out" ;;
         'math')
           ast:push-state 'topmath'
           ast:parse:math "$out"
@@ -5466,12 +5503,12 @@ __shadowing_ast:parse:top() {
 }
 
 ast:parse:top() {
-  if [ -z ${__noshadow_56_+x} ]; then
-    local __noshadow_56_
-    local __noshadow_56_1
+  if [ -z ${__noshadow_57_+x} ]; then
+    local __noshadow_57_
+    local __noshadow_57_1
   fi
-  __shadowing_ast:parse:top  __noshadow_56_1
-  setvar "$1" "$__noshadow_56_1"
+  __shadowing_ast:parse:top  __noshadow_57_1
+  setvar "$1" "$__noshadow_57_1"
 }
 
 
@@ -5850,6 +5887,18 @@ __shadowing_bash:compile() {
           ;;
       esac
       ;;
+
+    pop)
+      local pop_argument_ast pop_argument
+      ast:children $expr pop_argument_ast
+      if [ -n "$pop_argument_ast" ]; then
+        bash:compile $pop_argument_ast pop_argument
+      else
+        pop_argument=1
+      fi
+      setvar "$out" 'set -- "${@:1:$(($# - '"$pop_argument"'))}"'
+      ;;
+
     newline|eof|'')
       ;;
     *)
@@ -5859,18 +5908,33 @@ __shadowing_bash:compile() {
 }
 
 bash:compile() {
-  if [ -z ${__noshadow_57_+x} ]; then
-    local __noshadow_57_
-    local __noshadow_57_2
+  if [ -z ${__noshadow_58_+x} ]; then
+    local __noshadow_58_
+    local __noshadow_58_2
   fi
-  __shadowing_bash:compile "$1"  __noshadow_57_2
-  setvar "$2" "$__noshadow_57_2"
+  __shadowing_bash:compile "$1"  __noshadow_58_2
+  setvar "$2" "$__noshadow_58_2"
 }
 
 # FILE: lang/bash/compile.bash
-FileStartSh="\
+read -r -d '' FileStartSh <<'EOF'
 #!/usr/bin/env sh
-"
+
+__powscript_pop() {
+  local n=$(($1 - ${2:-1}))
+  if [ $n -ge 500 ]; then
+    __powscript_POP_EXPR="set -- $(seq -s " " 1 $n | sed 's/[0-9]\+/"${\0}"/g')"
+  else
+    local index=0
+    local arguments=""
+    while [ $index -lt $n ]; do
+      index=$((index+1))
+      arguments="$arguments \"\${$index}\""
+    done
+    __powscript_POP_EXPR="set -- $arguments"
+  fi
+}
+EOF
 
 sh:file-start() {
   echo "$FileStartSh"
@@ -6432,6 +6496,16 @@ __shadowing_sh:compile() {
       setvar quoted_block "${quoted_block//\~/\$}"
       setvar "$out" "eval \"$quoted_block\""
       ;;
+    pop)
+      local pop_argument_ast pop_argument
+      ast:children $expr pop_argument_ast
+      if [ -n "$pop_argument_ast" ]; then
+        bash:compile $pop_argument_ast pop_argument
+      else
+        pop_argument=1
+      fi
+      setvar "$out" '__powscript_pop $# '"$pop_argument"'; eval "$__powscript_POP_EXPR"'
+      ;;
     newline|eof|'')
       ;;
     *)
@@ -6441,12 +6515,12 @@ __shadowing_sh:compile() {
 }
 
 sh:compile() {
-  if [ -z ${__noshadow_58_+x} ]; then
-    local __noshadow_58_
-    local __noshadow_58_2
+  if [ -z ${__noshadow_59_+x} ]; then
+    local __noshadow_59_
+    local __noshadow_59_2
   fi
-  __shadowing_sh:compile "$1"  __noshadow_58_2
-  setvar "$2" "$__noshadow_58_2"
+  __shadowing_sh:compile "$1"  __noshadow_59_2
+  setvar "$2" "$__noshadow_59_2"
 }
 
 # FILE: lang/sh/compile.bash
@@ -6526,7 +6600,7 @@ powscript:help() {
   '
 }
 # FILE: compiler/helptext.bash
-POWSCRIPT_VERSION=1.1.18
+POWSCRIPT_VERSION=1.1.27
 
 version:number() {
   echo "$POWSCRIPT_VERSION"
@@ -6834,6 +6908,8 @@ interactive:start() {
   exec 3<>"$wfifo"
   exec 4<>"$rfifo"
 
+  backend:file-start >>"$wfifo"
+
   if ${PowscriptIncludeStd-true}; then
     echo "$(cache:library std)" >>"$wfifo"
   fi
@@ -6841,6 +6917,7 @@ interactive:start() {
   if [ -f "$HOME/.powrc" ]; then
     files:compile-file "$wfifo" <"$HOME/.powrc"
   fi
+
 
   while pgrep -P $proc >/dev/null; do
     result=
@@ -6981,12 +7058,12 @@ __shadowing_interactive:get-remaining-input() {
 }
 
 interactive:get-remaining-input() {
-  if [ -z ${__noshadow_59_+x} ]; then
-    local __noshadow_59_
-    local __noshadow_59_1
+  if [ -z ${__noshadow_60_+x} ]; then
+    local __noshadow_60_
+    local __noshadow_60_1
   fi
-  __shadowing_interactive:get-remaining-input  __noshadow_59_1
-  setvar "$1" "$__noshadow_59_1"
+  __shadowing_interactive:get-remaining-input  __noshadow_60_1
+  setvar "$1" "$__noshadow_60_1"
 }
 
 
